@@ -18,7 +18,9 @@ export function Tooltip({
 }) {
   const id = useId();
   const [dismissed, setDismissed] = useState(false);
-  const [active, setActive] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const active = hovered || focused;
 
   // Escape must work for hover too (WCAG 1.4.13), where focus is not inside.
   useEffect(() => {
@@ -37,15 +39,15 @@ export function Tooltip({
   return (
     <span
       className="group relative inline-flex"
-      onMouseEnter={() => setActive(true)}
-      onFocus={() => setActive(true)}
-      onBlur={() => {
-        setActive(false);
-        setDismissed(false);
-      }}
+      onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => {
-        setActive(false);
-        setDismissed(false);
+        setHovered(false);
+        if (!focused) setDismissed(false);
+      }}
+      onFocus={() => setFocused(true)}
+      onBlur={() => {
+        setFocused(false);
+        if (!hovered) setDismissed(false);
       }}
     >
       {cloneElement(children, { "aria-describedby": describedBy })}

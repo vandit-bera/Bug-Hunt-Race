@@ -117,3 +117,19 @@ test("theme toggle uses a roving tabindex and arrow keys", async ({ page }) => {
   await page.keyboard.press("ArrowRight");
   await expect(page.getByRole("radio", { name: /System/ })).toBeChecked();
 });
+
+test("tooltip Escape still works for a focused trigger after hover leaves", async ({
+  page,
+}) => {
+  await page.goto("/styleguide");
+  const trigger = page
+    .getByRole("button", { name: "Hover or focus me" })
+    .first();
+  await trigger.focus();
+  await trigger.hover();
+  await page.mouse.move(0, 0);
+  const tooltip = page.getByRole("tooltip").first();
+  await expect(tooltip).toHaveCSS("opacity", "1");
+  await page.keyboard.press("Escape");
+  await expect(tooltip).toHaveCSS("opacity", "0");
+});
