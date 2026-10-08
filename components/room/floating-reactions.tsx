@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
-import { capNewest, MAX_FLOATING_REACTIONS } from "@/lib/game/room-fun";
+import {
+  capNewest,
+  MAX_FLOATING_REACTIONS,
+  overflow,
+} from "@/lib/game/room-fun";
 
 export type FloatingReaction = {
   id: number | string;
@@ -35,7 +39,11 @@ function FloatingEmoji({
   );
 }
 
-/** Decorative layer: reactions float up and fade. At most 20 show at once. */
+/**
+ * Decorative layer: reactions float up and fade. At most 20 show at once.
+ * Reactions over the cap are dropped: `onExpire` is called for them right away,
+ * so the owner should remove every expired id (or add with `addCapped`).
+ */
 export function FloatingReactions({
   reactions,
   onExpire,
@@ -43,6 +51,12 @@ export function FloatingReactions({
   reactions: readonly FloatingReaction[];
   onExpire: (id: FloatingReaction["id"]) => void;
 }) {
+  useEffect(() => {
+    for (const { id } of overflow(reactions, MAX_FLOATING_REACTIONS)) {
+      onExpire(id);
+    }
+  }, [reactions, onExpire]);
+
   return (
     <div
       aria-hidden="true"

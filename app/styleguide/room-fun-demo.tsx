@@ -12,7 +12,7 @@ import {
   type SolveToastData,
 } from "@/components/room/solve-toast";
 import { Button } from "@/components/ui/button";
-import type { RankRow } from "@/lib/game/room-fun";
+import { addCapped, type RankRow } from "@/lib/game/room-fun";
 
 const PLAYERS: RankRow[] = [
   { id: "riya", name: "Riya", emoji: "🦊", score: 120 },
@@ -64,10 +64,13 @@ export function RoomFunDemo() {
       <div className="flex flex-wrap items-center gap-3">
         <ReactionBar
           onReact={(emoji) =>
-            setReactions((current) => [
-              ...current,
-              { id: nextId++, emoji, x: 5 + Math.random() * 85 },
-            ])
+            setReactions((current) =>
+              addCapped(current, {
+                id: nextId++,
+                emoji,
+                x: 5 + Math.random() * 85,
+              }),
+            )
           }
         />
         <Button
@@ -75,14 +78,17 @@ export function RoomFunDemo() {
           variant="secondary"
           onClick={() => {
             const emojis = ["😂", "🔥", "👏", "😱", "🐛", "🚀"];
-            setReactions((current) => [
-              ...current,
-              ...Array.from({ length: 25 }, () => ({
-                id: nextId++,
-                emoji: emojis[Math.floor(Math.random() * emojis.length)],
-                x: 5 + Math.random() * 85,
-              })),
-            ]);
+            setReactions((current) =>
+              Array.from({ length: 25 }).reduce<FloatingReaction[]>(
+                (list) =>
+                  addCapped(list, {
+                    id: nextId++,
+                    emoji: emojis[Math.floor(Math.random() * emojis.length)],
+                    x: 5 + Math.random() * 85,
+                  }),
+                current,
+              ),
+            );
           }}
         >
           Simulate reaction burst

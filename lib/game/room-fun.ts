@@ -17,6 +17,23 @@ export function capNewest<T>(items: readonly T[], max: number): T[] {
   return items.length > max ? items.slice(items.length - max) : [...items];
 }
 
+/**
+ * Adds a reaction and drops the oldest ones over the cap. Callers should store
+ * reactions through this so the list never grows past `max`.
+ */
+export function addCapped<T>(
+  items: readonly T[],
+  item: T,
+  max: number = MAX_FLOATING_REACTIONS,
+): T[] {
+  return capNewest([...items, item], max);
+}
+
+/** The oldest items that do not fit under the cap. */
+export function overflow<T>(items: readonly T[], max: number): T[] {
+  return items.slice(0, Math.max(items.length - max, 0));
+}
+
 export type RankRow = {
   id: string;
   name: string;

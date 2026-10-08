@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  addCapped,
   capNewest,
   isCoolingDown,
   MAX_FLOATING_REACTIONS,
+  overflow,
   rankRows,
   REACTION_COOLDOWN_MS,
   REACTION_EMOJIS,
@@ -40,6 +42,25 @@ describe("capNewest", () => {
     expect(capped).toHaveLength(20);
     expect(capped[0]).toBe(5);
     expect(capped.at(-1)).toBe(24);
+  });
+});
+
+describe("addCapped", () => {
+  it("never grows past the cap, dropping the oldest", () => {
+    let items: number[] = [];
+    for (let i = 0; i < 25; i++) items = addCapped(items, i);
+    expect(items).toHaveLength(MAX_FLOATING_REACTIONS);
+    expect(items[0]).toBe(5);
+  });
+});
+
+describe("overflow", () => {
+  it("returns the oldest items over the cap", () => {
+    expect(overflow([1, 2, 3, 4], 3)).toEqual([1]);
+  });
+
+  it("is empty under the cap", () => {
+    expect(overflow([1, 2], 3)).toEqual([]);
   });
 });
 

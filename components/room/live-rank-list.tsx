@@ -59,14 +59,18 @@ function ChangeMarker({ change }: { change: number }) {
 
 function RankItem({
   row,
+  total,
   reducedMotion,
 }: {
   row: RankedRow;
+  total: number;
   reducedMotion: boolean;
 }) {
   const score = useCountUp(row.score, reducedMotion);
   return (
     <li
+      aria-posinset={row.rank}
+      aria-setsize={total}
       className={cn(
         "absolute inset-x-0 flex items-center gap-3 rounded-lg border-2 border-border bg-surface-raised px-3",
         !reducedMotion && "transition-transform duration-500 ease-out",
@@ -109,7 +113,12 @@ export function LiveRankList({ rows }: { rows: readonly RankRow[] }) {
       {[...ranked]
         .sort((a, b) => a.id.localeCompare(b.id))
         .map((row) => (
-          <RankItem key={row.id} row={row} reducedMotion={reducedMotion} />
+          <RankItem
+            key={row.id}
+            row={row}
+            total={ranked.length}
+            reducedMotion={reducedMotion}
+          />
         ))}
     </ol>
   );
