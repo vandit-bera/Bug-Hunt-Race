@@ -6,8 +6,9 @@ const MESSAGES: Partial<Record<DbErrorCode, string>> = {
   room_full: "Room is full",
   not_room_admin: "Only the room admin can do that",
   invalid_transition: "That's not possible right now",
-  invalid_display_name: "Pick a name of 1–24 characters",
+  invalid_display_name: "Names can't contain < or >",
   invalid_avatar: "Pick an avatar",
+  rate_limited: "You're creating rooms too fast. Try again in a minute.",
 };
 
 /** A short message for the player, e.g. "Room is full". */
