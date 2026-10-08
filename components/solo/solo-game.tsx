@@ -15,11 +15,16 @@ import {
 import { TestResults } from "@/components/solo/test-results";
 import { RunnerLoadingBar } from "@/components/runner-loading-bar";
 import { SoundToggle } from "@/components/sound-toggle";
+import { StreakCounter } from "@/components/streak-counter";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge, LevelBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/components/ui/cn";
 import { Modal } from "@/components/ui/modal";
+import { useToast } from "@/components/ui/toast";
+import { recordRound } from "@/lib/game/badges";
+import { currentDailyStreak, toDay, type Progress } from "@/lib/game/progress";
+import { loadProgress, saveProgress } from "@/lib/game/progress-storage";
 import { HINT_PENALTY_RATIO, computeScore } from "@/lib/game/scoring";
 import { parseSoloParams, type SoloParams } from "@/lib/game/solo-params";
 import { levelForRound, pickPuzzle } from "@/lib/game/solo-pick";
@@ -147,6 +152,8 @@ function Round({
   const [hintShown, setHintShown] = useState(false);
   const [confirm, setConfirm] = useState<"hint" | "giveup" | null>(null);
   const [finish, setFinish] = useState<Finish | null>(null);
+  const [progress, setProgress] = useState<Progress>(() => loadProgress());
+  const toast = useToast();
 
   const startedAt = useRef(0);
   const finished = useRef(false);
@@ -170,6 +177,25 @@ function Round({
     const timeSec = Math.min(Math.round(elapsedSec), puzzle.timeLimitSec);
     const isNewBest =
       solved && recordBest(language, level, { points: score.total, timeSec });
+    const day = toDay(new Date());
+    const round = recordRound(loadProgress(), {
+      solved,
+      language,
+      level: puzzle.level,
+      hintUsed: hintUsed.current,
+      timeSec,
+      timeLimitSec: puzzle.timeLimitSec,
+      day,
+    });
+    saveProgress(round.progress);
+    setProgress(round.progress);
+    for (const badge of round.newBadges) {
+      toast({
+        title: `${badge.emoji} Badge unlocked! ${badge.name}`,
+        description: badge.howTo,
+        variant: "success",
+      });
+    }
     setConfirm(null);
     setFinish({
       outcome,
@@ -178,6 +204,9 @@ function Round({
       hintUsed: hintUsed.current,
       isNewBest,
       best: getBest(language, level),
+      winStreak: round.progress.winStreak,
+      dailyStreak: currentDailyStreak(round.progress, day),
+      newBadgeCount: round.newBadges.length,
     });
   }
 
@@ -255,6 +284,7 @@ function Round({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          <StreakCounter winStreak={progress.winStreak} />
           <p
             role="timer"
             aria-label="Time left"

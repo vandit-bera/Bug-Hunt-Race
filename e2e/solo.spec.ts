@@ -102,9 +102,11 @@ for (const language of ["javascript", "typescript"] as const) {
     ).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText(/\d+ points/).first()).toBeVisible();
     await expect(page.getByText("New personal best!")).toBeVisible();
+    await expect(page.getByText(/Badge unlocked! .*First Blood/)).toBeVisible();
 
     await page.getByRole("link", { name: "Play again" }).click();
     await expect(page.getByRole("timer")).toBeVisible(COUNTDOWN_WAIT);
+    await expect(page.getByLabel("Win streak: 1")).toBeVisible();
     expect(errors).toEqual([]);
   });
 }
