@@ -330,6 +330,8 @@ are skipped). Everything is client side; nothing is sent to Supabase.
 - **Puzzle picking** (`lib/game/solo-pick.ts`): random from the language +
   level pool, without repeats until every puzzle there has been played; the
   played ids are in `localStorage` too.
+- **Setup screen:** `/solo` counts the pools on the server and passes the
+  sizes down, so the puzzle pack only ships with the game.
 - **Editor:** Monaco, bundled with the app (no CDN) and loaded on demand. Only
   the editor worker runs, so there are no type-checker squiggles that would
   point at the bug.
@@ -590,6 +592,32 @@ was used; unsolved = 0. A 5 s grace after the deadline absorbs network lag.
 The leaderboard ranks by total points, then total solve time; exact ties share
 the place. Task 13 may tune the numbers in a new migration.
 
+### Abuse limits
+
+Players are anonymous, so limits protect the database from a script, not
+from a determined attacker with many IPs. Migration
+`20261008000005_abuse_limits.sql` (TB-41):
+
+| Limit                      | Value                          | Enforced by                                                             |
+| -------------------------- | ------------------------------ | ----------------------------------------------------------------------- |
+| Rooms created per user     | 10 per rolling hour            | `before insert` trigger on `rooms` → `rate_limited`                     |
+| Display name               | 1–24 chars, no control chars   | `private.clean_display_name` → `invalid_display_name`                   |
+| No HTML in names / avatars | `<` and `>` rejected           | `private.clean_display_name`, `private.check_avatar`                    |
+| Avatar                     | 1–16 chars                     | `private.check_avatar` → `invalid_avatar`                               |
+| Players per room           | 50 (game rule: 30)             | `join_room` → `room_full`                                               |
+| New anonymous users per IP | 30 per hour (Supabase default) | Supabase Auth → Rate Limits (dashboard; `supabase/config.toml` locally) |
+
+- The room limit counts creates in `private.room_creations` (pruned per user
+  as they go). It runs as a trigger, so it holds for every function that
+  creates a room. Inserts without a user (seed, migrations) are not limited.
+- React escapes text, so `<` / `>` in a name could not run as HTML anyway.
+  Rejecting them keeps names safe in any other sink (titles, exports).
+- **Watch the IP limit:** a whole office behind one NAT IP shares the 30
+  anonymous sign-ins per hour. Raise it in the Supabase dashboard before a
+  large game (Vandit's call; it is a live-project setting).
+- Not limited: joins (bounded by the room cap), score submits (one row per
+  player per round), Realtime messages (Supabase's per-project quotas).
+
 ### Data access (`lib/db`)
 
 Components never build queries inline. They call typed functions that take a
@@ -625,6 +653,55 @@ Add a change as a **new** migration file; never edit one that has been
 applied to production. Supabase grants new tables to the API roles by
 default, so every new table needs `enable row level security`, explicit
 grants, and a pgTAP test.
+
+## Security headers
+
+Set for every response except built JS in `next.config.ts`, from
+`lib/security/headers.ts` (unit tested; an E2E test checks them on real
+pages):
+
+- **Content-Security-Policy:** `default-src 'self'`; scripts and workers from
+  this site only; `connect-src` is this site plus the Supabase origin from
+  `NEXT_PUBLIC_SUPABASE_URL` (`https://…` and `wss://…` for Realtime), read at
+  build time; `img-src` also allows `data:` / `blob:`;
+  `object-src 'none'`; `base-uri` and `form-action` `'self'`;
+  `frame-ancestors 'none'`.
+  - **No nonces, so `'unsafe-inline'` for scripts and styles.** Nonces force
+    every page to render per request (no static pages, no CDN cache). The
+    inline scripts are the theme script in `<head>` and Next's RSC payload;
+    Monaco injects styles. Acceptable here: there is no user HTML anywhere,
+    React escapes text, and names reject `<` / `>`.
+  - `next dev` adds `'unsafe-eval'` (React's dev error overlay needs it).
+  - The runner workers keep their own, stricter CSP (see Sandbox limits); built
+    JS is excluded from the page policy so the two never stack.
+  - Adding a third-party origin (analytics, fonts, a CDN) means adding it here.
+- `X-Content-Type-Options: nosniff`, `Referrer-Policy:
+strict-origin-when-cross-origin`, `X-Frame-Options: DENY` (old browsers).
+- `Permissions-Policy` turns off camera, microphone, geolocation, payment,
+  USB and topics. Fullscreen (QR code) and clipboard (invite link) stay on.
+
+## Performance budget
+
+`pnpm bundle:check` (CI runs it after `pnpm build`) sums the gzipped size of
+every script the prerendered `/` and `/solo` pages load and fails over the
+budget in `scripts/bundle-budget.ts`:
+
+| Page               | Budget (gzip) | At TB-41 |
+| ------------------ | ------------- | -------- |
+| `/` Home           | 185 KB        | 175.7 KB |
+| `/solo` Solo setup | 190 KB        | 179.3 KB |
+
+About 170 KB of that is React and Next.js, shared by every page. Keep heavy
+code off these pages:
+
+- Monaco loads with `next/dynamic` on the game screen only; Pyodide downloads
+  only when Python is picked (preload) or played. An E2E test checks that Home
+  and Solo setup load neither.
+- Screens that only need puzzle counts get them from the server
+  (`countPools` in `lib/puzzles/pools.ts`), so the puzzle pack (~29 KB gzip)
+  ships only with the game.
+
+If a change has to raise a budget, raise it in the same PR and say why.
 
 ## Environment
 

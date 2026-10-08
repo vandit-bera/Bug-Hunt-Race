@@ -28,25 +28,26 @@ your machine is out of file watchers: close other dev servers or run
 
 ## Scripts
 
-| Command              | What it does                                 |
-| -------------------- | -------------------------------------------- |
-| `pnpm dev`           | Start the dev server                         |
-| `pnpm build`         | Production build                             |
-| `pnpm start`         | Serve the production build                   |
-| `pnpm lint`          | ESLint                                       |
-| `pnpm format`        | Format everything with Prettier              |
-| `pnpm format:check`  | Check formatting (CI runs this)              |
-| `pnpm typecheck`     | Generate Next.js route types, then `tsc`     |
-| `pnpm test`          | Unit tests (Vitest)                          |
-| `pnpm test:watch`    | Unit tests in watch mode                     |
-| `pnpm test:e2e`      | End-to-end tests (Playwright)                |
-| `pnpm puzzles:check` | Check every puzzle: buggy fails, fix passes  |
-| `pnpm puzzles:build` | Regenerate the puzzle index the app imports  |
-| `pnpm db:start`      | Start local Supabase (Docker)                |
-| `pnpm db:stop`       | Stop local Supabase                          |
-| `pnpm db:reset`      | Rebuild the local database from migrations   |
-| `pnpm db:test`       | Database tests (pgTAP: RLS, rooms, scores)   |
-| `pnpm db:types`      | Regenerate `lib/db/types.ts` from the schema |
+| Command              | What it does                                    |
+| -------------------- | ----------------------------------------------- |
+| `pnpm dev`           | Start the dev server                            |
+| `pnpm build`         | Production build                                |
+| `pnpm bundle:check`  | First-load JS budget for Home and Solo setup    |
+| `pnpm start`         | Serve the production build                      |
+| `pnpm lint`          | ESLint                                          |
+| `pnpm format`        | Format everything with Prettier                 |
+| `pnpm format:check`  | Check formatting (CI runs this)                 |
+| `pnpm typecheck`     | Generate Next.js route types, then `tsc`        |
+| `pnpm test`          | Unit tests (Vitest)                             |
+| `pnpm test:watch`    | Unit tests in watch mode                        |
+| `pnpm test:e2e`      | End-to-end tests (Playwright)                   |
+| `pnpm puzzles:check` | Check every puzzle: buggy fails, fix passes     |
+| `pnpm puzzles:build` | Regenerate the puzzle index the app imports     |
+| `pnpm db:start`      | Start local Supabase (Docker)                   |
+| `pnpm db:stop`       | Stop local Supabase                             |
+| `pnpm db:reset`      | Rebuild the local database from migrations      |
+| `pnpm db:test`       | Database tests (pgTAP: RLS, rooms, scores) |
+| `pnpm db:types`      | Regenerate `lib/db/types.ts` from the schema    |
 
 ## Tests
 
@@ -87,10 +88,11 @@ security rules and the data-access layer are described in
 
 GitHub Actions (`.github/workflows/ci.yml`) runs on every pull request and on
 pushes to `main`: install → lint → format check → typecheck → unit tests →
-puzzle check → build → E2E. A second job starts a fresh Supabase database from
-the migrations, runs the pgTAP tests and checks `lib/db/types.ts` is up to
-date. A third job starts a local Supabase (database, auth, API, Realtime)
-and runs the two-browser room E2E tests. A PR cannot merge unless CI is green.
+puzzle check → build → bundle budget → E2E. A second job starts a fresh
+Supabase database from the migrations, runs the pgTAP tests and checks
+`lib/db/types.ts` is up to date. A third job starts a local Supabase
+(database, auth, API, Realtime) and runs the two-browser room E2E tests. A PR
+cannot merge unless CI is green.
 
 ## Environment variables
 
