@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
   DbError,
+  advanceRoom,
   createRoom,
   findRoomByCode,
+  getRoom,
   joinRoom,
+  leaveRoom,
   listPlayers,
+  sendHeartbeat,
+  setRoomLocked,
 } from "@/lib/db";
 import type { Player, Room } from "@/lib/db";
 import { createFakeClient } from "./test-utils";
@@ -33,6 +38,7 @@ const player: Player = {
   is_admin: true,
   connected: true,
   joined_at: "2026-10-08T00:00:00Z",
+  left_at: null,
 };
 
 describe("createRoom", () => {
@@ -204,7 +210,7 @@ describe("joinRoom", () => {
 });
 
 describe("listPlayers", () => {
-  it("lists a room's players in join order", async () => {
+  it("lists the players still in a room, in join order", async () => {
     const fake = createFakeClient({ from: [{ data: [player], error: null }] });
 
     await expect(listPlayers(fake.client, "room-1")).resolves.toEqual([player]);
@@ -213,6 +219,7 @@ describe("listPlayers", () => {
       calls: [
         ["select", []],
         ["eq", ["room_id", "room-1"]],
+        ["is", ["left_at", null]],
         ["order", ["joined_at"]],
         ["order", ["id"]],
       ],
@@ -232,6 +239,91 @@ describe("listPlayers", () => {
     await expect(listPlayers(fake.client, "room-1")).rejects.toMatchObject({
       code: "unknown",
       message: "permission denied for table players",
+    });
+  });
+});
+
+describe("getRoom", () => {
+  it("reads one room", async () => {
+    const fake = createFakeClient({ from: [{ data: room, error: null }] });
+
+    await expect(getRoom(fake.client, "room-1")).resolves.toEqual(room);
+    expect(fake.queries[0]).toEqual({
+      table: "rooms",
+      calls: [
+        ["select", []],
+        ["eq", ["id", "room-1"]],
+        ["single", []],
+      ],
+    });
+  });
+});
+
+describe("room actions", () => {
+  it("sendHeartbeat returns the room status", async () => {
+    const fake = createFakeClient({ rpc: [{ data: "closed", error: null }] });
+
+    await expect(sendHeartbeat(fake.client, "room-1")).resolves.toBe("closed");
+    expect(fake.rpc).toHaveBeenCalledWith("room_heartbeat", {
+      target_room_id: "room-1",
+    });
+  });
+
+  it("leaveRoom calls leave_room", async () => {
+    const fake = createFakeClient({ rpc: [{ data: null, error: null }] });
+
+    await leaveRoom(fake.client, "room-1");
+    expect(fake.rpc).toHaveBeenCalledWith("leave_room", {
+      target_room_id: "room-1",
+    });
+  });
+
+  it("advanceRoom sends the event and returns the updated room", async () => {
+    const started = { ...room, status: "countdown" as const, current_round: 1 };
+    const fake = createFakeClient({ rpc: [{ data: started, error: null }] });
+
+    await expect(advanceRoom(fake.client, "room-1", "start")).resolves.toEqual(
+      started,
+    );
+    expect(fake.rpc).toHaveBeenCalledWith("advance_room", {
+      target_room_id: "room-1",
+      room_event: "start",
+    });
+  });
+
+  it("setRoomLocked sends the lock flag", async () => {
+    const locked = { ...room, locked: true };
+    const fake = createFakeClient({ rpc: [{ data: locked, error: null }] });
+
+    await expect(setRoomLocked(fake.client, "room-1", true)).resolves.toEqual(
+      locked,
+    );
+    expect(fake.rpc).toHaveBeenCalledWith("set_room_locked", {
+      target_room_id: "room-1",
+      room_locked: true,
+    });
+  });
+
+  it.each([
+    ["advanceRoom", "not_room_admin"],
+    ["advanceRoom", "invalid_transition"],
+    ["setRoomLocked", "not_room_admin"],
+    ["sendHeartbeat", "room_not_found"],
+    ["leaveRoom", "room_not_found"],
+  ] as const)("%s maps %s to a typed error", async (action, code) => {
+    const fake = createFakeClient({
+      rpc: [{ data: null, error: { message: code } }],
+    });
+    const calls = {
+      advanceRoom: () => advanceRoom(fake.client, "room-1", "start"),
+      setRoomLocked: () => setRoomLocked(fake.client, "room-1", true),
+      sendHeartbeat: () => sendHeartbeat(fake.client, "room-1"),
+      leaveRoom: () => leaveRoom(fake.client, "room-1"),
+    };
+
+    await expect(calls[action]()).rejects.toMatchObject({
+      name: "DbError",
+      code,
     });
   });
 });

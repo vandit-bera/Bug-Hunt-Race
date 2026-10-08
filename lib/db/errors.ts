@@ -15,6 +15,8 @@ export const DB_ERROR_CODES = [
   "room_code_exhausted",
   "round_not_found",
   "round_not_live",
+  "not_room_admin",
+  "invalid_transition",
 ] as const;
 
 export type DbErrorCode = (typeof DB_ERROR_CODES)[number] | "unknown";
