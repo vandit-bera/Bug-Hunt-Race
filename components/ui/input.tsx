@@ -27,7 +27,7 @@ export function Input({
         aria-invalid={error ? true : undefined}
         aria-describedby={message ? messageId : undefined}
         className={cn(
-          "h-11 rounded-lg border-2 bg-surface px-3 text-foreground placeholder:text-muted",
+          "h-11 w-full min-w-0 rounded-lg border-2 bg-surface px-3 text-foreground placeholder:text-muted",
           "disabled:cursor-not-allowed disabled:opacity-50",
           error ? "border-danger" : "border-border focus:border-accent",
           className,

@@ -15,6 +15,16 @@ import { Modal } from "@/components/ui/modal";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast";
 import { Tooltip } from "@/components/ui/tooltip";
+import {
+  InvitePanel,
+  NameAvatarForm,
+  PlayerList,
+  RoomCodeInput,
+  RoomErrorCard,
+  RoomSettingsForm,
+  type RoomPlayer,
+  type RoomSettings,
+} from "@/components/room";
 import { RoomFunDemo } from "./room-fun-demo";
 
 const COLOR_TOKENS = [
@@ -32,6 +42,12 @@ const COLOR_TOKENS = [
   "level-easy",
   "level-medium",
   "level-hard",
+];
+
+const SAMPLE_PLAYERS: RoomPlayer[] = [
+  { id: "1", name: "Mika", avatar: "🦊", isAdmin: true, connected: true },
+  { id: "2", name: "Vandit", avatar: "🐙", isAdmin: false, connected: true },
+  { id: "3", name: "Sam", avatar: "🐼", isAdmin: false, connected: false },
 ];
 
 function Section({
@@ -53,13 +69,20 @@ export function Showcase({ theme }: { theme: "light" | "dark" }) {
   const toast = useToast();
   const [modalOpen, setModalOpen] = useState(false);
   const modalTitle = `${theme} modal`;
+  const [locked, setLocked] = useState(false);
+  const [roomCode, setRoomCode] = useState("");
+  const [settings, setSettings] = useState<RoomSettings>({
+    language: "javascript",
+    level: "mixed",
+    rounds: 5,
+  });
   const [fxRun, setFxRun] = useState(0);
   const [confettiRun, setConfettiRun] = useState(0);
 
   return (
     <div
       data-theme={theme}
-      className="flex flex-col gap-8 rounded-2xl border-2 border-border-subtle bg-background p-6 text-foreground"
+      className="flex flex-col gap-8 rounded-2xl border-2 border-border-subtle bg-background p-4 text-foreground sm:p-6"
     >
       <h2 className="font-display text-2xl font-bold">
         {theme === "light" ? "☀️ Light" : "🌙 Dark"}
@@ -198,6 +221,68 @@ export function Showcase({ theme }: { theme: "light" | "dark" }) {
           </p>
           <Button onClick={() => setModalOpen(false)}>Got it</Button>
         </Modal>
+      </Section>
+
+      <Section title="Room: invite panel">
+        <div className="w-full max-w-md">
+          <InvitePanel
+            roomCode="K7M2QX"
+            link="https://bughuntrace.example/join/K7M2QX"
+            playerCount={7}
+            maxPlayers={30}
+            locked={locked}
+            onLockChange={setLocked}
+          />
+        </div>
+      </Section>
+
+      <Section title="Room: code input">
+        <div className="w-full max-w-sm">
+          <RoomCodeInput value={roomCode} onChange={setRoomCode} />
+        </div>
+      </Section>
+
+      <Section title="Room: name and avatar">
+        <div className="w-full max-w-md">
+          <NameAvatarForm submitLabel="Join room" onSubmit={() => {}} />
+        </div>
+      </Section>
+
+      <Section title="Room: player list">
+        <div className="w-full max-w-md">
+          <PlayerList players={SAMPLE_PLAYERS} selfId="2" />
+        </div>
+      </Section>
+
+      <Section title="Room: settings">
+        <div className="w-full max-w-md">
+          <RoomSettingsForm
+            idPrefix={`${theme}-settings`}
+            value={settings}
+            onChange={setSettings}
+          />
+        </div>
+      </Section>
+
+      <Section title="Room: error cards">
+        <div className="grid w-full gap-3 sm:grid-cols-2">
+          <RoomErrorCard
+            kind="not-found"
+            action={<Button size="sm">Try another code</Button>}
+          />
+          <RoomErrorCard
+            kind="locked"
+            action={<Button size="sm">Back to home</Button>}
+          />
+          <RoomErrorCard
+            kind="full"
+            action={<Button size="sm">Back to home</Button>}
+          />
+          <RoomErrorCard
+            kind="disconnected"
+            action={<Button size="sm">Reconnect</Button>}
+          />
+        </div>
       </Section>
 
       <Section title="Room fun: reactions, solve toasts, live ranks">
