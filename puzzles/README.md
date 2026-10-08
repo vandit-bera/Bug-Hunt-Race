@@ -54,7 +54,7 @@ puzzle, and CI blocks any PR that breaks it.
 | `level`        | `easy`, `medium` or `hard`; same as the folder              |
 | `description`  | What the code **should** do, so the player can spot the gap |
 | `hint`         | Shown when the player asks for it                           |
-| `bugCount`     | Number of separate bugs, 1–5                                |
+| `bugCount`     | Number of separate bugs: Easy 1, Medium 1–2, Hard 2–3       |
 | `timeLimitSec` | Easy 180, Medium 300, Hard 480                              |
 | `basePoints`   | Easy 100, Medium 200, Hard 300                              |
 | `tags`         | At least one kebab-case tag, e.g. `off-by-one`, `async`     |
@@ -91,8 +91,14 @@ test("async code works too", async () => {
 ```
 
 Matchers: `toBe` (`Object.is`), `toEqual` (deep), `toThrow(text?)`. See
-`docs/ARCHITECTURE.md` for the full harness behaviour. Python puzzles arrive
-with the Python runner (TB-19 task 6).
+`docs/ARCHITECTURE.md` for the full harness behaviour.
+
+Python tests are plain `def test_*()` functions that use `assert`:
+
+```python
+def test_returns_the_first_page():
+    assert paginate(["a", "b", "c"], 1, 2) == ["a", "b"]
+```
 
 ## What makes a good puzzle
 
@@ -104,6 +110,9 @@ with the Python runner (TB-19 task 6).
   rewrite the function. Keep `fix.*` identical to `buggy.*` everywhere else.
 - **The description is enough.** A player who reads it and the tests should
   know what correct looks like without guessing.
+- **The description and hint never show the fixed code.** Describe the
+  behaviour, not the fixed line or signature: `add_tag(tag, tags)` with "the
+  list is optional", not `add_tag(tag, tags=None)`.
 - **The hint points, it does not solve.** "Check which elements the loop
   visits" beats "change `i = 1` to `i = 0`".
 - **Every bug fails a test.** With `bugCount: 2`, fixing only one bug should

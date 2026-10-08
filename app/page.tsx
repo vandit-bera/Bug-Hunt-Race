@@ -90,7 +90,7 @@ export default function Home() {
 function RaceRoomCard() {
   const body = (
     <>
-      <CardTitle>Race Room</CardTitle>
+      <CardTitle as="h2">Race Room</CardTitle>
       <p className="text-sm text-muted">
         {RACE_ROOM_HREF ? "Race your team live." : "Coming soon"}
       </p>

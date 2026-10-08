@@ -4,9 +4,12 @@ import { DbError, toDbError } from "./errors";
 import type {
   DbLanguage,
   Player,
+  Room,
+  RoomEvent,
   RoomLevel,
   RoomMembership,
   RoomPreview,
+  RoomStatus,
 } from "./models";
 
 export interface CreateRoomInput {
@@ -80,7 +83,7 @@ export async function joinRoom(
   return withRoom(client, player);
 }
 
-/** Players in a room the caller belongs to, in join order. */
+/** Players still in a room the caller belongs to, in join order. */
 export async function listPlayers(
   client: DbClient,
   roomId: string,
@@ -89,8 +92,83 @@ export async function listPlayers(
     .from("players")
     .select()
     .eq("room_id", roomId)
+    .is("left_at", null)
     .order("joined_at")
     .order("id");
+  if (error) throw toDbError(error);
+  return data;
+}
+
+/** A room the caller belongs to. */
+export async function getRoom(client: DbClient, roomId: string): Promise<Room> {
+  const { data, error } = await client
+    .from("rooms")
+    .select()
+    .eq("id", roomId)
+    .single();
+  if (error) throw toDbError(error);
+  return data;
+}
+
+/**
+ * Tells the room the caller is still here. Call every
+ * `HEARTBEAT_INTERVAL_MS` (lib/rooms does). The database marks players not
+ * seen for 15 s as disconnected, hands the admin role over, and closes a room
+ * nobody has been seen in for 10 minutes. Returns the room status, which is
+ * `closed` if that just happened.
+ */
+export async function sendHeartbeat(
+  client: DbClient,
+  roomId: string,
+): Promise<RoomStatus> {
+  const { data, error } = await client.rpc("room_heartbeat", {
+    target_room_id: roomId,
+  });
+  if (error) throw toDbError(error);
+  return data;
+}
+
+/**
+ * Leaves the room: frees the seat and the name. If the caller was the admin,
+ * the earliest-joined connected player takes over. Joining again later gets
+ * the same player back, with their scores.
+ */
+export async function leaveRoom(
+  client: DbClient,
+  roomId: string,
+): Promise<void> {
+  const { error } = await client.rpc("leave_room", { target_room_id: roomId });
+  if (error) throw toDbError(error);
+}
+
+/**
+ * Admin only: moves the room through the state machine
+ * (lib/game/room-machine.ts). Raises `not_room_admin` for other players and
+ * `invalid_transition` for an event the current state does not allow.
+ */
+export async function advanceRoom(
+  client: DbClient,
+  roomId: string,
+  event: RoomEvent,
+): Promise<Room> {
+  const { data, error } = await client.rpc("advance_room", {
+    target_room_id: roomId,
+    room_event: event,
+  });
+  if (error) throw toDbError(error);
+  return data;
+}
+
+/** Admin only: lock or unlock the room to new players. */
+export async function setRoomLocked(
+  client: DbClient,
+  roomId: string,
+  locked: boolean,
+): Promise<Room> {
+  const { data, error } = await client.rpc("set_room_locked", {
+    target_room_id: roomId,
+    room_locked: locked,
+  });
   if (error) throw toDbError(error);
   return data;
 }
@@ -99,11 +177,5 @@ async function withRoom(
   client: DbClient,
   player: Player,
 ): Promise<RoomMembership> {
-  const { data: room, error } = await client
-    .from("rooms")
-    .select()
-    .eq("id", player.room_id)
-    .single();
-  if (error) throw toDbError(error);
-  return { room, player };
+  return { room: await getRoom(client, player.room_id), player };
 }

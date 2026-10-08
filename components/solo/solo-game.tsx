@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { LaptopBanner } from "@/components/solo/laptop-banner";
+import { Countdown } from "@/components/fx/countdown";
 import { CodeEditor } from "@/components/solo/editor-loader";
 import {
   formatTime,
@@ -13,6 +14,7 @@ import {
 } from "@/components/solo/result-screen";
 import { TestResults } from "@/components/solo/test-results";
 import { RunnerLoadingBar } from "@/components/runner-loading-bar";
+import { SoundToggle } from "@/components/sound-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge, LevelBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,6 +35,7 @@ import { LANGUAGES } from "@/lib/runner/config";
 import { preloadRunner } from "@/lib/runner/preload";
 import { getRunner } from "@/lib/runner/registry";
 import type { RunResult } from "@/lib/runner/types";
+import { playSound } from "@/lib/sound/sounds";
 
 const TICK_MS = 250;
 const LOW_TIME_SEC = 30;
@@ -106,7 +109,30 @@ function Game({ params }: { params: SoloParams }) {
   return <Board puzzle={pick.puzzle} params={params} />;
 }
 
+/** Counts down 3-2-1 before the puzzle is shown, so every player starts together. */
 function Board({
+  puzzle,
+  params,
+}: {
+  puzzle: PublicPuzzle;
+  params: SoloParams;
+}) {
+  const [ready, setReady] = useState(false);
+  if (ready) return <Round puzzle={puzzle} params={params} />;
+  return (
+    <>
+      <div className="flex justify-end">
+        <SoundToggle />
+      </div>
+      <Countdown
+        onStep={(value) => playSound(value === 0 ? "go" : "tick")}
+        onDone={() => setReady(true)}
+      />
+    </>
+  );
+}
+
+function Round({
   puzzle,
   params,
 }: {
@@ -139,6 +165,8 @@ function Board({
       elapsedSec,
       hintsUsed: hintUsed.current ? 1 : 0,
     });
+    if (solved) playSound("solved");
+    if (outcome === "timeup") playSound("timeup");
     const timeSec = Math.min(Math.round(elapsedSec), puzzle.timeLimitSec);
     const isNewBest =
       solved && recordBest(language, level, { points: score.total, timeSec });
@@ -167,7 +195,8 @@ function Board({
   }, []);
 
   async function run() {
-    if (busy.current || finished.current) return;
+    // The Ctrl/Cmd+Enter shortcut must not act behind an open confirm dialog.
+    if (busy.current || finished.current || confirm !== null) return;
     busy.current = true;
     setRunning(true);
     const next = await getRunner(language).run({
@@ -180,6 +209,7 @@ function Board({
     if (finished.current) return;
     setResult(next);
     if (next.status === "passed") end("solved");
+    else playSound("fail");
   }
 
   const runRef = useRef(run);
@@ -224,7 +254,7 @@ function Board({
             <Badge>{LANGUAGES[language].label}</Badge>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <p
             role="timer"
             aria-label="Time left"
@@ -235,6 +265,7 @@ function Board({
           >
             {formatTime(remainingSec)}
           </p>
+          <SoundToggle />
           <ThemeToggle />
         </div>
       </header>

@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { RulesButton } from "@/components/rules-modal";
+import { AnimatedNumber } from "@/components/fx/animated-number";
+import { Confetti } from "@/components/fx/confetti";
+import { ScorePopup } from "@/components/fx/score-popup";
 import { TestResults } from "@/components/solo/test-results";
 import { buttonClass } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -58,6 +61,7 @@ export function ResultScreen({
 
   return (
     <Card className="mx-auto flex w-full max-w-xl flex-col gap-4">
+      {outcome === "solved" && <Confetti />}
       <span
         aria-hidden="true"
         className="inline-block animate-[celebrate_700ms_ease-out] text-5xl"
@@ -73,7 +77,12 @@ export function ResultScreen({
       </h1>
       <p className="text-lg">
         {outcome === "solved" ? (
-          <span className="font-bold">{score.total} points</span>
+          <span className="inline-flex items-baseline gap-3 font-bold">
+            <span>
+              <AnimatedNumber value={score.total} /> points
+            </span>
+            <ScorePopup points={score.total} />
+          </span>
         ) : (
           "0 points. No fix this time."
         )}
