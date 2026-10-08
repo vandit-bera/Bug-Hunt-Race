@@ -28,26 +28,27 @@ your machine is out of file watchers: close other dev servers or run
 
 ## Scripts
 
-| Command              | What it does                                 |
-| -------------------- | -------------------------------------------- |
-| `pnpm dev`           | Start the dev server                         |
-| `pnpm build`         | Production build                             |
-| `pnpm bundle:check`  | First-load JS budget for Home and Solo setup |
-| `pnpm start`         | Serve the production build                   |
-| `pnpm lint`          | ESLint                                       |
-| `pnpm format`        | Format everything with Prettier              |
-| `pnpm format:check`  | Check formatting (CI runs this)              |
-| `pnpm typecheck`     | Generate Next.js route types, then `tsc`     |
-| `pnpm test`          | Unit tests (Vitest)                          |
-| `pnpm test:watch`    | Unit tests in watch mode                     |
-| `pnpm test:e2e`      | End-to-end tests (Playwright)                |
-| `pnpm puzzles:check` | Check every puzzle: buggy fails, fix passes  |
-| `pnpm puzzles:build` | Regenerate the puzzle index the app imports  |
-| `pnpm db:start`      | Start local Supabase (Docker)                |
-| `pnpm db:stop`       | Stop local Supabase                          |
-| `pnpm db:reset`      | Rebuild the local database from migrations   |
-| `pnpm db:test`       | Database tests (pgTAP: RLS, rooms, scores)   |
-| `pnpm db:types`      | Regenerate `lib/db/types.ts` from the schema |
+| Command                     | What it does                                  |
+| --------------------------- | --------------------------------------------- |
+| `pnpm dev`                  | Start the dev server                          |
+| `pnpm build`                | Production build                              |
+| `pnpm bundle:check`         | First-load JS budget for Home and Solo setup  |
+| `pnpm start`                | Serve the production build                    |
+| `pnpm lint`                 | ESLint                                        |
+| `pnpm format`               | Format everything with Prettier               |
+| `pnpm format:check`         | Check formatting (CI runs this)               |
+| `pnpm typecheck`            | Generate Next.js route types, then `tsc`      |
+| `pnpm test`                 | Unit tests (Vitest)                           |
+| `pnpm test:watch`           | Unit tests in watch mode                      |
+| `pnpm test:e2e`             | End-to-end tests (Playwright)                 |
+| `pnpm test:e2e:multiplayer` | Multi-player E2E tests (needs local Supabase) |
+| `pnpm puzzles:check`        | Check every puzzle: buggy fails, fix passes   |
+| `pnpm puzzles:build`        | Regenerate the puzzle index the app imports   |
+| `pnpm db:start`             | Start local Supabase (Docker)                 |
+| `pnpm db:stop`              | Stop local Supabase                           |
+| `pnpm db:reset`             | Rebuild the local database from migrations    |
+| `pnpm db:test`              | Database tests (pgTAP: RLS, rooms, scores)    |
+| `pnpm db:types`             | Regenerate `lib/db/types.ts` from the schema  |
 
 ## Tests
 
@@ -58,9 +59,9 @@ your machine is out of file watchers: close other dev servers or run
   Playwright starts `pnpm dev` for you (or reuses one already running on port
   3000). If port 3000 is taken by another app, pick another port:
   `E2E_PORT=3100 pnpm test:e2e`.
-- `e2e/rooms.spec.ts` needs a running Supabase and is skipped without one:
-  `pnpm db:start`, then run with `NEXT_PUBLIC_SUPABASE_URL` and
-  `NEXT_PUBLIC_SUPABASE_ANON_KEY` from `pnpm exec supabase status`.
+- **Multi-player** E2E tests live in `e2e/multiplayer/`, need a running local
+  Supabase and are skipped without one. How to run and write them:
+  [`e2e/README.md`](e2e/README.md).
 
 ## Code runner
 

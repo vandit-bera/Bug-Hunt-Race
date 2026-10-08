@@ -30,7 +30,7 @@ lib/puzzles/          Puzzle format, loader, checker, generated puzzle index.
 puzzles/              Puzzle files: <language>/<level>/<id>/ (see puzzles/README.md).
 supabase/             Local Supabase config, SQL migrations, dev seed, pgTAP tests.
 scripts/              Repo scripts, e.g. the puzzle checker.
-e2e/                  Playwright tests.
+e2e/                  Playwright tests; multi-player harness in e2e/support/.
 docs/                 This doc and other design notes.
 ```
 

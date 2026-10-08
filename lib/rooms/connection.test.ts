@@ -141,12 +141,15 @@ afterEach(() => {
 });
 
 describe("connectToRoom", () => {
-  it("listens to its own room only, with the player as presence key", () => {
+  it("listens to its own room only, with the player as presence key, and waits for the changes stream", () => {
     const fake = createFakeRealtime();
     connect(fake);
 
     expect(fake.channelFactory).toHaveBeenCalledWith("room:room-1", {
-      config: { presence: { key: "p1" } },
+      config: {
+        presence: { key: "p1" },
+        postgres_changes_options: { wait: true },
+      },
     });
     expect(fake.handlers.map((h) => [h.type, h.filter])).toEqual([
       [

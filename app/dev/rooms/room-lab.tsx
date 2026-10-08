@@ -16,6 +16,7 @@ import {
   type RoomMembership,
 } from "@/lib/db";
 import { roomErrorMessage, useRoomConnection } from "@/lib/rooms";
+import { parseLabSettings } from "./lab-settings";
 
 // Survives a reload in this tab, so the lab can show a reconnect.
 const STORAGE_KEY = "bhr-room-lab";
@@ -146,6 +147,12 @@ function Lab({ client }: { client: DbClient }) {
           </strong>
           {me?.is_admin && " (admin)"}
         </p>
+        <p data-testid="room-settings">
+          Settings: {membership.room.language} · {membership.room.level} ·{" "}
+          {membership.room.total_rounds === null
+            ? "endless"
+            : `${membership.room.total_rounds} rounds`}
+        </p>
         <p data-testid="room-status">
           Status: {view?.room.status ?? "connecting…"}
           {view?.room.locked && " · locked"}
@@ -217,9 +224,7 @@ function Lab({ client }: { client: DbClient }) {
           enter(
             () =>
               createRoom(client, {
-                language: "javascript",
-                level: "easy",
-                totalRounds: 3,
+                ...parseLabSettings(window.location.search),
                 displayName: name,
                 avatar: AVATAR,
               }),
