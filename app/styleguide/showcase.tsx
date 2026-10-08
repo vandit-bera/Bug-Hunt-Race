@@ -15,6 +15,7 @@ import { Modal } from "@/components/ui/modal";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast";
 import { Tooltip } from "@/components/ui/tooltip";
+import { RoomFunDemo } from "./room-fun-demo";
 
 const COLOR_TOKENS = [
   "background",
@@ -197,6 +198,10 @@ export function Showcase({ theme }: { theme: "light" | "dark" }) {
           </p>
           <Button onClick={() => setModalOpen(false)}>Got it</Button>
         </Modal>
+      </Section>
+
+      <Section title="Room fun: reactions, solve toasts, live ranks">
+        <RoomFunDemo />
       </Section>
     </div>
   );
