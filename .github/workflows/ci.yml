@@ -40,3 +40,20 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 7
+
+  database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Fresh Postgres with every migration and the dev seed applied.
+      - run: pnpm exec supabase db start
+      - run: pnpm db:test
+      - name: Generated types match the migrations
+        run: pnpm db:types && git diff --exit-code lib/db/types.ts

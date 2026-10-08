@@ -41,6 +41,11 @@ your machine is out of file watchers: close other dev servers or run
 | `pnpm test:watch`    | Unit tests in watch mode                        |
 | `pnpm test:e2e`      | End-to-end tests (Playwright)                   |
 | `pnpm puzzles:check` | Puzzle auto-checker (placeholder until Phase 2) |
+| `pnpm db:start`      | Start local Supabase (Docker)                   |
+| `pnpm db:stop`       | Stop local Supabase                             |
+| `pnpm db:reset`      | Rebuild the local database from migrations      |
+| `pnpm db:test`       | Database tests (pgTAP: RLS, room codes, scores) |
+| `pnpm db:types`      | Regenerate `lib/db/types.ts` from the schema    |
 
 ## Tests
 
@@ -52,11 +57,28 @@ your machine is out of file watchers: close other dev servers or run
   3000). If port 3000 is taken by another app, pick another port:
   `E2E_PORT=3100 pnpm test:e2e`.
 
+## Local database
+
+Needs Docker. The Supabase CLI is a dev dependency, so no global install.
+
+```bash
+pnpm db:start   # first run downloads the images; prints the local URL and keys
+pnpm db:test
+```
+
+`pnpm db:start` prints a local API URL (`http://127.0.0.1:54321`) and a
+publishable/anon key; put them in `.env.local` to point the app at the local
+database. `supabase/seed.sql` loads three sample puzzles (dev only). Schema,
+security rules and the data-access layer are described in
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#data-model).
+
 ## CI
 
 GitHub Actions (`.github/workflows/ci.yml`) runs on every pull request and on
 pushes to `main`: install → lint → format check → typecheck → unit tests →
-puzzle check → build → E2E. A PR cannot merge unless CI is green.
+puzzle check → build → E2E. A second job starts a fresh Supabase database from
+the migrations, runs the pgTAP tests and checks `lib/db/types.ts` is up to
+date. A PR cannot merge unless CI is green.
 
 ## Environment variables
 
