@@ -9,6 +9,8 @@ import {
 
 const DARK_QUERY = "(prefers-color-scheme: dark)";
 const listeners = new Set<() => void>();
+// Fallback for when localStorage is blocked, so the choice still holds for this visit.
+let sessionTheme: Theme = DEFAULT_THEME;
 
 function notify() {
   listeners.forEach((listener) => listener());
@@ -34,7 +36,7 @@ export function getStoredTheme(): Theme {
   try {
     return parseTheme(window.localStorage.getItem(THEME_STORAGE_KEY));
   } catch {
-    return DEFAULT_THEME;
+    return sessionTheme;
   }
 }
 
@@ -47,10 +49,11 @@ export function applyTheme() {
 }
 
 export function setStoredTheme(theme: Theme) {
+  sessionTheme = theme;
   try {
     window.localStorage.setItem(THEME_STORAGE_KEY, theme);
   } catch {
-    // Storage can be blocked (private mode); the theme still applies for this visit.
+    // Storage can be blocked (private mode); sessionTheme keeps the choice.
   }
   applyTheme();
   notify();

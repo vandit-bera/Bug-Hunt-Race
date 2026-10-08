@@ -50,3 +50,25 @@ test("theme change in another tab recolors this tab", async ({ context }) => {
   await second.getByRole("radio", { name: /Dark/ }).click();
   await expect(first.locator("html")).toHaveAttribute("data-theme", "dark");
 });
+
+test("tooltip closes on Escape and the modal ignores clicks on its padding", async ({
+  page,
+}) => {
+  await page.goto("/styleguide");
+  const trigger = page
+    .getByRole("button", { name: "Hover or focus me" })
+    .first();
+  await trigger.focus();
+  const tooltip = page.getByRole("tooltip").first();
+  await expect(tooltip).toHaveCSS("opacity", "1");
+  await page.keyboard.press("Escape");
+  await expect(tooltip).toHaveCSS("opacity", "0");
+
+  await page.getByRole("button", { name: "Open modal" }).first().click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  await dialog.click({ position: { x: 4, y: 4 } });
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+});

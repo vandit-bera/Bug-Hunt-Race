@@ -31,12 +31,14 @@ export function Modal({
       onClick={(event) => {
         if (event.target === ref.current) onClose();
       }}
-      className="m-auto w-[min(32rem,calc(100vw-2rem))] rounded-xl border-2 border-border bg-surface p-6 text-foreground backdrop:bg-black/60 open:animate-[modal-in_150ms_ease-out]"
+      className="m-auto w-[min(32rem,calc(100vw-2rem))] rounded-xl border-2 border-border bg-surface p-0 text-foreground backdrop:bg-black/60 open:animate-[modal-in_150ms_ease-out]"
     >
-      <h2 id={titleId} className="mb-3 font-display text-xl font-bold">
-        {title}
-      </h2>
-      {children}
+      <div className="p-6">
+        <h2 id={titleId} className="mb-3 font-display text-xl font-bold">
+          {title}
+        </h2>
+        {children}
+      </div>
     </dialog>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { cloneElement, useId, type ReactElement } from "react";
+import { cloneElement, useId, useState, type ReactElement } from "react";
+import { cn } from "./cn";
 
 export function Tooltip({
   content,
@@ -10,13 +11,24 @@ export function Tooltip({
   children: ReactElement<{ "aria-describedby"?: string }>;
 }) {
   const id = useId();
+  const [dismissed, setDismissed] = useState(false);
   return (
-    <span className="group relative inline-flex">
+    <span
+      className="group relative inline-flex"
+      onKeyDown={(event) => {
+        if (event.key === "Escape") setDismissed(true);
+      }}
+      onBlur={() => setDismissed(false)}
+      onMouseLeave={() => setDismissed(false)}
+    >
       {cloneElement(children, { "aria-describedby": id })}
       <span
         id={id}
         role="tooltip"
-        className="pointer-events-none absolute bottom-full left-1/2 z-40 mb-2 w-max max-w-56 -translate-x-1/2 rounded-md border-2 border-border bg-surface-raised px-2.5 py-1.5 text-xs text-foreground opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100"
+        className={cn(
+          "pointer-events-none absolute bottom-full left-1/2 z-40 mb-2 w-max max-w-56 -translate-x-1/2 rounded-md border-2 border-border bg-surface-raised px-2.5 py-1.5 text-xs text-foreground opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100",
+          dismissed && "!opacity-0",
+        )}
       >
         {content}
       </span>
