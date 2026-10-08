@@ -82,7 +82,7 @@ export function Showcase({ theme }: { theme: "light" | "dark" }) {
   return (
     <div
       data-theme={theme}
-      className="flex flex-col gap-8 rounded-2xl border-2 border-border-subtle bg-background p-6 text-foreground"
+      className="flex flex-col gap-8 rounded-2xl border-2 border-border-subtle bg-background p-4 text-foreground sm:p-6"
     >
       <h2 className="font-display text-2xl font-bold">
         {theme === "light" ? "☀️ Light" : "🌙 Dark"}

@@ -109,6 +109,17 @@ test.describe("room UI building blocks on /styleguide", () => {
           () => document.documentElement.scrollWidth - window.innerWidth,
         );
       expect(await overflow()).toBeLessThanOrEqual(0);
+      // The theme panels must fit inside the page padding. Checking only
+      // the viewport hides content that is a few px from overflowing, and
+      // Linux text rendering adds those few px (CI failed by 2px).
+      const panelRights = await page
+        .locator("main [data-theme]")
+        .evaluateAll((panels) =>
+          panels.map((p) => p.getBoundingClientRect().right),
+        );
+      for (const right of panelRights) {
+        expect(right).toBeLessThanOrEqual(width - 24);
+      }
 
       const panel = page.locator('main [data-theme="light"]');
       await panel.getByRole("button", { name: "Show full-screen QR" }).click();

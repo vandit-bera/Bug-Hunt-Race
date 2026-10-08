@@ -44,7 +44,7 @@ export function RoomErrorCard({
       <span aria-hidden="true" className="text-5xl">
         {emoji}
       </span>
-      <CardTitle className="mb-0 text-xl">{title}</CardTitle>
+      <CardTitle className="mb-0 text-lg sm:text-xl">{title}</CardTitle>
       <p className="text-muted">{description}</p>
       {action}
     </Card>
