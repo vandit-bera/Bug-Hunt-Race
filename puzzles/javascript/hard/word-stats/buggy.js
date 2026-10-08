@@ -9,7 +9,7 @@ function tokenize(text) {
 
 // Counts how many times each word appears, as an object word -> count.
 function countWords(words) {
-  const counts = {};
+  const counts = Object.create(null);
   for (const word of words) {
     counts[word] = (counts[word] || 0) + 1;
   }

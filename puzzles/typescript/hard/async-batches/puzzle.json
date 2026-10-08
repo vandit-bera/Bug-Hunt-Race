@@ -5,7 +5,7 @@
   "level": "hard",
   "description": "mapInBatches(items, batchSize, worker) runs the worker on the items one batch at a time: the items of a batch run together, and the next batch starts only when the previous one is done. Results come back in the same order as the items, and onProgress(done, total) is called after every batch. settleInBatches never rejects: every item becomes { ok: true, value } or { ok: false, error } where error is the error's message.",
   "hint": "Check how many items each batch really holds, whether the batch is awaited, and what \"done\" counts.",
-  "bugCount": 4,
+  "bugCount": 3,
   "timeLimitSec": 480,
   "basePoints": 300,
   "tags": ["async", "await", "promises", "batching"]
