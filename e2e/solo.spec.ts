@@ -1,16 +1,19 @@
 import { expect, test, type Page } from "@playwright/test";
 import { loadPuzzles } from "@/lib/puzzles/load";
 
-const fixes = new Map(
-  loadPuzzles("puzzles").flatMap((entry) =>
-    entry.puzzle ? [[entry.puzzle.meta.id, entry.puzzle] as const] : [],
-  ),
+const puzzles = loadPuzzles("puzzles").flatMap((entry) =>
+  entry.puzzle ? [entry.puzzle] : [],
 );
 
-function puzzleFor(language: string, level: string) {
-  return [...fixes.values()].find(
-    ({ meta }) => meta.language === language && meta.level === level,
-  );
+/** The puzzle on screen: the game picks at random, so read its title. */
+async function currentPuzzle(page: Page) {
+  await expect(page.getByRole("timer")).toBeVisible();
+  const heading = page.getByRole("main").getByRole("heading", { level: 1 });
+  await expect(heading).toBeVisible();
+  const title = (await heading.textContent()) ?? "";
+  const puzzle = puzzles.find(({ meta }) => meta.title === title);
+  if (!puzzle) throw new Error(`No puzzle titled "${title}"`);
+  return puzzle;
 }
 
 const LABELS: Record<string, string> = {
@@ -26,10 +29,20 @@ async function start(page: Page, language: string, level: string) {
   await page.getByRole("link", { name: "Start" }).click();
 }
 
+/**
+ * Replaces the editor content. Select-all does not work in headless
+ * Chromium's Monaco, so select from the top to the bottom with the arrow and
+ * page keys, then paste (typing would auto-indent Python).
+ */
 async function setCode(page: Page, code: string) {
   await page.locator(".monaco-editor .view-lines").click();
-  await page.keyboard.press("ControlOrMeta+A");
-  // A paste keeps the text as is; typing it would auto-indent Python.
+  for (let i = 0; i < 4; i++) await page.keyboard.press("PageUp");
+  await page.keyboard.press("Home");
+  for (let i = 0; i < 4; i++) await page.keyboard.press("Shift+PageDown");
+  await page.keyboard.press("Shift+End");
+  await page.keyboard.press("Backspace");
+  await expect(page.locator(".monaco-editor .view-line")).toHaveCount(1);
+  await expect(page.locator(".monaco-editor .view-lines")).toHaveText(/^\s*$/);
   await page.evaluate((text) => {
     const data = new DataTransfer();
     data.setData("text/plain", text);
@@ -41,14 +54,13 @@ async function setCode(page: Page, code: string) {
       }),
     );
   }, code);
+  await expect(page.locator(".monaco-editor .view-lines")).not.toHaveText(
+    /^\s*$/,
+  );
 }
 
-async function solveWithFix(page: Page, language: string, level: string) {
-  const puzzle = puzzleFor(language, level);
-  if (!puzzle) throw new Error(`No ${language} ${level} puzzle`);
-  await expect(
-    page.getByRole("heading", { level: 1, name: puzzle.meta.title }),
-  ).toBeVisible();
+async function solveWithFix(page: Page) {
+  const puzzle = await currentPuzzle(page);
   await setCode(page, puzzle.fix);
   await page.getByRole("button", { name: "Run Tests" }).click();
   return puzzle;
@@ -73,7 +85,7 @@ for (const language of ["javascript", "typescript"] as const) {
       if (message.type() === "error") errors.push(message.text());
     });
     await start(page, language, "Easy");
-    await solveWithFix(page, language, "easy");
+    await solveWithFix(page);
     await expect(
       page.getByRole("heading", { name: "Bug squashed!" }),
     ).toBeVisible({ timeout: 15_000 });
@@ -109,7 +121,7 @@ test("Ctrl/Cmd+Enter runs the tests", async ({ page }) => {
 
 test("a hint costs points after a confirm", async ({ page }) => {
   await start(page, "javascript", "Easy");
-  const puzzle = puzzleFor("javascript", "easy")!;
+  const puzzle = await currentPuzzle(page);
   await page.getByRole("button", { name: "Hint (costs points)" }).click();
   await expect(page.getByText(/costs 25 points/)).toBeVisible();
   await page.getByRole("button", { name: "Show hint" }).click();
@@ -161,19 +173,10 @@ test("Mixed steps Easy, Medium, Hard on Play again", async ({ page }) => {
   await expect(page.locator("header").getByText("Medium")).toBeVisible();
 });
 
-test("a level without puzzles says so", async ({ page }) => {
-  await page.goto("/solo");
-  await page.getByLabel("JavaScript", { exact: true }).check();
-  await page.getByLabel("Hard", { exact: false }).check();
-  await expect(page.getByText(/No puzzles yet/)).toBeVisible();
-  await expect(page.getByRole("link", { name: "Start" })).toHaveCount(0);
-});
-
 test("Python: setup, fix the bug, see the result", async ({ page }) => {
-  test.skip(!puzzleFor("python", "easy"), "No Python puzzles yet (TB-28)");
   test.setTimeout(90_000);
   await start(page, "python", "Easy");
-  await solveWithFix(page, "python", "easy");
+  await solveWithFix(page);
   await expect(
     page.getByRole("heading", { name: "Bug squashed!" }),
   ).toBeVisible({ timeout: 60_000 });
