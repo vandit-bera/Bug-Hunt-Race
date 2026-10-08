@@ -13,6 +13,7 @@ export const DB_ERROR_CODES = [
   "room_locked",
   "room_full",
   "room_code_exhausted",
+  "rate_limited",
   "round_not_found",
   "round_not_live",
 ] as const;
