@@ -423,8 +423,40 @@ await connection.leave(); // leave for good
 
 React components can use `useRoomConnection(db, roomId, playerId)`, and
 `roomErrorMessage(error)` gives "Room not found", "Room is full", … for a
-`DbError`. `/dev/rooms` is a bare test page for all of this until the race
-screens (3.2–3.5) exist.
+`DbError`. `getBrowserDbClient()` returns the one Supabase client per tab
+that every room screen shares. `/dev/rooms` is a bare test page for all of
+this (and still the way to create a room until the Create Room screen lands).
+
+### Join flow and lobby (TB-34)
+
+```mermaid
+flowchart LR
+  code["/join<br/>type the code"] --> join
+  link["Invite link"] --> join
+  qr["QR scan"] --> join
+  join["/join/CODE<br/>check room, name + avatar"] -->|join_room| lobby["/room/CODE<br/>live lobby"]
+  lobby -->|reload| lobby
+  lobby -->|no seat| join
+```
+
+- **`/join`** cleans what is typed (uppercase, no spaces, no 0/O/1/I with a
+  hint) and only moves on with a full 6-character code.
+- **`/join/<code>`** checks the room with `find_open_room()` (works before
+  sign-in) and shows "Room not found", "This room is locked" or "Room is full
+  (30/30)" before asking for a name. A player who already has a seat goes
+  straight to the lobby. Join errors map the same way; `invalid_display_name`
+  shows on the name field and `rate_limited` as a "try again shortly" alert.
+  Name and avatar are remembered in localStorage (`bhr:room:profile`).
+- **`/room/<code>`** finds the caller's seat with `findMyMembership()` (a
+  read: it never takes a seat) and opens `useRoomConnection`. No seat → back
+  to `/join/<code>`. The identity is the browser's anonymous session, so a
+  reload or a second tab is the same player. The admin also sees the invite
+  panel (code, link, QR, lock); everyone sees the settings and "Waiting for
+  the admin to start…", or "Next round starts soon" when joining mid-round.
+- **Leave room** calls `leave_room()` and goes Home. A player who left can
+  still read the room (`is_room_member` ignores `left_at`); that is kept on
+  purpose so a later scoreboard can stay visible, and the lobby does not show
+  it to them because `findMyMembership()` requires `left_at is null`.
 
 - **One channel per room**, `room:<room id>`:
   - `postgres_changes` UPDATE on `rooms` (`id=eq.<id>`): the new row is
@@ -635,6 +667,8 @@ const { room, player } = await createRoom(db, {
 });
 const preview = await findRoomByCode(db, "bug-7kx"); // null if unknown/closed
 await joinRoom(db, { code, displayName, avatar });
+const userId = await getSignedInUserId(db); // null: never signed in here
+await findMyMembership(db, code, userId); // my seat, or null; never joins
 await listPlayers(db, room.id);
 await recordScore(db, { roundId, passed: true, hintUsed: false });
 await getLeaderboard(db, room.id);
