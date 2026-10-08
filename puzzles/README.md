@@ -15,8 +15,13 @@ puzzle, and CI blocks any PR that breaks it.
    all puzzles.
 2. Add the four files below.
 3. Run `pnpm puzzles:check` until it is green.
-4. Run `pnpm puzzles:build` and commit `lib/puzzles/generated/index.ts` with
-   the puzzle.
+4. Run `pnpm puzzles:build` and commit the generated files with the puzzle:
+   `lib/puzzles/generated/index.ts` (what the app ships, no fix),
+   `lib/puzzles/generated/fixes.ts` (server only, for the fix reveal) and
+   `supabase/puzzles.sql` (the catalog race rounds pick from).
+5. After merge, the live database needs the new catalog: run
+   `supabase/puzzles.sql` in the Supabase SQL Editor (Vandit). Until then,
+   race rounds simply do not pick the new puzzle.
 
 ## Files
 

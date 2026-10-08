@@ -33,6 +33,7 @@ your machine is out of file watchers: close other dev servers or run
 | `pnpm dev`                  | Start the dev server                          |
 | `pnpm build`                | Production build                              |
 | `pnpm bundle:check`         | First-load JS budget for Home and Solo setup  |
+| `pnpm fixes:check`          | No reference fix in client JS (after build)   |
 | `pnpm start`                | Serve the production build                    |
 | `pnpm lint`                 | ESLint                                        |
 | `pnpm format`               | Format everything with Prettier               |
@@ -44,7 +45,7 @@ your machine is out of file watchers: close other dev servers or run
 | `pnpm test:e2e:multiplayer` | Multi-player E2E tests (needs local Supabase) |
 | `pnpm load:room`            | Load test: 30 players × 3 rounds, local only  |
 | `pnpm puzzles:check`        | Check every puzzle: buggy fails, fix passes   |
-| `pnpm puzzles:build`        | Regenerate the puzzle index the app imports   |
+| `pnpm puzzles:build`        | Regenerate the puzzle index, fixes and SQL    |
 | `pnpm db:start`             | Start local Supabase (Docker)                 |
 | `pnpm db:stop`              | Stop local Supabase                           |
 | `pnpm db:reset`             | Rebuild the local database from migrations    |
@@ -88,7 +89,9 @@ pnpm db:test
 
 `pnpm db:start` prints a local API URL (`http://127.0.0.1:54321`) and a
 publishable/anon key; put them in `.env.local` to point the app at the local
-database. `supabase/seed.sql` loads three sample puzzles (dev only). Schema,
+database. The seed is `supabase/puzzles.sql`, the puzzle catalog generated
+from `puzzles/` (see
+[Puzzle catalog](docs/ARCHITECTURE.md#puzzle-catalog)). Schema,
 security rules and the data-access layer are described in
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#data-model).
 
@@ -96,7 +99,7 @@ security rules and the data-access layer are described in
 
 GitHub Actions (`.github/workflows/ci.yml`) runs on every pull request and on
 pushes to `main`: install → lint → format check → typecheck → unit tests →
-puzzle check → build → bundle budget → E2E. A second job starts a fresh
+puzzle check → build → bundle budget → fix leak check → E2E. A second job starts a fresh
 Supabase database from the migrations, runs the pgTAP tests and checks
 `lib/db/types.ts` is up to date. A third job starts a local Supabase
 (database, auth, API, Realtime) and runs the two-browser room E2E tests. A PR
