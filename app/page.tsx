@@ -33,6 +33,9 @@ export default function Home() {
         <Link href="/solo" className={buttonClass({ size: "lg" })}>
           Solo Practice
         </Link>
+        <Link href="/stats" className={buttonClass({ variant: "secondary" })}>
+          My Stats
+        </Link>
         <RaceRoomCard />
       </section>
 
