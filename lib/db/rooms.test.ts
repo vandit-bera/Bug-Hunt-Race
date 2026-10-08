@@ -3,6 +3,7 @@ import {
   DbError,
   advanceRoom,
   createRoom,
+  findMyMembership,
   findRoomByCode,
   getRoom,
   joinRoom,
@@ -206,6 +207,79 @@ describe("joinRoom", () => {
       }),
     ).rejects.toMatchObject({ code: "room_not_found" });
     expect(fake.rpc).not.toHaveBeenCalled();
+  });
+});
+
+describe("findMyMembership", () => {
+  it("finds the caller's seat in the open room with that code", async () => {
+    const fake = createFakeClient({
+      from: [
+        { data: room, error: null },
+        { data: player, error: null },
+      ],
+    });
+
+    await expect(
+      findMyMembership(fake.client, " bug7kx ", "user-1"),
+    ).resolves.toEqual({ room, player });
+    expect(fake.queries).toEqual([
+      {
+        table: "rooms",
+        calls: [
+          ["select", []],
+          ["eq", ["code", "BUG7KX"]],
+          ["neq", ["status", "closed"]],
+          ["maybeSingle", []],
+        ],
+      },
+      {
+        table: "players",
+        calls: [
+          ["select", []],
+          ["eq", ["room_id", "room-1"]],
+          ["eq", ["user_id", "user-1"]],
+          ["is", ["left_at", null]],
+          ["maybeSingle", []],
+        ],
+      },
+    ]);
+  });
+
+  it("returns null when the room is not open or visible", async () => {
+    const fake = createFakeClient({ from: [{ data: null, error: null }] });
+    await expect(
+      findMyMembership(fake.client, "BUG7KX", "user-1"),
+    ).resolves.toBeNull();
+    expect(fake.queries).toHaveLength(1);
+  });
+
+  it("returns null when the caller has no seat in the room", async () => {
+    const fake = createFakeClient({
+      from: [
+        { data: room, error: null },
+        { data: null, error: null },
+      ],
+    });
+    await expect(
+      findMyMembership(fake.client, "BUG7KX", "user-1"),
+    ).resolves.toBeNull();
+  });
+
+  it("returns null for malformed codes without calling the database", async () => {
+    const fake = createFakeClient({});
+    await expect(
+      findMyMembership(fake.client, "nope", "user-1"),
+    ).resolves.toBeNull();
+    expect(fake.from).not.toHaveBeenCalled();
+  });
+
+  it("throws typed errors on query failures", async () => {
+    const fake = createFakeClient({
+      from: [{ data: null, error: { message: "socket hang up" } }],
+    });
+    await expect(
+      findMyMembership(fake.client, "BUG7KX", "user-1"),
+    ).rejects.toMatchObject({ name: "DbError", code: "unknown" });
   });
 });
 

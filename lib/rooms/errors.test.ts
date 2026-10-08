@@ -8,6 +8,8 @@ describe("roomErrorMessage", () => {
     ["room_locked", "Room is locked"],
     ["room_full", "Room is full"],
     ["not_room_admin", "Only the room admin can do that"],
+    ["invalid_display_name", "Names can't contain < or >"],
+    ["rate_limited", "You're creating rooms too fast. Try again in a minute."],
   ] as const)("%s → %s", (code, message) => {
     expect(roomErrorMessage(new DbError(code))).toBe(message);
   });

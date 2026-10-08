@@ -18,10 +18,16 @@ export function NameAvatarForm({
   onSubmit,
   submitLabel = "Continue",
   loading = false,
+  nameError,
+  onNameChange,
 }: {
   onSubmit: (profile: PlayerProfile) => void;
   submitLabel?: string;
   loading?: boolean;
+  /** A name the server refused, shown on the field. */
+  nameError?: string;
+  /** Called as the player edits the name, e.g. to clear `nameError`. */
+  onNameChange?: () => void;
 }) {
   const [name, setName] = useState("");
   const [avatar, setAvatar] = useState(AVATAR_EMOJIS[0]);
@@ -56,11 +62,14 @@ export function NameAvatarForm({
       <Input
         label="Your name"
         value={name}
-        onChange={(event) => setName(event.target.value)}
+        onChange={(event) => {
+          setName(event.target.value);
+          onNameChange?.();
+        }}
         maxLength={NAME_MAX_LENGTH + 10}
         autoComplete="nickname"
         placeholder="BugSlayer"
-        error={showError && error ? error : undefined}
+        error={(showError && error) || nameError}
         hint={`1 to ${NAME_MAX_LENGTH} characters`}
       />
 

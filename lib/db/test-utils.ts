@@ -29,7 +29,15 @@ export function createFakeClient(results: {
     const builder: Record<string, unknown> = {
       then: (resolve: (value: FakeResult) => unknown) => resolve(result),
     };
-    for (const method of ["select", "eq", "is", "order", "single"]) {
+    for (const method of [
+      "select",
+      "eq",
+      "neq",
+      "is",
+      "order",
+      "single",
+      "maybeSingle",
+    ]) {
       builder[method] = (...args: unknown[]) => {
         query.calls.push([method, args]);
         return builder;
