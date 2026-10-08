@@ -36,7 +36,7 @@ export function RoomCodeInput({
       autoCorrect="off"
       spellCheck={false}
       inputMode="text"
-      className="font-display text-xl uppercase tracking-[0.3em]"
+      className="w-full min-w-0 font-display text-xl uppercase tracking-[0.2em] sm:tracking-[0.3em]"
     />
   );
 }

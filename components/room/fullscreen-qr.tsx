@@ -17,7 +17,7 @@ export function FullscreenQr({
 }) {
   return (
     <Modal open={open} onClose={onClose} title="Scan to join">
-      <div className="flex flex-col items-center gap-4">
+      <div className="@container flex w-full flex-col items-center gap-4">
         <QrCode
           value={link}
           label={`QR code to join room ${roomCode}`}
@@ -25,7 +25,7 @@ export function FullscreenQr({
         />
         <p
           aria-label={`Room code ${roomCode.split("").join(" ")}`}
-          className="font-display text-5xl font-bold tracking-[0.3em]"
+          className="font-display text-[min(3.75rem,13cqi)] font-bold tracking-[0.3em]"
         >
           {roomCode}
         </p>

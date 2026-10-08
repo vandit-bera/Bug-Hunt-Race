@@ -1,12 +1,14 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useId, useRef, useState, useSyncExternalStore } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
 import { FullscreenQr } from "./fullscreen-qr";
 import { QrCode } from "./qr-code";
+
+const subscribeNothing = () => () => {};
 
 export interface InvitePanelProps {
   roomCode: string;
@@ -30,7 +32,13 @@ export function InvitePanel({
   const linkRef = useRef<HTMLInputElement>(null);
   const [qrOpen, setQrOpen] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
-  const canShare = typeof navigator !== "undefined" && "share" in navigator;
+  // Decided after hydration: the server never has Web Share, so checking
+  // during render would make the server and client markup differ.
+  const canShare = useSyncExternalStore(
+    subscribeNothing,
+    () => "share" in navigator,
+    () => false,
+  );
 
   async function copyLink() {
     try {
@@ -56,7 +64,10 @@ export function InvitePanel({
     <Card className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
         <CardTitle className="mb-0">Invite players</CardTitle>
-        <Badge variant={playerCount >= maxPlayers ? "danger" : "accent"}>
+        <Badge
+          variant={playerCount >= maxPlayers ? "danger" : "accent"}
+          className="shrink-0 whitespace-nowrap"
+        >
           <span aria-hidden="true">👥</span>
           <span aria-label={`${playerCount} of ${maxPlayers} players`}>
             {playerCount} / {maxPlayers}
@@ -64,11 +75,11 @@ export function InvitePanel({
         </Badge>
       </div>
 
-      <div className="flex flex-col items-center gap-1">
+      <div className="@container flex w-full flex-col items-center gap-1">
         <span className="text-sm text-muted">Room code</span>
         <p
           aria-label={`Room code ${roomCode.split("").join(" ")}`}
-          className="font-display text-5xl font-bold tracking-[0.3em] sm:text-6xl"
+          className="font-display text-[min(3.75rem,13cqi)] font-bold tracking-[0.3em]"
         >
           {roomCode}
         </p>
@@ -85,7 +96,7 @@ export function InvitePanel({
             readOnly
             value={link}
             onFocus={(event) => event.currentTarget.select()}
-            className="h-11 min-w-0 flex-1 rounded-lg border-2 border-border bg-surface px-3 font-mono text-sm text-foreground focus:border-accent"
+            className="h-11 w-full min-w-0 flex-1 rounded-lg border-2 border-border bg-surface px-3 font-mono text-sm text-foreground focus:border-accent"
           />
           <div className="flex gap-2">
             <Button onClick={copyLink}>Copy</Button>

@@ -82,4 +82,42 @@ test.describe("room UI building blocks on /styleguide", () => {
     await expect(again.getByLabel("Your name")).toHaveValue("Mika");
     await expect(again.getByLabel("Avatar 🐼")).toBeChecked();
   });
+
+  test("Web Share support shows Share without a hydration error", async ({
+    page,
+  }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "share", {
+        value: () => Promise.resolve(),
+      });
+    });
+    await page.goto("/styleguide");
+
+    const panel = page.locator('main [data-theme="light"]');
+    await expect(panel.getByRole("button", { name: "Share" })).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+
+  for (const width of [320, 375]) {
+    test(`no sideways scroll at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 812 });
+      await page.goto("/styleguide");
+      const overflow = () =>
+        page.evaluate(
+          () => document.documentElement.scrollWidth - window.innerWidth,
+        );
+      expect(await overflow()).toBeLessThanOrEqual(0);
+
+      const panel = page.locator('main [data-theme="light"]');
+      await panel.getByRole("button", { name: "Show full-screen QR" }).click();
+      const code = page
+        .getByRole("dialog", { name: "Scan to join" })
+        .getByText("K7M2QX");
+      const box = await code.boundingBox();
+      expect(box!.x).toBeGreaterThanOrEqual(0);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width);
+    });
+  }
 });
