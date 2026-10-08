@@ -91,6 +91,46 @@ describe("SandboxRunner", () => {
     expect(open).not.toHaveBeenCalled();
   });
 
+  it("starts the clock only after an async session has opened", async () => {
+    const session = fakeSession(never());
+    const runner = new SandboxRunner(
+      "javascript",
+      () => new Promise((resolve) => setTimeout(() => resolve(session), 4_000)),
+    );
+    const pending = runner.run({ ...request, timeoutMs: 1_000 });
+    await vi.advanceTimersByTimeAsync(4_000);
+    expect(session.terminate).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(await pending).toMatchObject({
+      status: "timeout",
+      durationMs: 1_000,
+    });
+  });
+
+  it("maps an async session that fails to open to an error", async () => {
+    const runner = new SandboxRunner("javascript", () =>
+      Promise.reject(new Error("download failed")),
+    );
+    expect(await runner.run(request)).toMatchObject({
+      status: "error",
+      error: "Could not start the runner: download failed",
+    });
+  });
+
+  it("dispose stops a run that is still starting", async () => {
+    const session = fakeSession(never());
+    const runner = new SandboxRunner("javascript", () =>
+      Promise.resolve(session),
+    );
+    const pending = runner.run(request);
+    runner.dispose();
+    expect(await pending).toMatchObject({
+      status: "error",
+      error: "The runner was stopped",
+    });
+    expect(session.terminate).toHaveBeenCalledOnce();
+  });
+
   it("dispose stops runs in flight", async () => {
     const sessions = [fakeSession(never()), fakeSession(never())];
     const runner = new SandboxRunner("javascript", () => sessions.shift()!);

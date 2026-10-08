@@ -15,6 +15,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     "test-results/**",
     "playwright-report/**",
+    "public/pyodide/**",
+    ".scratch/**",
   ]),
 ]);
 

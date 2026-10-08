@@ -69,15 +69,55 @@ describe("Node runner", () => {
     });
   });
 
-  it("refuses Python until its runner exists", async () => {
+  it("kills a Python infinite loop at the timeout", async () => {
     const result = await runInNode({
+      language: "python",
+      code: "while True:\n    pass",
+      tests: "def test_never():\n    pass",
+      timeoutMs: 500,
+    });
+    expect(result.status).toBe("timeout");
+    expect(result.error).toMatch(/Time limit exceeded/);
+    // Booting Pyodide is not part of the run.
+    expect(result.durationMs).toBeGreaterThanOrEqual(490);
+    expect(result.durationMs).toBeLessThan(1_500);
+  });
+
+  it("truncates Python output over the cap", async () => {
+    const result = await runInNode({
+      language: "python",
+      code: 'for i in range(100000):\n    print("line", i)',
+      tests: "def test_noop():\n    pass",
+    });
+    expect(result.output).toMatch(
+      new RegExp(`… output truncated at ${MAX_OUTPUT_CHARS} characters$`),
+    );
+    expect(result.output.length).toBeLessThan(MAX_OUTPUT_CHARS + 100);
+  });
+
+  it("blocks Node access from Python", async () => {
+    const result = await runInNode({
+      language: "python",
+      code: "",
+      tests:
+        "def test_process():\n    import js\n    js.process.exit(1)\ndef test_urllib():\n    import urllib.request\n    urllib.request.urlopen('http://localhost/runner-sentinel')",
+    });
+    expect(result.status).toBe("failed");
+    expect(result.tests[0].message).toBe(
+      "JsException: Error: process is blocked in the sandbox",
+    );
+    expect(result.tests[1].passed).toBe(false);
+  });
+
+  it("refuses a Python request on a JS runner", async () => {
+    const result = await createNodeRunner("javascript").run({
       language: "python",
       code: "",
       tests: "",
     });
     expect(result).toMatchObject({
       status: "error",
-      error: "The JS/TS runner cannot run python",
+      error: "This runner runs javascript, not python",
     });
   });
 });

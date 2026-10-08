@@ -136,6 +136,133 @@ test("output over the cap is truncated", async ({ page }) => {
   expect(result.output.length).toBeLessThan(MAX_OUTPUT_CHARS + 100);
 });
 
+async function pickLanguage(page: Page, language: string) {
+  await page.getByLabel("Language").selectOption(language);
+  await expect(page.getByTestId("preload-status")).toHaveText(
+    `${language} runner: ready`,
+    { timeout: 30_000 },
+  );
+}
+
+test("Python: an infinite loop times out at ~5s, the page stays responsive and the next run works", async ({
+  page,
+}) => {
+  await pickLanguage(page, "python");
+  await startRun(page, {
+    language: "python",
+    code: "while True:\n    pass",
+    tests: "def test_never():\n    pass",
+  });
+  await expect(page.getByRole("button", { name: "Run tests" })).toBeDisabled();
+
+  const counter = page.getByRole("button", { name: /^Clicks:/ });
+  for (let i = 1; i <= 3; i++) {
+    await counter.click();
+    await expect(counter).toHaveText(`Clicks: ${i}`, { timeout: 500 });
+  }
+
+  const result = await readResult(page);
+  expect(result).toMatchObject({
+    status: "timeout",
+    error: "Time limit exceeded (5s). Look for an infinite loop.",
+  });
+  const duration = Number.parseInt(
+    (await page.getByTestId("run-duration").textContent()) ?? "",
+    10,
+  );
+  expect(duration).toBeGreaterThanOrEqual(5_000);
+  expect(duration).toBeLessThan(6_500);
+
+  // The killed worker is replaced by the warm spare, so this is fast.
+  const startedAt = Date.now();
+  const next = await runInBrowser(page, {
+    language: "python",
+    code: "def one():\n    return 1",
+    tests: "def test_one():\n    assert one() == 1",
+  });
+  expect(next.status).toBe("passed");
+  expect(Date.now() - startedAt).toBeLessThan(3_000);
+});
+
+test("Python: network paths fail, including cross-origin import()", async ({
+  context,
+  page,
+  baseURL,
+}) => {
+  // Same server, different origin: anything that is not blocked reaches this.
+  const crossOrigin = new URL(baseURL ?? "").origin.replace(
+    "localhost",
+    "127.0.0.1",
+  );
+  const reached: string[] = [];
+  await context.route("**/runner-sentinel*", async (route) => {
+    reached.push(route.request().url());
+    await route.fulfill({
+      contentType: "text/javascript",
+      headers: { "Access-Control-Allow-Origin": "*" },
+      body: "export {};",
+    });
+  });
+
+  const result = await runInBrowser(page, {
+    language: "python",
+    code: "",
+    tests: [
+      "def test_urllib():",
+      "    import urllib.request",
+      `    urllib.request.urlopen("${crossOrigin}/runner-sentinel")`,
+      "def test_socket():",
+      "    import socket",
+      "    socket.create_connection(('127.0.0.1', 80))",
+      "def test_fetch():",
+      "    import js",
+      `    js.fetch("${crossOrigin}/runner-sentinel")`,
+      "def test_import():",
+      "    import js",
+      `    js.eval('import("${crossOrigin}/runner-sentinel.js")')`,
+    ].join("\n"),
+  });
+
+  const passed = result.tests.filter((t) => t.passed).map((t) => t.name);
+  // import() returns a promise instead of throwing; the CSP rejects it.
+  expect(passed).toEqual(["test_import"]);
+  await page.waitForTimeout(500);
+  expect(reached).toEqual([]);
+});
+
+test("Python: preload reports progress, then a second run is fast", async ({
+  page,
+}) => {
+  const wasm = page.waitForResponse((r) => r.url().endsWith(".asm.wasm"));
+  const values: number[] = [];
+  await page.getByLabel("Language").selectOption("python");
+  const bar = page.getByRole("progressbar", {
+    name: "Loading the python runner",
+  });
+  while (await bar.isVisible().catch(() => false)) {
+    values.push(Number(await bar.getAttribute("value")));
+    await page.waitForTimeout(50);
+  }
+  await expect(page.getByTestId("preload-status")).toHaveText(
+    "python runner: ready",
+    { timeout: 30_000 },
+  );
+  expect(values.length).toBeGreaterThan(0);
+  expect(values).toEqual([...values].sort((a, b) => a - b));
+
+  // Versioned, immutable: the browser never downloads it twice.
+  expect((await wasm).headers()["cache-control"]).toContain("immutable");
+
+  const request = {
+    language: "python",
+    code: "def one():\n    return 1",
+    tests: "def test_one():\n    assert one() == 1",
+  } as const;
+  const startedAt = Date.now();
+  expect((await runInBrowser(page, request)).status).toBe("passed");
+  expect(Date.now() - startedAt).toBeLessThan(2_000);
+});
+
 for (const runnerCase of RUNNER_CASES) {
   test(`browser matches Node: ${runnerCase.name}`, async ({ page }) => {
     const browser = await runInBrowser(page, runnerCase.request);

@@ -17,6 +17,11 @@ test("adds negatives", () => {
   expect(add(-2, -3)).toBe(-5);
 });`;
 
+const PY_ADD_TESTS = `def test_adds():
+    assert add(2, 3) == 5
+def test_adds_negatives():
+    assert add(-2, -3) == -5`;
+
 export const RUNNER_CASES: RunnerCase[] = [
   {
     name: "JS: correct code passes",
@@ -297,6 +302,187 @@ export const RUNNER_CASES: RunnerCase[] = [
     expected: {
       status: "error",
       error: "RangeError: Maximum call stack size exceeded",
+    },
+  },
+  {
+    name: "Python: correct code passes",
+    request: {
+      language: "python",
+      code: "def add(a, b):\n    return a + b",
+      tests: PY_ADD_TESTS,
+    },
+    expected: {
+      status: "passed",
+      tests: [
+        { name: "test_adds", passed: true },
+        { name: "test_adds_negatives", passed: true },
+      ],
+      output: "",
+    },
+  },
+  {
+    name: "Python: failing asserts explain themselves",
+    request: {
+      language: "python",
+      code: "def add(a, b):\n    return a - b",
+      tests:
+        PY_ADD_TESTS +
+        '\ndef test_custom():\n    assert add(1, 1) == 2, "one plus one"\ndef test_truthy():\n    assert add(1, 1) == 2 and add(0, 0)',
+    },
+    expected: {
+      status: "failed",
+      tests: [
+        {
+          name: "test_adds",
+          passed: false,
+          message: "assert add(2, 3) == 5 (left: -1, right: 5)",
+        },
+        {
+          name: "test_adds_negatives",
+          passed: false,
+          message: "assert add(-2, -3) == -5 (left: 1, right: -5)",
+        },
+        { name: "test_custom", passed: false, message: "one plus one" },
+        {
+          name: "test_truthy",
+          passed: false,
+          message: "assert add(1, 1) == 2 and add(0, 0)",
+        },
+      ],
+    },
+  },
+  {
+    name: "Python: an exception inside a test fails only that test",
+    request: {
+      language: "python",
+      code: "def first(items):\n    return items[0]",
+      tests:
+        "def test_empty():\n    assert first([]) == 1\ndef test_ok():\n    assert first([1]) == 1",
+    },
+    expected: {
+      status: "failed",
+      tests: [
+        {
+          name: "test_empty",
+          passed: false,
+          message: "IndexError: list index out of range",
+        },
+        { name: "test_ok", passed: true },
+      ],
+    },
+  },
+  {
+    name: "Python: print is captured",
+    request: {
+      language: "python",
+      code: 'print("hello", 42, {"a": [1, "x"]})',
+      tests: "def test_noop():\n    pass",
+    },
+    expected: { status: "passed", output: "hello 42 {'a': [1, 'x']}\n" },
+  },
+  {
+    name: "Python: syntax error in the code",
+    request: {
+      language: "python",
+      code: "def add(a, b)\n    return a + b",
+      tests: PY_ADD_TESTS,
+    },
+    expected: {
+      status: "error",
+      tests: [],
+      error: "SyntaxError in your code: expected ':' (line 1)",
+    },
+  },
+  {
+    name: "Python: syntax error in the tests",
+    request: {
+      language: "python",
+      code: "x = 1",
+      tests: "def test_broken(:\n    pass",
+    },
+    expected: {
+      status: "error",
+      error: "SyntaxError in the tests: invalid syntax (line 1)",
+    },
+  },
+  {
+    name: "Python: exception at the top level",
+    request: {
+      language: "python",
+      code: 'raise ValueError("boom")',
+      tests: PY_ADD_TESTS,
+    },
+    expected: { status: "error", tests: [], error: "ValueError: boom" },
+  },
+  {
+    name: "Python: no tests",
+    request: { language: "python", code: "x = 1", tests: "y = 2" },
+    expected: { status: "error", error: "No tests were found" },
+  },
+  {
+    name: "Python: recursion error is a failed test",
+    request: {
+      language: "python",
+      code: "def f():\n    return f()",
+      tests: "def test_f():\n    f()",
+    },
+    expected: {
+      status: "failed",
+      tests: [
+        {
+          name: "test_f",
+          passed: false,
+          message: "RecursionError: maximum recursion depth exceeded",
+        },
+      ],
+    },
+  },
+  {
+    name: "Python: network paths are blocked",
+    request: {
+      language: "python",
+      code: "",
+      tests: [
+        "def test_js_fetch():",
+        "    import js",
+        '    js.fetch("/runner-sentinel")',
+        "def test_xhr():",
+        "    import js",
+        "    js.XMLHttpRequest.new()",
+        "def test_open_url():",
+        "    from pyodide.http import open_url",
+        '    open_url("/runner-sentinel")',
+        "def test_websocket():",
+        "    from js import WebSocket",
+        '    WebSocket.new("ws://localhost/runner-sentinel")',
+      ].join("\n"),
+    },
+    expected: {
+      status: "failed",
+      tests: [
+        {
+          name: "test_js_fetch",
+          passed: false,
+          message: "JsException: Error: fetch is blocked in the sandbox",
+        },
+        {
+          name: "test_xhr",
+          passed: false,
+          message:
+            "JsException: Error: XMLHttpRequest is blocked in the sandbox",
+        },
+        {
+          name: "test_open_url",
+          passed: false,
+          message:
+            "JsException: Error: XMLHttpRequest is blocked in the sandbox",
+        },
+        {
+          name: "test_websocket",
+          passed: false,
+          message: "JsException: Error: WebSocket is blocked in the sandbox",
+        },
+      ],
     },
   },
 ];

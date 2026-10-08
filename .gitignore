@@ -46,3 +46,7 @@ next-env.d.ts
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# self-hosted Pyodide runtime (scripts/copy-pyodide.mjs)
+/public/pyodide/
+/.scratch/

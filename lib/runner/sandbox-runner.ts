@@ -10,11 +10,19 @@ export interface SandboxSession {
   terminate(): void;
 }
 
-export type OpenSession = (request: RunRequest) => SandboxSession;
+/**
+ * May be async: a slow start (Pyodide booting) happens before the timeout
+ * clock starts, so it never eats into the player's time.
+ */
+export type OpenSession = (
+  request: RunRequest,
+) => SandboxSession | Promise<SandboxSession>;
 
 type Settled =
   | { kind: "outcome"; outcome: HarnessOutcome }
   | { kind: "error"; error: string };
+
+const STOPPED = "The runner was stopped";
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -33,6 +41,8 @@ export function resolveTimeoutMs(timeoutMs: number | undefined): number {
  */
 export class SandboxRunner implements CodeRunner {
   private readonly cancels = new Set<(error: string) => void>();
+  /** Bumped by `dispose`, so runs still starting up know they were stopped. */
+  private generation = 0;
 
   constructor(
     readonly language: LanguageId,
@@ -40,7 +50,7 @@ export class SandboxRunner implements CodeRunner {
   ) {}
 
   async run(request: RunRequest): Promise<RunResult> {
-    const startedAt = performance.now();
+    let startedAt = performance.now();
     const timeoutMs = resolveTimeoutMs(request.timeoutMs);
     const elapsed = () => Math.round(performance.now() - startedAt);
     const fail = (error: string): RunResult => ({
@@ -55,12 +65,19 @@ export class SandboxRunner implements CodeRunner {
       return fail(`This runner runs ${this.language}, not ${request.language}`);
     }
 
+    const generation = this.generation;
     let session: SandboxSession;
     try {
-      session = this.openSession(request);
+      session = await this.openSession(request);
     } catch (error) {
       return fail(`Could not start the runner: ${errorMessage(error)}`);
     }
+    if (generation !== this.generation) {
+      session.terminate();
+      return fail(STOPPED);
+    }
+    // Starting up (Pyodide boot) is not part of the run.
+    startedAt = performance.now();
 
     let timer: ReturnType<typeof setTimeout> | undefined;
     let cancel: ((error: string) => void) | undefined;
@@ -96,7 +113,8 @@ export class SandboxRunner implements CodeRunner {
 
   /** Stops every run in flight; each resolves with `status: "error"`. */
   dispose(): void {
-    for (const cancel of [...this.cancels]) cancel("The runner was stopped");
+    this.generation++;
+    for (const cancel of [...this.cancels]) cancel(STOPPED);
     this.cancels.clear();
   }
 }

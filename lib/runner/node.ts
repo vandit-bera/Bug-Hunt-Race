@@ -2,6 +2,7 @@ import { Worker } from "node:worker_threads";
 import { prepareHarnessInput } from "./js/compile";
 import { runHarness, type HarnessOutcome } from "./js/harness";
 import { BLOCKED_GLOBALS, lockDownGlobals } from "./js/lockdown";
+import { openPythonThreadSession } from "./python/node-session";
 import {
   SandboxRunner,
   type OpenSession,
@@ -12,7 +13,8 @@ import type { CodeRunner, LanguageId, RunRequest, RunResult } from "./types";
 /**
  * Node entry point for the CI puzzle checker. Same compiler, same harness and
  * same lockdown as the browser; a worker thread stands in for the Web Worker
- * and is terminated on timeout just like it.
+ * and is terminated on timeout just like it. Python runs Pyodide in its own
+ * thread (`python/node-session.ts`).
  */
 
 // The harness and lockdown are self-contained, so their source can be shipped
@@ -65,7 +67,10 @@ const openThreadSession: OpenSession = (request): SandboxSession => {
 };
 
 export function createNodeRunner(language: LanguageId): CodeRunner {
-  return new SandboxRunner(language, openThreadSession);
+  return new SandboxRunner(
+    language,
+    language === "python" ? openPythonThreadSession : openThreadSession,
+  );
 }
 
 /** Runs one request in a fresh worker thread. Never rejects. */
