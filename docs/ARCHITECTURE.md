@@ -28,7 +28,7 @@ lib/db/               Supabase client, generated types, typed data access.
 lib/rooms/            Live room connection: Realtime, presence, heartbeats.
 lib/puzzles/          Puzzle format, loader, checker, generated puzzle index.
 puzzles/              Puzzle files: <language>/<level>/<id>/ (see puzzles/README.md).
-supabase/             Local Supabase config, SQL migrations, dev seed, pgTAP tests.
+supabase/             Local Supabase config, SQL migrations, puzzle catalog seed, pgTAP tests.
 scripts/              Repo scripts, e.g. the puzzle checker.
 e2e/                  Playwright tests; multi-player harness in e2e/support/.
 docs/                 This doc and other design notes.
@@ -280,7 +280,11 @@ flowchart LR
   load --> check["pnpm puzzles:check<br/>runInNode: buggy fails, fix passes"]
   load --> build["pnpm puzzles:build"]
   build --> index["lib/puzzles/generated/index.ts<br/>PUZZLES: PublicPuzzle[] (no fix)"]
+  build --> fixes["lib/puzzles/generated/fixes.ts<br/>server only"]
+  build --> catalog["supabase/puzzles.sql<br/>catalog (no fix)"]
   index --> app["App"]
+  fixes --> reveal["Fix reveal route"]
+  catalog --> db["puzzles table"]
 ```
 
 - **Format:** `PuzzleMeta` and `validatePuzzleMeta` in `lib/puzzles/schema.ts`
@@ -297,7 +301,7 @@ flowchart LR
   then runs each puzzle twice with `runInNode`, the same compiler, harness
   and lockdown as the browser. The buggy code must end `failed` (a syntax
   error, crash or timeout is not a fair bug); the fix must end `passed`. It
-  also fails when the generated index is out of date. `--dir <folder>` checks
+  also fails when a generated file is out of date. `--dir <folder>` checks
   another folder (the tests use `lib/puzzles/fixtures/`).
 - **Index (`pnpm puzzles:build`):** writes `lib/puzzles/generated/index.ts`,
   committed like `lib/db/types.ts`. It holds `PublicPuzzle` objects: the
@@ -392,7 +396,7 @@ room admin may call `advance_room()` (`not_room_admin` otherwise).
 | `begin_round` | countdown → round_live                  | admin  | countdown over (3.4 may move it to timer)     |
 | `pause`       | round_live → paused                     | admin  |                                               |
 | `resume`      | paused → round_live                     | admin  |                                               |
-| `end_round`   | round_live → round_results              | admin  | solved, time up or Skip                       |
+| `end_round`   | round_live → round_results              | admin  | Skip; the database applies it too (see below) |
 | `next_round`  | round_results → countdown               | admin  | only if a round is left; round + 1            |
 | `finish`      | round_results → final_leaderboard       | admin  | only after the last round (or "until I stop") |
 | `stop`        | round_live / paused → final_leaderboard | admin  |                                               |
@@ -402,6 +406,11 @@ room admin may call `advance_room()` (`not_room_admin` otherwise).
 
 `abandon` widens the diagram's "Lobby → Closed: empty for 10 min" to every
 open state, so a room everyone walked away from mid-game also frees its code.
+
+"Solved or time up" is the database's own call: it applies `end_round`
+itself when every player has a result or the time is up (see
+[Race rounds](#race-rounds)). Round events also start, pause, resume and end
+the round row; `play_again` starts a new game (`rooms.game_number`).
 
 ## Rooms and Realtime
 
@@ -486,8 +495,8 @@ code, one Supabase client and Realtime socket per player. It runs 3 rounds in
 which every player calls `record_score()` at the same moment, drops the admin
 before the last round, and checks that every client ends with the same player
 list and leaderboard. It counts every Realtime frame the clients receive. It
-refuses any Supabase that is not on this machine, and it inserts `rounds` rows
-with the local service-role key because no API creates rounds yet.
+refuses any Supabase that is not on this machine, and the host Skips each round
+(they never submit); the local service-role key only reads server totals.
 
 Results on a MacBook with Docker Desktop (2026-10-08), 30 players, all joining
 in the same second (`--join-over 30` in brackets, where it differs):
@@ -566,9 +575,123 @@ Supabase disconnects clients of a project over its message rate
   [Postgres Changes](https://supabase.com/docs/guides/realtime/postgres-changes)
   does for every event.
 
+With the round engine (TB-53), rounds start through `begin_round` and every
+result locks the room row: 29 `record_score()` calls at once took p50 25 ms,
+p95 41 ms locally (2026-10-08); everything else was unchanged.
+
 Re-run `pnpm load:room` after changing `lib/rooms`, the room functions or the
 Realtime setup. It is not part of CI (too slow); run the "Load test" workflow
 by hand from the Actions tab.
+
+## Race rounds
+
+The round engine (TB-53, migration `20261008000006_round_engine.sql`) runs
+on the database's clock. The room events above drive it; there is no other
+way to start or end a round.
+
+```mermaid
+sequenceDiagram
+  participant Admin
+  participant DB as Postgres
+  participant Players
+  Admin->>DB: advance_room(begin_round)
+  Note over DB: pick puzzle, insert round<br/>started_at = now() (server clock)
+  DB-->>Players: rooms.status = round_live (Realtime)
+  Players->>DB: get_current_round(room)
+  DB-->>Players: round + puzzle + server_now
+  Note over Players: time left = started_at + limit<br/>+ paused - server now
+  Players->>DB: record_score(round, passed, hint)
+  Note over DB: solve time from the server clock<br/>last result in → end_round
+  DB-->>Players: rooms.status = round_results
+  Players->>App: GET /api/rounds/<id>/fix
+  App->>DB: reveal_round_puzzle(round) as that player
+  DB-->>App: puzzle id (only if ended)
+  App-->>Players: reference fix
+```
+
+| Event                   | Round effect                                                        |
+| ----------------------- | ------------------------------------------------------------------- |
+| `begin_round`           | Picks the puzzle, inserts the round with `started_at = now()`       |
+| `pause`                 | `paused_at = now()`: the clock is frozen                            |
+| `resume`                | `paused_ms += now() - paused_at`, `paused_at = null`                |
+| `end_round` (Skip)      | `ended_at = now()` (a pause in progress counts as paused time)      |
+| `stop` (live or paused) | Same, then the final leaderboard. Results so far count as they are. |
+| `abandon` (auto-close)  | Same                                                                |
+| `play_again`            | `game_number + 1`; rounds are numbered per game, from 1             |
+
+- **Same puzzle, no repeats, Mixed steps up** (`private.pick_puzzle`): an
+  active puzzle in the room's language and level, at random, that this game
+  has not played yet. Once a pool is used up the least-played come back, never
+  the one just played (unless it is the only one). Mixed plays Easy in round
+  1, Medium in round 2, Hard from round 3; an empty level falls back to a
+  harder one, then an easier one. No puzzle at all: `no_puzzles`, and the
+  room stays in the countdown. One open round per room (unique index).
+- **One clock for everyone.** Clients never send times. `get_current_round`
+  returns the round's server fields and `server_now`; `getCurrentRound`
+  turns that into `clockOffsetMs` (server minus local clock, from the
+  midpoint of the request), and `timeLeftMs` in `lib/game/round-clock.ts`
+  computes `started_at + limit + paused − (Date.now() + offset)`. Clients
+  reload the round when the room status changes (Realtime), which covers
+  start, pause, resume and end. `rounds` is not on Realtime.
+- **Results** (`record_score`): one per player per round, solved or gave up,
+  with the hint flag. The solve time is `now() − started_at − paused_ms`,
+  capped at the limit; points are computed in the database. Refused:
+  a second result (`already_submitted`), a player who joined after the round
+  started (`joined_late`), while paused, after the round ended or later than
+  limit + 5 s grace (`round_not_live`). Results lock the room row, so they
+  run one at a time with admin actions and heartbeats.
+- **Automatic end** (`private.end_round_if_over`, run after every result and
+  every heartbeat): the round ends when every player who was in the room at
+  its start, is still in it and is connected has a result, or when limit +
+  5 s grace has passed. With heartbeats every 5 s per player, time-up lands
+  within a few seconds of the grace; clients can show "Time's up" at 0:00.
+- **Late joiners** (`joined_at > started_at`) see the round
+  (`joined_late = true`) but cannot submit, and do not hold up the automatic
+  end. They play from the next round. Rejoining after a dropped connection
+  keeps the original `joined_at`.
+- **Fix reveal.** The reference fix is in neither the database nor the client
+  bundle. `GET /api/rounds/<round id>/fix` (`app/api/rounds/[roundId]/fix`)
+  takes the player's Supabase access token (`Authorization: Bearer`), calls
+  `reveal_round_puzzle(round)` **as that player** (anon key + their token,
+  so RLS and `auth.uid()` apply), and only if the round has ended reads the
+  fix from `lib/puzzles/generated/fixes.ts`. That module imports
+  `server-only`, so importing it from client code fails the build, and
+  `pnpm fixes:check` (CI, after the build) fails if any fix text shows up in
+  `.next/static`. Responses are `private, no-store`. Errors: 401
+  `not_authenticated`, 403 `round_not_over`, 404 `round_not_found` (also for
+  anyone who was never in the room). Players who left, and late joiners, can
+  see the fix of a round they saw. No service-role key is involved.
+
+```ts
+const view = await getCurrentRound(db, roomId); // null in lobby / countdown
+if (view) {
+  const left = timeLeftMs(
+    roundClock(view.round),
+    Date.now() + view.clockOffsetMs,
+  );
+}
+await startRound(db, roomId); // admin: after the countdown
+await pauseRound(db, roomId); // admin
+await resumeRound(db, roomId); // admin
+await skipRound(db, roomId); // admin: → round_results
+await stopGame(db, roomId); // admin: live or paused → final_leaderboard
+await recordScore(db, { roundId, passed: true, hintUsed: false });
+const { fix } = await fetchRoundFix(db, roundId); // after the round ends
+```
+
+### Puzzle catalog
+
+Rounds reference `public.puzzles`, so the database needs the puzzles from
+`puzzles/`. `pnpm puzzles:build` writes them to `supabase/puzzles.sql`: one
+upsert of every puzzle (metadata, buggy code, tests, hint; never the fix)
+plus `active = false` for ids no longer in `puzzles/` (old rounds keep
+them; they are never picked again). It is safe to run any number of times.
+
+- **Locally** it is the seed (`supabase/config.toml`), applied by
+  `pnpm db:reset` / `db:start`. It replaced the three dev sample puzzles.
+- **Live:** Vandit runs it in the SQL Editor after the migration, and again
+  after any change to `puzzles/`. `pnpm puzzles:check` fails if the file is
+  out of date, so it always matches the repo.
 
 ## Data model
 
@@ -596,6 +719,7 @@ erDiagram
     int total_rounds "null = until stopped"
     bool locked
     int current_round
+    int game_number "+1 on Play again"
     timestamptz created_at
     timestamptz updated_at
     timestamptz closed_at
@@ -616,18 +740,22 @@ erDiagram
     language_id language
     puzzle_level level
     text title
+    text description
     text buggy_code
     text tests
     text hint
     int time_limit_seconds
     int base_points "100/200/300 by level"
+    bool active "false = retired"
   }
   rounds {
     uuid id PK
     uuid room_id FK
     text puzzle_id FK
-    int round_number "unique per room"
-    timestamptz started_at
+    int game_number
+    int round_number "unique per room and game"
+    timestamptz started_at "server clock"
+
     timestamptz ended_at
     timestamptz paused_at "set while paused"
     int paused_ms "earlier pauses"
@@ -669,8 +797,8 @@ name and score.
 | ------------------ | -------------------------- | ---------------------------------------------------------- |
 | `rooms`            | Players in that room       | Admin only: settings (`language`, `level`, `total_rounds`) |
 | `players`          | Players in that room       | Nobody: only the functions below                           |
-| `puzzles`          | Anyone                     | Nobody (migrations / seed only)                            |
-| `rounds`           | Players in that room       | Nobody yet (Phase 3 adds round functions)                  |
+| `puzzles`          | Anyone                     | Nobody (migrations / catalog SQL only)                     |
+| `rounds`           | Players in that room       | Nobody: only `advance_room()` and the round engine         |
 | `scores`           | Players in that room       | Nobody: only `record_score()`                              |
 | `room_leaderboard` | Players in that room (RLS) | n/a (view, `security_invoker`)                             |
 
@@ -684,12 +812,16 @@ Everything else goes through `security definer` functions that check
 | `join_room(code, display_name, avatar)`                            | Signed in            | Joins an open, unlocked, non-full room (max 30). "Riya" → "Riya (2)". Rejoin returns the old player. |
 | `room_heartbeat(room_id)`                                          | Players in the room  | "Still here". Marks silent players disconnected, hands over admin. Returns the room status.          |
 | `leave_room(room_id)`                                              | Players in the room  | Frees the seat and name, keeps scores; passes the admin role on.                                     |
-| `advance_room(room_id, event)`                                     | Room admin           | Moves the room through the state machine.                                                            |
+| `advance_room(room_id, event)`                                     | Room admin           | Moves the room through the state machine; starts, pauses, resumes and ends rounds.                   |
 | `set_room_locked(room_id, locked)`                                 | Room admin           | Locks or unlocks the room to new players.                                                            |
-| `record_score(round_id, passed, hint_used)`                        | Players in the round | Server measures solve time and computes points. A pass is final.                                     |
+| `record_score(round_id, passed, hint_used)`                        | Players in the round | One result per round. Server measures solve time and computes points. Refuses late joiners.          |
+| `get_current_round(room_id)`                                       | Players in the room  | The current round, its puzzle and `server_now`. Nothing in the lobby or countdown.                   |
+| `reveal_round_puzzle(round_id)`                                    | Players of the room  | The puzzle id of an **ended** round (for the fix reveal route), else `round_not_over`.               |
 
 Errors are raised with a stable code as the message (`room_not_found`,
-`room_locked`, `room_full`, `not_room_admin`, `invalid_transition`, ...); `lib/db` turns them into a
+`room_locked`, `room_full`, `not_room_admin`, `invalid_transition`,
+`no_puzzles`, `joined_late`, `already_submitted`, `round_not_over`, ...);
+`lib/db` turns them into a
 typed `DbError`.
 
 Scoring (TB-19 §3) lives in `private.calculate_points`: base points (Easy 100 /
@@ -721,8 +853,8 @@ from a determined attacker with many IPs. Migration
 - **Watch the IP limit:** a whole office behind one NAT IP shares the 30
   anonymous sign-ins per hour. Raise it in the Supabase dashboard before a
   large game (Vandit's call; it is a live-project setting).
-- Not limited: joins (bounded by the room cap), score submits (one row per
-  player per round), Realtime messages (Supabase's per-project quotas).
+- Not limited: joins (bounded by the room cap), score submits (one result
+  per player per round), Realtime messages (Supabase's per-project quotas).
 
 ### Data access (`lib/db`)
 
@@ -750,7 +882,7 @@ await getLeaderboard(db, room.id);
 
 ```bash
 pnpm db:start   # local Supabase in Docker (API on :54321, Postgres on :54322)
-pnpm db:reset   # recreate from migrations + supabase/seed.sql
+pnpm db:reset   # recreate from migrations + supabase/puzzles.sql
 pnpm db:test    # pgTAP tests in supabase/tests (RLS, codes, names, scoring, rooms)
 pnpm db:types   # regenerate lib/db/types.ts after changing a migration
 ```

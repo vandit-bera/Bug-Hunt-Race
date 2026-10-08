@@ -32,10 +32,10 @@ select ok(
 
 select hasnt_column('public', 'puzzles', 'reference_fix', 'puzzles never store the reference fix');
 
-select results_eq(
-  $$select level::text from public.puzzles order by puzzles.level$$,
-  array['easy', 'medium', 'hard'],
-  'seed has one puzzle per level'
+select is(
+  (select count(distinct (language, level))::integer from public.puzzles where active),
+  9,
+  'the catalog seed has puzzles for every language and level'
 );
 
 select throws_ok(

@@ -9,9 +9,13 @@ export interface RecordScoreInput {
 }
 
 /**
- * Records the caller's result for the live round. The database measures the
- * solve time and computes the points, so they cannot be chosen by the client.
- * A passing result is final; calling again returns it unchanged.
+ * Records the caller's one result for the live round: solved (`passed`) or
+ * gave up, and whether they used the hint. The database measures the solve
+ * time from the round's start (pauses excluded) and computes the points, so
+ * the client cannot choose them. Raises `already_submitted` on a second
+ * call, `joined_late` for a player who joined after the round started, and
+ * `round_not_live` while paused or once the round is over. The last result
+ * from the players who were in at the start ends the round.
  */
 export async function recordScore(
   client: DbClient,

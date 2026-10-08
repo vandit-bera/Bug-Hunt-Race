@@ -26,6 +26,23 @@ export type LeaderboardEntry = {
   [K in keyof LeaderboardRow]: NonNullable<LeaderboardRow[K]>;
 };
 
+type CurrentRoundRow =
+  Database["public"]["Functions"]["get_current_round"]["Returns"][number];
+
+/**
+ * The room's current round from `get_current_round()`, with its puzzle. The
+ * generated types mark every function column non-null; these can be null.
+ */
+export type CurrentRound = Omit<
+  CurrentRoundRow,
+  "paused_at" | "ended_at" | "description" | "hint"
+> & {
+  paused_at: string | null;
+  ended_at: string | null;
+  description: string | null;
+  hint: string | null;
+};
+
 /** A player's seat in a room, returned by create and join. */
 export interface RoomMembership {
   room: Room;

@@ -40,7 +40,8 @@ export const ROOM_TRANSITIONS: readonly RoomTransition[] = [
   { from: "countdown", event: "begin_round", to: "round_live", by: "admin" },
   { from: "round_live", event: "pause", to: "paused", by: "admin" },
   { from: "paused", event: "resume", to: "round_live", by: "admin" },
-  // Solved, time up or Skip.
+  // Skip. The database applies it too when every player has a result or time
+  // is up (supabase/migrations/20261008000006_round_engine.sql).
   { from: "round_live", event: "end_round", to: "round_results", by: "admin" },
   { from: "round_results", event: "next_round", to: "countdown", by: "admin" },
   {

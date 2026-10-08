@@ -10,6 +10,7 @@
     "dev": "next dev",
     "build": "next build",
     "bundle:check": "tsx scripts/check-bundle-size.ts",
+    "fixes:check": "tsx scripts/check-fix-leaks.ts",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",

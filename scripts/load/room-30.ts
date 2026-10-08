@@ -7,6 +7,7 @@ import {
   advanceRoom,
   createRoom,
   ensureSignedIn,
+  getCurrentRound,
   getLeaderboard,
   joinRoom,
   recordScore,
@@ -45,8 +46,9 @@ import {
  * Players join all at once by default (worst case); `--join-over <seconds>`
  * spreads the joins evenly over that time instead.
  *
- * Rounds are inserted with the local service-role key: no API creates them
- * yet (the race-round task will).
+ * The rounds run on the real round engine: `begin_round` picks the puzzle and
+ * starts the clock; the host never submits, so each round ends on the
+ * host's Skip. The local service-role key only reads the server-side totals.
  */
 
 const ROOM_CAP = 30;
@@ -360,37 +362,6 @@ function check(name: string, ok: boolean, detail = "") {
 
 const service = newClient(supabase.serviceKey);
 
-async function pickPuzzle(): Promise<string> {
-  const { data, error } = await service
-    .from("puzzles")
-    .select("id")
-    .eq("language", "javascript")
-    .eq("level", "easy")
-    .limit(1)
-    .single();
-  if (error)
-    throw new Error(
-      `No JavaScript Easy puzzle in the database: ${error.message}`,
-    );
-  return data.id;
-}
-
-/** Starts the round the room just entered, as the race-round task will. */
-async function insertRound(
-  roomId: string,
-  roundNumber: number,
-  puzzleId: string,
-) {
-  const { data, error } = await service
-    .from("rounds")
-    .insert({ room_id: roomId, puzzle_id: puzzleId, round_number: roundNumber })
-    .select("id")
-    .single();
-  if (error)
-    throw new Error(`Could not insert round ${roundNumber}: ${error.message}`);
-  return data.id;
-}
-
 /** Server-side totals per player, read with the service role. */
 async function serverTotals(roomId: string) {
   const [{ data: players, error: playersError }, { data: scores, error }] =
@@ -465,8 +436,6 @@ async function verifyLeaderboards(
 }
 
 async function main(): Promise<number> {
-  const puzzleId = await pickPuzzle();
-
   phase(`Signing in ${PLAYERS + 1} anonymous players`);
   const admin = new SimPlayer("Host");
   // One more joiner than seats: exactly one must be refused.
@@ -651,16 +620,20 @@ async function main(): Promise<number> {
 
   for (let round = 1; round <= ROUNDS; round++) {
     phase(
-      `Round ${round}: countdown, live, ${seated.filter((p) => p.connected).length} submit at once, results`,
+      `Round ${round}: countdown, live, ${seated.filter((p) => p.connected && p !== host).length} submit at once, Skip`,
       true,
     );
     await advance(round === 1 ? "start" : "next_round", "countdown", round);
-    const roundId = await insertRound(roomId, round, puzzleId);
     await advance("begin_round", "round_live", round);
+    const current = await getCurrentRound(host.client, roomId);
+    if (!current) throw new Error(`Round ${round} did not start.`);
+    const roundId = current.round.round_id;
 
+    // The host never submits, so the round stays live until their Skip.
     const players = seated.filter((p) => p.connected);
+    const submitters = players.filter((p) => p !== host);
     await Promise.all(
-      players.map(async (p, i) => {
+      submitters.map(async (p, i) => {
         const start = now();
         try {
           await recordScore(p.client, {
