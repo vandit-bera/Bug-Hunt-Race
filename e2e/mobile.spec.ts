@@ -43,12 +43,37 @@ test("Home fits a phone and explains the game", async ({ page }) => {
   await expectTapTargets(page);
 });
 
-test("Solo setup fits a phone", async ({ page }) => {
-  await page.goto("/solo");
-  await expect(page.getByRole("link", { name: "Start" })).toBeVisible();
-  await expectNoHorizontalScroll(page);
-  await expectTapTargets(page);
-});
+/** The text of every option card must stay inside the card. */
+async function expectOptionLabelsFit(page: Page) {
+  const overflowing = await page
+    .locator("input[type=radio] + span")
+    .evaluateAll((cards) =>
+      cards
+        .map((card) => {
+          const range = document.createRange();
+          range.selectNodeContents(card);
+          const text = range.getBoundingClientRect();
+          const box = card.getBoundingClientRect();
+          return {
+            name: card.textContent?.trim(),
+            fits: text.left >= box.left && text.right <= box.right,
+          };
+        })
+        .filter(({ fits }) => !fits),
+    );
+  expect(overflowing).toEqual([]);
+}
+
+for (const width of [360, 375, 414, 640]) {
+  test(`Solo setup fits at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 700 });
+    await page.goto("/solo");
+    await expect(page.getByRole("link", { name: "Start" })).toBeVisible();
+    await expectNoHorizontalScroll(page);
+    await expectTapTargets(page);
+    await expectOptionLabelsFit(page);
+  });
+}
 
 test("Styleguide fits a phone", async ({ page }) => {
   await page.goto("/styleguide");
