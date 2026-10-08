@@ -259,3 +259,55 @@ test("pass and fail sounds play on Run Tests once the player has interacted", as
     expect.arrayContaining(["fail.wav", "solved.wav"]),
   );
 });
+
+test("the first game's countdown ticks after the Start click", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const played: string[] = [];
+    Object.assign(window, { played });
+    window.Audio = class {
+      src: string;
+      volume = 1;
+      constructor(src: string) {
+        this.src = src;
+      }
+      play() {
+        played.push(this.src);
+        return Promise.resolve();
+      }
+    } as unknown as typeof Audio;
+  });
+  await page.goto("/solo");
+  await page.getByRole("link", { name: "Start" }).click();
+  await expect(page.getByRole("timer")).toBeVisible(COUNTDOWN_WAIT);
+  const played = await page.evaluate(
+    () => (window as unknown as { played: string[] }).played,
+  );
+  expect(played.map((src) => src.split("/").pop())).toEqual([
+    "tick.wav",
+    "tick.wav",
+    "tick.wav",
+    "go.wav",
+  ]);
+});
+
+test("the game header fits a 375 px screen", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await start(page, "javascript", "Easy");
+  const width = await page.evaluate(() => document.documentElement.scrollWidth);
+  expect(width).toBeLessThanOrEqual(375);
+  await expect(page.getByRole("radio", { name: /System/ })).toBeInViewport();
+});
+
+test("the score popup sits beside the score, not over the heading", async ({
+  page,
+}) => {
+  await start(page, "javascript", "Easy");
+  await solveWithFix(page);
+  const heading = page.getByRole("heading", { name: "Bug squashed!" });
+  await expect(heading).toBeVisible({ timeout: 15_000 });
+  const popup = await page.getByTestId("score-popup").boundingBox();
+  const title = await heading.boundingBox();
+  expect(popup && title && popup.y >= title.y + title.height).toBe(true);
+});

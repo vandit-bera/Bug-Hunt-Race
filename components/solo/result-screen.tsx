@@ -76,11 +76,11 @@ export function ResultScreen({
       </h1>
       <p className="text-lg">
         {outcome === "solved" ? (
-          <span className="relative font-bold">
-            <AnimatedNumber value={score.total} /> points
-            <span className="absolute -top-8 left-0">
-              <ScorePopup points={score.total} />
+          <span className="inline-flex items-baseline gap-3 font-bold">
+            <span>
+              <AnimatedNumber value={score.total} /> points
             </span>
+            <ScorePopup points={score.total} />
           </span>
         ) : (
           "0 points. No fix this time."

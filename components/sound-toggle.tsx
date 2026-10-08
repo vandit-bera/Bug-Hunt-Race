@@ -1,13 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
 import { cn } from "@/components/ui/cn";
-import { armSound } from "@/lib/sound/sound-store";
 import { useMuted } from "@/lib/sound/use-muted";
 
 export function SoundToggle({ className }: { className?: string }) {
   const [muted, setMuted] = useMuted();
-  useEffect(armSound, []);
 
   return (
     <button
@@ -20,7 +17,10 @@ export function SoundToggle({ className }: { className?: string }) {
         className,
       )}
     >
-      <span aria-hidden="true">{muted ? "🔇 Muted" : "🔊 Sound"}</span>
+      <span aria-hidden="true">
+        {muted ? "🔇" : "🔊"}
+        <span className="hidden sm:inline">{muted ? " Muted" : " Sound"}</span>
+      </span>
     </button>
   );
 }
