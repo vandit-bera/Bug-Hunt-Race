@@ -1,0 +1,12 @@
+{
+  "id": "sum-of-evens",
+  "title": "Sum of evens",
+  "language": "javascript",
+  "level": "easy",
+  "description": "sumOfEvens(nums) returns the sum of every even number in the array. An empty array sums to 0.",
+  "hint": "Check which elements the loop actually visits.",
+  "bugCount": 1,
+  "timeLimitSec": 180,
+  "basePoints": 100,
+  "tags": ["off-by-one", "loops"]
+}
