@@ -57,3 +57,34 @@ jobs:
       - run: pnpm db:test
       - name: Generated types match the migrations
         run: pnpm db:types && git diff --exit-code lib/db/types.ts
+
+  # Two-browser Realtime E2E (e2e/rooms.spec.ts) against a local Supabase:
+  # database, auth, API and Realtime only. The `ci` job skips that spec.
+  realtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec supabase start -x studio,storage-api,imgproxy,mailpit,edge-runtime,logflare,vector,supavisor
+      - name: Point the app at the local Supabase
+        run: |
+          pnpm exec supabase status -o json \
+            | jq -r '"NEXT_PUBLIC_SUPABASE_URL=\(.API_URL)", "NEXT_PUBLIC_SUPABASE_ANON_KEY=\(.ANON_KEY)"' \
+            >> "$GITHUB_ENV"
+      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm exec playwright test e2e/rooms.spec.ts
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: realtime-playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

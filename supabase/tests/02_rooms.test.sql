@@ -165,19 +165,19 @@ reset role;
 
 update public.rooms set locked = false where id = (select id from ids where name = 'room');
 
--- Fill the room to the 50-player cap.
+-- Fill the room to the 30-player cap.
 insert into auth.users (id)
-select ('00000000-0000-0000-0001-' || lpad(i::text, 12, '0'))::uuid from generate_series(1, 47) i;
+select ('00000000-0000-0000-0001-' || lpad(i::text, 12, '0'))::uuid from generate_series(1, 27) i;
 insert into public.players (room_id, user_id, display_name, avatar)
 select (select id from ids where name = 'room'),
        ('00000000-0000-0000-0001-' || lpad(i::text, 12, '0'))::uuid,
        'Filler ' || i, '🤖'
-from generate_series(1, 47) i;
+from generate_series(1, 27) i;
 
 set local role anon;
 select results_eq(
   $$select is_full, player_count from public.find_open_room((select code from room_code))$$,
-  $$values (true, 50)$$,
+  $$values (true, 30)$$,
   'find_open_room reports a full room'
 );
 reset role;

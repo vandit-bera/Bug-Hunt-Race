@@ -10,6 +10,7 @@ export type RoomStatus = Enums<"room_status">;
 export type RoomLevel = Enums<"room_level">;
 export type PuzzleLevel = Enums<"puzzle_level">;
 export type DbLanguage = Enums<"language_id">;
+export type RoomEvent = Enums<"room_event">;
 
 /** What the join screen learns about a room before the player joins it. */
 export type RoomPreview =

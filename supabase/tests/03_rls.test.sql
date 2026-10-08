@@ -1,7 +1,7 @@
 -- Row-level security: players only see their own room; only the admin
 -- changes the room; nobody writes tables the API functions own.
 begin;
-select plan(34);
+select plan(35);
 
 -- Fixtures (as postgres) ------------------------------------------------------
 -- Room A: Ana (admin) + Ben.  Room C: Cleo (admin).  Xavi: in no room.
@@ -48,7 +48,7 @@ select is_empty(
   'Cleo cannot read room A''s leaderboard'
 );
 select is_empty(
-  $$update public.rooms set status = 'countdown' where id = '00000000-0000-0000-0000-00000000aaaa' returning id$$,
+  $$update public.rooms set level = 'hard' where id = '00000000-0000-0000-0000-00000000aaaa' returning id$$,
   'the admin of another room cannot change room A'
 );
 
@@ -70,21 +70,21 @@ select results_eq(
   array['Ana', 'Ben'],
   'Ben sees the players in his room'
 );
-select is_empty(
-  $$update public.rooms set status = 'countdown' where id = '00000000-0000-0000-0000-00000000aaaa' returning id$$,
-  'a non-admin cannot change room status'
+select throws_ok(
+  $$update public.rooms set status = 'countdown' where id = '00000000-0000-0000-0000-00000000aaaa'$$,
+  '42501', null, 'room status is not a direct update (advance_room only)'
 );
 select is_empty(
-  $$update public.rooms set locked = true, level = 'hard' where id = '00000000-0000-0000-0000-00000000aaaa' returning id$$,
-  'a non-admin cannot change room settings or the lock'
+  $$update public.rooms set level = 'hard' where id = '00000000-0000-0000-0000-00000000aaaa' returning id$$,
+  'a non-admin cannot change room settings'
 );
-select is_empty(
-  $$update public.players set connected = false where display_name = 'Ana' returning id$$,
-  'a player cannot change another player'
+select throws_ok(
+  $$update public.players set connected = false where display_name = 'Ana'$$,
+  '42501', null, 'a player cannot change another player'
 );
-select isnt_empty(
-  $$update public.players set connected = false where display_name = 'Ben' returning id$$,
-  'a player can update their own connected flag'
+select throws_ok(
+  $$update public.players set connected = false where display_name = 'Ben'$$,
+  '42501', null, 'connection flags are not a direct update (room_heartbeat only)'
 );
 select throws_ok(
   $$update public.players set display_name = 'Ana' where display_name = 'Ben'$$,
@@ -130,9 +130,13 @@ select throws_ok(
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}', true);
 
 select isnt_empty(
-  $$update public.rooms set status = 'countdown', locked = true
+  $$update public.rooms set level = 'medium', total_rounds = 3
     where id = '00000000-0000-0000-0000-00000000aaaa' returning id$$,
-  'the admin can change room status and lock the room'
+  'the admin can change room settings'
+);
+select throws_ok(
+  $$update public.rooms set status = 'final_leaderboard', locked = true$$,
+  '42501', null, 'not even the admin can set status or the lock directly'
 );
 select throws_ok(
   $$update public.rooms set code = 'BBBBBB'$$,
@@ -176,8 +180,8 @@ select throws_ok(
 reset role;
 
 select results_eq(
-  $$select status::text, locked from public.rooms where code = 'AAAAAA'$$,
-  $$values ('countdown', true)$$,
+  $$select status::text, locked, level::text, total_rounds from public.rooms where code = 'AAAAAA'$$,
+  $$values ('lobby', false, 'medium', 3)$$,
   'only the admin''s update took effect'
 );
 
