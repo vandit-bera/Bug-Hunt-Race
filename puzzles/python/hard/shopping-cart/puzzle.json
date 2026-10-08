@@ -1,0 +1,12 @@
+{
+  "id": "shopping-cart",
+  "title": "Shopping cart",
+  "language": "python",
+  "level": "hard",
+  "description": "Cart holds items (name, price in cents, quantity). A new Cart() starts empty and never shares items with another cart, and Cart(items) copies the list it is given. average_price is the average price of one unit in cents and keeps the decimals. most_expensive returns the line with the highest total (price x quantity), or None for an empty cart.",
+  "hint": "Look at what a new cart starts from, what average_price divides with, and what max is comparing.",
+  "bugCount": 3,
+  "timeLimitSec": 480,
+  "basePoints": 300,
+  "tags": ["mutable-default", "integer-division", "max-key", "class"]
+}

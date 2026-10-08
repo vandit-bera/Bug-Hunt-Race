@@ -1,0 +1,12 @@
+{
+  "id": "average",
+  "title": "Average",
+  "language": "python",
+  "level": "easy",
+  "description": "average(numbers) returns the mean of a list of numbers, including the decimal part (average([1, 2]) is 1.5). An empty list gives 0.",
+  "hint": "Python has two kinds of division. Which one keeps the decimals?",
+  "bugCount": 1,
+  "timeLimitSec": 180,
+  "basePoints": 100,
+  "tags": ["integer-division", "math"]
+}

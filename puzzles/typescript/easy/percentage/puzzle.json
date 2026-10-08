@@ -1,0 +1,12 @@
+{
+  "id": "percentage",
+  "title": "Percentage",
+  "language": "typescript",
+  "level": "easy",
+  "description": "percentage(part, total) is the share of part in total as a whole number, rounded to the nearest integer. When total is 0 there is nothing to divide, so the answer is 0.",
+  "hint": "What does 0 / 0 give in JavaScript?",
+  "bugCount": 1,
+  "timeLimitSec": 180,
+  "basePoints": 100,
+  "tags": ["division-by-zero", "math", "edge-case"]
+}

@@ -1,0 +1,12 @@
+{
+  "id": "new-board",
+  "title": "Game board",
+  "language": "python",
+  "level": "medium",
+  "description": "new_board(rows, cols) creates a grid of 0s where every cell can be changed on its own. place(board, row, col, mark) puts a mark in one cell, count_marks counts how many cells hold a mark, and is_full says whether no 0 is left.",
+  "hint": "After placing one mark, how many cells hold it? Look at how the rows are created.",
+  "bugCount": 1,
+  "timeLimitSec": 300,
+  "basePoints": 200,
+  "tags": ["aliasing", "nested-lists", "mutation"]
+}

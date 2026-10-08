@@ -1,0 +1,12 @@
+{
+  "id": "top-scores",
+  "title": "Top scores",
+  "language": "javascript",
+  "level": "easy",
+  "description": "topScores(scores, limit) returns the best `limit` scores, highest first. The original array must stay exactly as it was.",
+  "hint": "What does sort() do when you give it no comparison function?",
+  "bugCount": 1,
+  "timeLimitSec": 180,
+  "basePoints": 100,
+  "tags": ["sorting", "comparator", "type-coercion"]
+}

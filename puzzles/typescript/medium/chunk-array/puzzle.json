@@ -1,0 +1,12 @@
+{
+  "id": "chunk-array",
+  "title": "Chunk an array",
+  "language": "typescript",
+  "level": "medium",
+  "description": "chunk(items, size) splits a list into groups of `size`; the last group may be shorter. chunk([1, 2, 3, 4, 5], 2) is [[1, 2], [3, 4], [5]]. toRows joins each group into one printable row.",
+  "hint": "Which start positions does the loop visit? Try a list with only one item.",
+  "bugCount": 1,
+  "timeLimitSec": 300,
+  "basePoints": 200,
+  "tags": ["loop-bounds", "arrays", "off-by-one"]
+}

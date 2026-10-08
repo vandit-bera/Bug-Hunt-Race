@@ -1,0 +1,12 @@
+{
+  "id": "semver",
+  "title": "Version compare",
+  "language": "typescript",
+  "level": "hard",
+  "description": "Versions look like \"1.10.2\". Missing parts count as 0 (\"1.2\" equals \"1.2.0\") and a suffix such as \"-beta\" is ignored (\"1.2.3-beta\" is 1.2.3). compareVersions returns -1, 0 or 1. latestVersion picks the highest version, sortVersions orders them from lowest to highest, and isAtLeast(version, minimum) is true when version is the same as or newer than minimum.",
+  "hint": "1.10.0 is newer than 1.9.0. What do the compare function and the sort do with numbers that look like text?",
+  "bugCount": 4,
+  "timeLimitSec": 480,
+  "basePoints": 300,
+  "tags": ["sorting", "comparator", "parsing", "version"]
+}

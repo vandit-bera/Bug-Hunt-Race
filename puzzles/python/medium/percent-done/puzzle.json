@@ -1,0 +1,12 @@
+{
+  "id": "percent-done",
+  "title": "Percent done",
+  "language": "python",
+  "level": "medium",
+  "description": "percent_done(done, total) is the share of finished tasks as a whole percentage, and halves round UP (1 of 8 is 12.5 so it shows 13). No tasks at all counts as 0 percent. progress_label turns it into text like \"50% done (4/8)\".",
+  "hint": "Try 1 of 8 and 0 of 0. What does round() do with 12.5?",
+  "bugCount": 2,
+  "timeLimitSec": 300,
+  "basePoints": 200,
+  "tags": ["rounding", "division-by-zero", "banker-rounding"]
+}

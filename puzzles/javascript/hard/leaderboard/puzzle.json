@@ -1,0 +1,12 @@
+{
+  "id": "leaderboard",
+  "title": "Quiz leaderboard",
+  "language": "javascript",
+  "level": "hard",
+  "description": "Entries look like { name, points, time }. They are ranked by more points first, then by the faster (smaller) time, then by name A to Z. Entries with the same points AND the same time share a rank, and the next rank skips ahead (1, 1, 3). sortEntries returns a sorted copy and must not reorder the original array.",
+  "hint": "Three small slips, in the comparison, the copy and the rank numbers. Try a tiny board first.",
+  "bugCount": 3,
+  "timeLimitSec": 480,
+  "basePoints": 300,
+  "tags": ["sorting", "comparator", "mutation", "ranking"]
+}

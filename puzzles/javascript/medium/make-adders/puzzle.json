@@ -1,0 +1,12 @@
+{
+  "id": "make-adders",
+  "title": "Make adders",
+  "language": "javascript",
+  "level": "medium",
+  "description": "makeAdders(amounts) returns one function per amount; each function adds its own amount to the number it is given. sumSteps(amounts, start) applies them one after another, so sumSteps([1, 5], 10) is 16.",
+  "hint": "Every function created in the loop shares one variable. When do they read it?",
+  "bugCount": 1,
+  "timeLimitSec": 300,
+  "basePoints": 200,
+  "tags": ["closure", "scope", "loops"]
+}

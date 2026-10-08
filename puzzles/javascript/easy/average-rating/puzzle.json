@@ -1,0 +1,12 @@
+{
+  "id": "average-rating",
+  "title": "Average rating",
+  "language": "javascript",
+  "level": "easy",
+  "description": "averageRating(ratings) is the average of the star ratings. A review that was left without a rating is null and must be ignored, not counted. No ratings at all gives 0.",
+  "hint": "Compare what you add up with what you divide by.",
+  "bugCount": 1,
+  "timeLimitSec": 180,
+  "basePoints": 100,
+  "tags": ["wrong-divisor", "null-handling"]
+}

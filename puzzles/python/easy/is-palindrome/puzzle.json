@@ -1,0 +1,12 @@
+{
+  "id": "is-palindrome",
+  "title": "Palindrome",
+  "language": "python",
+  "level": "easy",
+  "description": "is_palindrome(text) is True when the text reads the same backwards, ignoring spaces and upper or lower case. \"Never odd or even\" is a palindrome.",
+  "hint": "Are \"A\" and \"a\" the same letter for the == operator?",
+  "bugCount": 1,
+  "timeLimitSec": 180,
+  "basePoints": 100,
+  "tags": ["strings", "case", "edge-case"]
+}

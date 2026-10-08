@@ -4,6 +4,40 @@ import type { PublicPuzzle } from "@/lib/puzzles/schema";
 
 export const PUZZLES: readonly PublicPuzzle[] = [
   {
+    id: "average-rating",
+    title: "Average rating",
+    language: "javascript",
+    level: "easy",
+    description:
+      "averageRating(ratings) is the average of the star ratings. A review that was left without a rating is null and must be ignored, not counted. No ratings at all gives 0.",
+    hint: "Compare what you add up with what you divide by.",
+    bugCount: 1,
+    timeLimitSec: 180,
+    basePoints: 100,
+    tags: ["wrong-divisor", "null-handling"],
+    buggy:
+      "// Average of the ratings, ignoring unrated reviews (null).\nfunction averageRating(ratings) {\n  let total = 0;\n  let count = 0;\n  for (const rating of ratings) {\n    if (rating === null) continue;\n    total += rating;\n    count += 1;\n  }\n  if (count === 0) return 0;\n  return total / ratings.length;\n}\n",
+    tests:
+      'test("averages plain ratings", () => {\n  expect(averageRating([4, 5, 3])).toBe(4);\n});\ntest("ignores unrated reviews", () => {\n  expect(averageRating([5, null, 3, null])).toBe(4);\n});\ntest("a single rating is its own average", () => {\n  expect(averageRating([2])).toBe(2);\n});\ntest("no ratings gives 0", () => {\n  expect(averageRating([])).toBe(0);\n  expect(averageRating([null, null])).toBe(0);\n});\n',
+  },
+  {
+    id: "clamp-score",
+    title: "Clamp a score",
+    language: "javascript",
+    level: "easy",
+    description:
+      "clampScore(score, min, max) keeps a score inside the range min to max (both included). A score below min becomes min, a score above max becomes max, anything else is returned unchanged.",
+    hint: "Look at which limit each branch hands back.",
+    bugCount: 1,
+    timeLimitSec: 180,
+    basePoints: 100,
+    tags: ["wrong-return", "math"],
+    buggy:
+      "// Keeps a score between `min` and `max`, both included.\nfunction clampScore(score, min, max) {\n  if (score < min) return max;\n  if (score > max) return max;\n  return score;\n}\n",
+    tests:
+      'test("keeps a score inside the range", () => {\n  expect(clampScore(50, 0, 100)).toBe(50);\n});\ntest("raises a score that is too low", () => {\n  expect(clampScore(-5, 0, 100)).toBe(0);\n});\ntest("lowers a score that is too high", () => {\n  expect(clampScore(140, 0, 100)).toBe(100);\n});\ntest("keeps the limits themselves", () => {\n  expect(clampScore(0, 0, 100)).toBe(0);\n  expect(clampScore(100, 0, 100)).toBe(100);\n});\n',
+  },
+  {
     id: "sum-of-evens",
     title: "Sum of evens",
     language: "javascript",
@@ -19,6 +53,91 @@ export const PUZZLES: readonly PublicPuzzle[] = [
       "// Returns the sum of the even numbers in `nums`.\nfunction sumOfEvens(nums) {\n  let total = 0;\n  for (let i = 1; i < nums.length; i++) {\n    if (nums[i] % 2 === 0) {\n      total += nums[i];\n    }\n  }\n  return total;\n}\n",
     tests:
       'test("adds the even numbers", () => {\n  expect(sumOfEvens([1, 2, 3, 4])).toBe(6);\n});\ntest("counts the first element", () => {\n  expect(sumOfEvens([2, 4, 6])).toBe(12);\n});\ntest("handles negative numbers", () => {\n  expect(sumOfEvens([-2, 3])).toBe(-2);\n});\ntest("returns 0 for an empty array", () => {\n  expect(sumOfEvens([])).toBe(0);\n});\n',
+  },
+  {
+    id: "title-case",
+    title: "Title case",
+    language: "javascript",
+    level: "easy",
+    description:
+      "titleCase(sentence) capitalises the first letter of every word and lowercases the rest. Words are separated by single spaces. An empty string stays empty.",
+    hint: "Count how many words the loop actually visits.",
+    bugCount: 1,
+    timeLimitSec: 180,
+    basePoints: 100,
+    tags: ["loop-bounds", "strings"],
+    buggy:
+      '// Capitalises every word: "hELLO wORLD" -> "Hello World".\nfunction titleCase(sentence) {\n  const words = sentence.split(" ");\n  const result = [];\n  for (let i = 0; i < words.length - 1; i++) {\n    const word = words[i];\n    result.push(word.charAt(0).toUpperCase() + word.slice(1).toLowerCase());\n  }\n  return result.join(" ");\n}\n',
+    tests:
+      'test("capitalises two words", () => {\n  expect(titleCase("hello world")).toBe("Hello World");\n});\ntest("capitalises a single word", () => {\n  expect(titleCase("bug")).toBe("Bug");\n});\ntest("lowercases the rest of each word", () => {\n  expect(titleCase("mIxEd cAsE words")).toBe("Mixed Case Words");\n});\ntest("keeps an empty string empty", () => {\n  expect(titleCase("")).toBe("");\n});\n',
+  },
+  {
+    id: "top-scores",
+    title: "Top scores",
+    language: "javascript",
+    level: "easy",
+    description:
+      "topScores(scores, limit) returns the best `limit` scores, highest first. The original array must stay exactly as it was.",
+    hint: "What does sort() do when you give it no comparison function?",
+    bugCount: 1,
+    timeLimitSec: 180,
+    basePoints: 100,
+    tags: ["sorting", "comparator", "type-coercion"],
+    buggy:
+      "// Returns the best `limit` scores, highest first. Does not change `scores`.\nfunction topScores(scores, limit) {\n  const sorted = [...scores];\n  sorted.sort();\n  return sorted.slice(0, limit);\n}\n",
+    tests:
+      'test("returns the highest scores first", () => {\n  expect(topScores([5, 40, 100, 9], 3)).toEqual([100, 40, 9]);\n});\ntest("returns everything when limit is large", () => {\n  expect(topScores([3, 1, 2], 10)).toEqual([3, 2, 1]);\n});\ntest("does not change the original array", () => {\n  const scores = [5, 40, 100, 9];\n  topScores(scores, 2);\n  expect(scores).toEqual([5, 40, 100, 9]);\n});\ntest("handles an empty list", () => {\n  expect(topScores([], 3)).toEqual([]);\n});\n',
+  },
+  {
+    id: "apply-discount",
+    title: "Apply a discount",
+    language: "javascript",
+    level: "medium",
+    description:
+      "applyDiscount(items, category, percent) returns a NEW list where every item in the category is `percent` percent cheaper (price in cents, rounded to a whole cent). Other items are unchanged. The original items must not be modified.",
+    hint: "Does the original list still look the same after the call?",
+    bugCount: 1,
+    timeLimitSec: 300,
+    basePoints: 200,
+    tags: ["mutation", "copy", "objects"],
+    buggy:
+      '// Returns a new list; items in `category` get `percent` percent off.\n// Prices are in cents and are rounded to a whole cent.\n// The original items must not change.\nfunction applyDiscount(items, category, percent) {\n  return items.map((item) => {\n    if (item.category !== category) return item;\n    const discounted = Math.round(item.price * (1 - percent / 100));\n    item.price = discounted;\n    return item;\n  });\n}\n\n// Total price of all items, in cents.\nfunction totalPrice(items) {\n  return items.reduce((sum, item) => sum + item.price, 0);\n}\n\n// Formats cents as dollars, e.g. 1999 -> "$19.99".\nfunction formatPrice(cents) {\n  return "$" + (cents / 100).toFixed(2);\n}\n',
+    tests:
+      'const catalog = [\n  { name: "Novel", category: "books", price: 2000 },\n  { name: "Pen", category: "office", price: 500 },\n  { name: "Atlas", category: "books", price: 4000 },\n];\n\ntest("discounts items in the category", () => {\n  const result = applyDiscount(catalog, "books", 25);\n  expect(result.map((item) => item.price)).toEqual([1500, 500, 3000]);\n});\ntest("leaves other categories alone", () => {\n  expect(applyDiscount(catalog, "toys", 50)).toEqual(catalog);\n});\ntest("does not change the original items", () => {\n  applyDiscount(catalog, "books", 25);\n  expect(catalog[0].price).toBe(2000);\n  expect(catalog[2].price).toBe(4000);\n});\ntest("totals and formats the result", () => {\n  const total = totalPrice(applyDiscount(catalog, "office", 10));\n  expect(formatPrice(total)).toBe("$64.50");\n});\n',
+  },
+  {
+    id: "format-date",
+    title: "Format a date",
+    language: "javascript",
+    level: "medium",
+    description:
+      'formatDate(iso) turns an ISO timestamp into "DD/MM/YYYY" using UTC, so the result never depends on the machine\'s time zone. For example "2024-03-05T23:30:00Z" becomes "05/03/2024". formatTimeline(list) formats a list of timestamps, oldest first.',
+    hint: 'Check both the day and the month of "2024-03-05" by hand.',
+    bugCount: 2,
+    timeLimitSec: 300,
+    basePoints: 200,
+    tags: ["dates", "off-by-one", "strings"],
+    buggy:
+      '// Formats an ISO timestamp as "DD/MM/YYYY" in UTC, e.g.\n// "2024-03-05T23:30:00Z" -> "05/03/2024". UTC keeps the result the same on\n// every machine, whatever its time zone.\nfunction formatDate(iso) {\n  const date = new Date(iso);\n  const day = String(date.getUTCDate());\n  const month = String(date.getUTCMonth()).padStart(2, "0");\n  const year = date.getUTCFullYear();\n  return `${day}/${month}/${year}`;\n}\n\n// Formats a list of ISO timestamps, oldest first. Does not change the list.\nfunction formatTimeline(isoList) {\n  return [...isoList]\n    .sort((a, b) => new Date(a) - new Date(b))\n    .map((iso) => formatDate(iso));\n}\n',
+    tests:
+      'test("formats a late evening UTC timestamp", () => {\n  expect(formatDate("2024-03-05T23:30:00Z")).toBe("05/03/2024");\n});\ntest("formats a date with a two digit day and month", () => {\n  expect(formatDate("2023-12-25T08:00:00Z")).toBe("25/12/2023");\n});\ntest("uses UTC, not the local time zone", () => {\n  expect(formatDate("2024-01-01T00:00:00Z")).toBe("01/01/2024");\n});\ntest("formats a timeline oldest first", () => {\n  expect(\n    formatTimeline(["2024-02-10T00:00:00Z", "2023-11-30T12:00:00Z"]),\n  ).toEqual(["30/11/2023", "10/02/2024"]);\n});\n',
+  },
+  {
+    id: "make-adders",
+    title: "Make adders",
+    language: "javascript",
+    level: "medium",
+    description:
+      "makeAdders(amounts) returns one function per amount; each function adds its own amount to the number it is given. sumSteps(amounts, start) applies them one after another, so sumSteps([1, 5], 10) is 16.",
+    hint: "Every function created in the loop shares one variable. When do they read it?",
+    bugCount: 1,
+    timeLimitSec: 300,
+    basePoints: 200,
+    tags: ["closure", "scope", "loops"],
+    buggy:
+      "// Builds one function per amount.\n// makeAdders([1, 5]) -> [(x) => x + 1, (x) => x + 5]\nfunction makeAdders(amounts) {\n  const adders = [];\n  for (var i = 0; i < amounts.length; i++) {\n    adders.push((x) => x + amounts[i]);\n  }\n  return adders;\n}\n\n// Runs a number through every function in order.\nfunction pipe(fns, start) {\n  let value = start;\n  for (const fn of fns) value = fn(value);\n  return value;\n}\n\n// Adds each amount in turn: sumSteps([1, 5], 10) -> 16.\nfunction sumSteps(amounts, start) {\n  return pipe(makeAdders(amounts), start);\n}\n",
+    tests:
+      'test("each adder uses its own amount", () => {\n  const [addOne, addFive] = makeAdders([1, 5]);\n  expect(addOne(10)).toBe(11);\n  expect(addFive(10)).toBe(15);\n});\ntest("builds one function per amount", () => {\n  expect(makeAdders([3, 4, 5]).length).toBe(3);\n});\ntest("sumSteps applies the adders in order", () => {\n  expect(sumSteps([1, 5], 10)).toBe(16);\n});\ntest("no amounts leaves the number alone", () => {\n  expect(sumSteps([], 7)).toBe(7);\n});\n',
   },
   {
     id: "retry-until-success",
@@ -38,6 +157,397 @@ export const PUZZLES: readonly PublicPuzzle[] = [
       'function flaky(failures) {\n  let calls = 0;\n  return async (attempt) => {\n    calls += 1;\n    if (calls <= failures) throw new Error(`fail ${attempt}`);\n    return `ok on ${attempt}`;\n  };\n}\n\nasync function errorFrom(promise) {\n  try {\n    await promise;\n  } catch (error) {\n    return error.message;\n  }\n  return "no error";\n}\n\ntest("resolves on the first try", async () => {\n  expect(await retry(flaky(0))).toBe("ok on 1");\n});\ntest("retries a rejected task", async () => {\n  expect(await retry(flaky(2), { attempts: 3 })).toBe("ok on 3");\n});\ntest("rejects with the last error", async () => {\n  expect(await errorFrom(retry(flaky(5), { attempts: 3 }))).toBe("fail 3");\n});\ntest("reports each retry", async () => {\n  const seen = [];\n  await retry(flaky(2), {\n    onRetry: (error, n) => seen.push([error.message, n]),\n  });\n  expect(seen).toEqual([\n    ["fail 1", 1],\n    ["fail 2", 2],\n  ]);\n});\ntest("retries a task that throws synchronously", async () => {\n  let calls = 0;\n  const task = () => {\n    calls += 1;\n    if (calls === 1) throw new Error("sync");\n    return "done";\n  };\n  expect(await retry(task)).toBe("done");\n});\n',
   },
   {
+    id: "sum-fields",
+    title: "Sum form fields",
+    language: "javascript",
+    level: "medium",
+    description:
+      "Form inputs arrive as strings. sumFields(values) adds up the filled-in fields (blank ones are skipped) and returns the total rounded to 2 decimal places. averageField(values) is the average of the filled-in fields, or 0 when all are blank.",
+    hint: 'What happens to "2.5" when it is read as a whole number?',
+    bugCount: 1,
+    timeLimitSec: 300,
+    basePoints: 200,
+    tags: ["type-coercion", "parsing", "numbers"],
+    buggy:
+      '// Adds up the filled-in fields (blank ones are skipped), rounded to 2 decimals.\nfunction sumFields(values) {\n  let total = 0;\n  for (const value of values) {\n    if (value.trim() === "") continue;\n    total += parseInt(value, 10);\n  }\n  return Math.round(total * 100) / 100;\n}\n\n// Number of fields that were filled in.\nfunction countFilled(values) {\n  return values.filter((value) => value.trim() !== "").length;\n}\n\n// Average of the filled-in fields, or 0 when all of them are blank.\nfunction averageField(values) {\n  const filled = countFilled(values);\n  return filled === 0 ? 0 : sumFields(values) / filled;\n}\n',
+    tests:
+      'test("adds whole numbers", () => {\n  expect(sumFields(["10", "20", "5"])).toBe(35);\n});\ntest("adds decimals", () => {\n  expect(sumFields(["1.5", "2.25"])).toBe(3.75);\n});\ntest("skips blank fields", () => {\n  expect(sumFields(["4", "", "  ", "6"])).toBe(10);\n});\ntest("rounds away floating point noise", () => {\n  expect(sumFields(["0.1", "0.2"])).toBe(0.3);\n});\ntest("averages only the filled fields", () => {\n  expect(averageField(["1.5", "", "2.5"])).toBe(2);\n  expect(averageField(["", " "])).toBe(0);\n});\n',
+  },
+  {
+    id: "inventory-reducer",
+    title: "Inventory reducer",
+    language: "javascript",
+    level: "hard",
+    description:
+      'reduce(state, action) returns a NEW state and never changes the old one. State is { stock: { [sku]: number }, log: string[] }. "receive" adds to the stock, "ship" removes stock (shipping exactly what is left is fine; shipping more throws "not enough <sku>"), and "discontinue" removes a sku that has no stock left.',
+    hint: "Compare the old state before and after each action. Which actions change it, and which comparison is too strict?",
+    bugCount: 3,
+    timeLimitSec: 480,
+    basePoints: 300,
+    tags: ["reducer", "mutation", "immutability", "comparison"],
+    buggy:
+      '// A tiny inventory store. State shape:\n//   { stock: { [sku]: number }, log: string[] }\n// reduce(state, action) must return a NEW state and never change the old one.\n//\n// Actions:\n//   { type: "receive", sku, qty }  adds qty to the stock of sku\n//   { type: "ship", sku, qty }     removes qty; throws if there is not enough\n//   { type: "discontinue", sku }   removes a sku that has no stock left\n\nconst initialState = { stock: {}, log: [] };\n\nfunction reduce(state, action) {\n  switch (action.type) {\n    case "receive": {\n      const current = state.stock[action.sku] ?? 0;\n      return {\n        ...state,\n        stock: Object.assign(state.stock, {\n          [action.sku]: current + action.qty,\n        }),\n        log: [...state.log, `received ${action.qty} ${action.sku}`],\n      };\n    }\n    case "ship": {\n      const current = state.stock[action.sku] ?? 0;\n      if (action.qty >= current) throw new Error(`not enough ${action.sku}`);\n      return {\n        ...state,\n        stock: { ...state.stock, [action.sku]: current - action.qty },\n        log: [...state.log, `shipped ${action.qty} ${action.sku}`],\n      };\n    }\n    case "discontinue": {\n      if ((state.stock[action.sku] ?? 0) !== 0) {\n        throw new Error(`${action.sku} still has stock`);\n      }\n      delete state.stock[action.sku];\n      const stock = state.stock;\n      return {\n        ...state,\n        stock,\n        log: [...state.log, `discontinued ${action.sku}`],\n      };\n    }\n    default:\n      return state;\n  }\n}\n\n// Applies a list of actions, starting from an empty inventory.\nfunction replay(actions) {\n  return actions.reduce(reduce, initialState);\n}\n\n// Total number of units in stock.\nfunction totalUnits(state) {\n  return Object.values(state.stock).reduce((sum, qty) => sum + qty, 0);\n}\n',
+    tests:
+      'function snapshot(state) {\n  return JSON.stringify(state);\n}\n\ntest("receiving adds to the stock and the log", () => {\n  const state = replay([\n    { type: "receive", sku: "pen", qty: 5 },\n    { type: "receive", sku: "pen", qty: 3 },\n  ]);\n  expect(state.stock).toEqual({ pen: 8 });\n  expect(state.log).toEqual(["received 5 pen", "received 3 pen"]);\n});\ntest("receiving does not change the previous state", () => {\n  const before = replay([{ type: "receive", sku: "pen", qty: 5 }]);\n  const saved = snapshot(before);\n  reduce(before, { type: "receive", sku: "ink", qty: 2 });\n  expect(snapshot(before)).toBe(saved);\n  expect(snapshot(initialState)).toBe(\'{"stock":{},"log":[]}\');\n});\ntest("shipping everything that is left is allowed", () => {\n  const state = replay([\n    { type: "receive", sku: "pen", qty: 4 },\n    { type: "ship", sku: "pen", qty: 4 },\n  ]);\n  expect(totalUnits(state)).toBe(0);\n});\ntest("shipping more than the stock throws", () => {\n  const before = replay([{ type: "receive", sku: "pen", qty: 4 }]);\n  expect(() => reduce(before, { type: "ship", sku: "pen", qty: 5 })).toThrow(\n    "not enough pen",\n  );\n});\ntest("discontinuing removes the sku without touching the old state", () => {\n  const before = replay([\n    { type: "receive", sku: "pen", qty: 1 },\n    { type: "ship", sku: "pen", qty: 1 },\n  ]);\n  const saved = snapshot(before);\n  const after = reduce(before, { type: "discontinue", sku: "pen" });\n  expect(after.stock).toEqual({});\n  expect(snapshot(before)).toBe(saved);\n});\ntest("a sku with stock cannot be discontinued", () => {\n  const before = replay([{ type: "receive", sku: "pen", qty: 2 }]);\n  expect(() => reduce(before, { type: "discontinue", sku: "pen" })).toThrow(\n    "still has stock",\n  );\n});\n',
+  },
+  {
+    id: "leaderboard",
+    title: "Quiz leaderboard",
+    language: "javascript",
+    level: "hard",
+    description:
+      "Entries look like { name, points, time }. They are ranked by more points first, then by the faster (smaller) time, then by name A to Z. Entries with the same points AND the same time share a rank, and the next rank skips ahead (1, 1, 3). sortEntries returns a sorted copy and must not reorder the original array.",
+    hint: "Three small slips, in the comparison, the copy and the rank numbers. Try a tiny board first.",
+    bugCount: 3,
+    timeLimitSec: 480,
+    basePoints: 300,
+    tags: ["sorting", "comparator", "mutation", "ranking"],
+    buggy:
+      '// Leaderboard for a quiz night.\n// Each entry is { name, points, time } where time is the seconds taken.\n//\n// Ranking rules:\n//   1. more points first\n//   2. on equal points, the faster time first\n//   3. on equal points and time, alphabetical by name\n// Entries that tie on points AND time share one rank (1, 1, 3, ...).\n\nfunction compareEntries(a, b) {\n  if (a.points !== b.points) return a.points - b.points;\n  if (a.time !== b.time) return a.time - b.time;\n  return a.name.localeCompare(b.name);\n}\n\n// Returns a sorted copy of the entries, best first.\nfunction sortEntries(entries) {\n  return entries.sort(compareEntries);\n}\n\n// Adds a `rank` to every entry of an already sorted list.\nfunction rankEntries(sorted) {\n  const ranked = [];\n  for (let i = 0; i < sorted.length; i++) {\n    const entry = sorted[i];\n    const previous = ranked[i - 1];\n    const tied =\n      previous !== undefined &&\n      previous.points === entry.points &&\n      previous.time === entry.time;\n    ranked.push({ ...entry, rank: tied ? previous.rank : i });\n  }\n  return ranked;\n}\n\n// The names of the best `n` entries, best first.\nfunction podium(entries, n = 3) {\n  return rankEntries(sortEntries(entries))\n    .slice(0, n)\n    .map((entry) => entry.name);\n}\n\n// One printable line per entry: "1. Ada - 90 pts (42s)".\nfunction formatBoard(entries) {\n  return rankEntries(sortEntries(entries)).map(\n    (entry) =>\n      `${entry.rank}. ${entry.name} - ${entry.points} pts (${entry.time}s)`,\n  );\n}\n\n// Name of the entry in last place, or null for an empty board.\nfunction lastPlace(entries) {\n  const sorted = sortEntries(entries);\n  return sorted.length === 0 ? null : sorted[sorted.length - 1].name;\n}\n',
+    tests:
+      'const quiz = [\n  { name: "Cy", points: 70, time: 50 },\n  { name: "Ada", points: 90, time: 60 },\n  { name: "Bo", points: 90, time: 45 },\n  { name: "Dee", points: 70, time: 50 },\n];\n\ntest("more points rank higher", () => {\n  expect(sortEntries(quiz).map((entry) => entry.name)).toEqual([\n    "Bo",\n    "Ada",\n    "Cy",\n    "Dee",\n  ]);\n});\ntest("equal points are decided by the faster time", () => {\n  const board = [\n    { name: "Slow", points: 10, time: 90 },\n    { name: "Fast", points: 10, time: 20 },\n  ];\n  expect(podium(board)).toEqual(["Fast", "Slow"]);\n});\ntest("sorting does not reorder the original array", () => {\n  const board = quiz.map((entry) => ({ ...entry }));\n  sortEntries(board);\n  expect(board.map((entry) => entry.name)).toEqual(["Cy", "Ada", "Bo", "Dee"]);\n});\ntest("ranks start at 1 and ties share a rank", () => {\n  expect(formatBoard(quiz)).toEqual([\n    "1. Bo - 90 pts (45s)",\n    "2. Ada - 90 pts (60s)",\n    "3. Cy - 70 pts (50s)",\n    "3. Dee - 70 pts (50s)",\n  ]);\n});\ntest("the rank after a tie skips ahead", () => {\n  const board = [\n    { name: "A", points: 5, time: 1 },\n    { name: "B", points: 5, time: 1 },\n    { name: "C", points: 3, time: 1 },\n  ];\n  expect(rankEntries(sortEntries(board)).map((entry) => entry.rank)).toEqual([\n    1, 1, 3,\n  ]);\n});\ntest("finds the last place", () => {\n  expect(lastPlace(quiz)).toBe("Dee");\n  expect(lastPlace([])).toBe(null);\n});\n',
+  },
+  {
+    id: "lru-cache",
+    title: "LRU cache",
+    language: "javascript",
+    level: "hard",
+    description:
+      'LruCache(capacity) remembers at most `capacity` entries. get and set both count as "using" a key. When the cache is full, setting a NEW key throws out the least recently used one. Setting a key that already exists never evicts anything. keys() lists the keys from least to most recently used; has and peek do not count as use.',
+    hint: "Follow the order of keys() after each call. Who moves to the back, and when is anything evicted?",
+    bugCount: 3,
+    timeLimitSec: 480,
+    basePoints: 300,
+    tags: ["cache", "map", "data-structure", "off-by-one"],
+    buggy:
+      '// A small least-recently-used cache.\n// `get` and `set` both count as "use"; `has` and `peek` do not.\n// When the cache is full, setting a NEW key evicts the least recently used one.\n// Setting a key that already exists replaces its value and never evicts.\nclass LruCache {\n  constructor(capacity) {\n    if (!Number.isInteger(capacity) || capacity < 1) {\n      throw new Error("capacity must be a positive whole number");\n    }\n    this.capacity = capacity;\n    this.entries = new Map();\n  }\n\n  get size() {\n    return this.entries.size;\n  }\n\n  has(key) {\n    return this.entries.has(key);\n  }\n\n  // Reads a value without counting as use.\n  peek(key) {\n    return this.entries.get(key);\n  }\n\n  get(key) {\n    if (!this.entries.has(key)) return undefined;\n    const value = this.entries.get(key);\n    return value;\n  }\n\n  set(key, value) {\n    if (this.entries.size > this.capacity) {\n      const oldest = this.entries.keys().next().value;\n      this.entries.delete(oldest);\n    }\n    this.entries.set(key, value);\n  }\n\n  // Keys from least to most recently used.\n  keys() {\n    return [...this.entries.keys()];\n  }\n\n  clear() {\n    this.entries.clear();\n  }\n}\n\n// Wraps `fn` so repeated calls with the same argument reuse the cached result.\nfunction memoize(fn, capacity) {\n  const cache = new LruCache(capacity);\n  return (arg) => {\n    if (cache.has(arg)) return cache.get(arg);\n    const result = fn(arg);\n    cache.set(arg, result);\n    return result;\n  };\n}\n',
+    tests:
+      'function filled() {\n  const cache = new LruCache(3);\n  cache.set("a", 1);\n  cache.set("b", 2);\n  cache.set("c", 3);\n  return cache;\n}\n\ntest("stores and reads values", () => {\n  const cache = filled();\n  expect(cache.get("b")).toBe(2);\n  expect(cache.get("zzz")).toBe(undefined);\n  expect(cache.size).toBe(3);\n});\ntest("evicts the oldest key when a new key does not fit", () => {\n  const cache = filled();\n  cache.set("d", 4);\n  expect(cache.keys()).toEqual(["b", "c", "d"]);\n  expect(cache.size).toBe(3);\n});\ntest("reading a key makes it the most recently used", () => {\n  const cache = filled();\n  cache.get("a");\n  cache.set("d", 4);\n  expect(cache.keys()).toEqual(["c", "a", "d"]);\n});\ntest("setting an existing key never evicts and moves it to the back", () => {\n  const cache = filled();\n  cache.set("b", 20);\n  expect(cache.keys()).toEqual(["a", "c", "b"]);\n  expect(cache.peek("b")).toBe(20);\n});\ntest("peek and has do not count as use", () => {\n  const cache = filled();\n  cache.peek("a");\n  cache.has("a");\n  expect(cache.keys()).toEqual(["a", "b", "c"]);\n});\ntest("memoize computes each argument once", () => {\n  let calls = 0;\n  const square = memoize((n) => {\n    calls += 1;\n    return n * n;\n  }, 2);\n  expect(square(3)).toBe(9);\n  expect(square(3)).toBe(9);\n  expect(calls).toBe(1);\n});\n',
+  },
+  {
+    id: "user-loader",
+    title: "User loader",
+    language: "javascript",
+    level: "hard",
+    description:
+      'loadUser adds the number of PUBLISHED posts (draft is false) to a user. loadUsers loads many users in parallel and keeps the order of the ids. A user that does not exist (the error code is "NOT_FOUND") is left out. Any other error must reject the whole call.',
+    hint: "Think about what a try/catch really catches around a promise, and what the catch block lets through.",
+    bugCount: 3,
+    timeLimitSec: 480,
+    basePoints: 300,
+    tags: ["async", "await", "promises", "error-handling"],
+    buggy:
+      '// Loads user profiles through an API client with two async methods:\n//   api.getUser(id)   -> { id, name }   (rejects with error.code "NOT_FOUND")\n//   api.getPosts(id)  -> [{ title, draft }]\n//\n// The helpers below never talk to the network themselves; they only combine\n// what the client returns.\n\n// One user plus the number of published (non-draft) posts.\nasync function loadUser(api, id) {\n  const [user, posts] = await Promise.all([api.getUser(id), api.getPosts(id)]);\n  const published = posts;\n  return { ...user, postCount: published.length };\n}\n\n// Loads many users in parallel and keeps the order of `ids`.\n// Unknown users (NOT_FOUND) are left out; any other error rejects the call.\nasync function loadUsers(api, ids) {\n  const loaded = await Promise.all(\n    ids.map(async (id) => {\n      try {\n        return loadUser(api, id);\n      } catch (error) {\n        return null;\n      }\n    }),\n  );\n  return loaded.filter((user) => user !== null);\n}\n\n// Names of all found users as one comma separated string.\nasync function userNames(api, ids) {\n  const users = await loadUsers(api, ids);\n  return users.map((user) => user.name).join(", ");\n}\n\n// The found user with the most published posts, or null when nobody is found.\n// On a tie the user listed first wins.\nasync function mostActiveUser(api, ids) {\n  const users = await loadUsers(api, ids);\n  let best = null;\n  for (const user of users) {\n    if (best === null || user.postCount > best.postCount) best = user;\n  }\n  return best;\n}\n\n// How many of the given ids belong to real users.\nasync function countFound(api, ids) {\n  const users = await loadUsers(api, ids);\n  return users.length;\n}\n',
+    tests:
+      'const database = {\n  1: {\n    name: "Ada",\n    posts: [{ draft: false }, { draft: false }, { draft: true }],\n  },\n  2: { name: "Bo", posts: [{ draft: false }] },\n  3: { name: "Cy", posts: [{ draft: true }, { draft: true }] },\n  9: { name: "Broken", broken: true, posts: [] },\n};\n\nconst api = {\n  async getUser(id) {\n    const row = database[id];\n    if (!row) {\n      const error = new Error(`no user ${id}`);\n      error.code = "NOT_FOUND";\n      throw error;\n    }\n    if (row.broken) throw new Error("database is down");\n    return { id, name: row.name };\n  },\n  async getPosts(id) {\n    return database[id] ? database[id].posts : [];\n  },\n};\n\nasync function errorFrom(promise) {\n  try {\n    await promise;\n  } catch (error) {\n    return error.message;\n  }\n  return "no error";\n}\n\ntest("counts only published posts", async () => {\n  expect(await loadUser(api, 1)).toEqual({ id: 1, name: "Ada", postCount: 2 });\n  expect((await loadUser(api, 3)).postCount).toBe(0);\n});\ntest("loads users in the order of the ids", async () => {\n  expect(await userNames(api, [2, 1, 3])).toBe("Bo, Ada, Cy");\n});\ntest("leaves out users that do not exist", async () => {\n  expect(await userNames(api, [1, 404, 2])).toBe("Ada, Bo");\n  expect(await countFound(api, [404, 405])).toBe(0);\n});\ntest("any other error rejects the whole call", async () => {\n  expect(await errorFrom(loadUsers(api, [1, 9, 2]))).toBe("database is down");\n});\ntest("finds the most active user", async () => {\n  expect((await mostActiveUser(api, [2, 1, 3])).name).toBe("Ada");\n  expect(await mostActiveUser(api, [404])).toBe(null);\n});\n',
+  },
+  {
+    id: "word-stats",
+    title: "Word statistics",
+    language: "javascript",
+    level: "hard",
+    description:
+      "tokenize splits text into lowercase words (letters and apostrophes, case does not matter). countWords counts them, topWords gives the n most common as [word, count] (equal counts in alphabetical order) and averageLength is the mean word length rounded to the nearest tenth.",
+    hint: 'Try the words "The" and "constructor", a tie in counts, and an average that ends in .x5.',
+    bugCount: 4,
+    timeLimitSec: 480,
+    basePoints: 300,
+    tags: ["strings", "objects", "sorting", "rounding"],
+    buggy:
+      '// Word statistics for a piece of text.\n// Words are made of letters and apostrophes; everything else separates them.\n// Case does not matter: "The" and "the" are the same word, kept in lowercase.\n\nfunction tokenize(text) {\n  const matches = text.match(/[A-Za-z\']+/g);\n  return matches ?? [];\n}\n\n// Counts how many times each word appears, as an object word -> count.\nfunction countWords(words) {\n  const counts = {};\n  for (const word of words) {\n    counts[word] = (counts[word] || 0) + 1;\n  }\n  return counts;\n}\n\n// The `n` most common words as [word, count] pairs, most common first.\n// Words with the same count are in alphabetical order.\nfunction topWords(counts, n) {\n  return Object.entries(counts)\n    .sort((a, b) => b[1] - a[1])\n    .slice(0, n);\n}\n\n// Mean word length rounded to the nearest tenth; 0 when there are no words.\nfunction averageLength(words) {\n  if (words.length === 0) return 0;\n  const letters = words.reduce((sum, word) => sum + word.length, 0);\n  return Math.floor((letters / words.length) * 10) / 10;\n}\n\n// Everything at once.\nfunction summarize(text, n = 3) {\n  const words = tokenize(text);\n  const counts = countWords(words);\n  return {\n    total: words.length,\n    unique: Object.keys(counts).length,\n    top: topWords(counts, n),\n    averageLength: averageLength(words),\n  };\n}\n\n// The words that appear exactly once, in the order they first appear.\nfunction singletons(text) {\n  const words = tokenize(text);\n  const counts = countWords(words);\n  return [...new Set(words)].filter((word) => counts[word] === 1);\n}\n',
+    tests:
+      'test("splits words and ignores punctuation", () => {\n  expect(tokenize("Hello, world! It\'s 5 o\'clock.")).toEqual([\n    "hello",\n    "world",\n    "it\'s",\n    "o\'clock",\n  ]);\n});\ntest("treats upper and lower case as the same word", () => {\n  const counts = countWords(tokenize("The cat and THE hat"));\n  expect(counts.the).toBe(2);\n});\ntest("counts words that look like object properties", () => {\n  const counts = countWords(tokenize("constructor the constructor"));\n  expect(counts.constructor).toBe(2);\n  expect(counts.the).toBe(1);\n});\ntest("breaks ties alphabetically", () => {\n  const top = topWords(\n    countWords(tokenize("pear apple pear fig apple kiwi")),\n    3,\n  );\n  expect(top).toEqual([\n    ["apple", 2],\n    ["pear", 2],\n    ["fig", 1],\n  ]);\n});\ntest("rounds the average length to the nearest tenth", () => {\n  expect(averageLength(["abcd", "abcde"])).toBe(4.5);\n  expect(averageLength(["abc", "abc", "abc", "abcd"])).toBe(3.3);\n});\ntest("lists the words used only once", () => {\n  expect(singletons("a b a c")).toEqual(["b", "c"]);\n});\n',
+  },
+  {
+    id: "add-tag",
+    title: "Add a tag",
+    language: "python",
+    level: "easy",
+    description:
+      "add_tag(tag, tags=None) appends the tag to the given list and returns that list. When no list is given, it starts a new empty one, so separate calls never share tags.",
+    hint: "When does Python create a default argument value?",
+    bugCount: 1,
+    timeLimitSec: 180,
+    basePoints: 100,
+    tags: ["mutable-default", "lists"],
+    buggy:
+      'def add_tag(tag, tags=[]):\n    """Add `tag` to `tags` and return it.\n\n    Without a list, start a new one.\n    """\n    tags.append(tag)\n    return tags\n',
+    tests:
+      'def test_adds_to_a_given_list():\n    assert add_tag("b", ["a"]) == ["a", "b"]\n\n\ndef test_returns_the_same_list():\n    tags = ["a"]\n    assert add_tag("b", tags) is tags\n\n\ndef test_first_call_without_a_list():\n    assert add_tag("x") == ["x"]\n\n\ndef test_separate_calls_do_not_share_tags():\n    add_tag("first")\n    assert add_tag("second") == ["second"]\n',
+  },
+  {
+    id: "average",
+    title: "Average",
+    language: "python",
+    level: "easy",
+    description:
+      "average(numbers) returns the mean of a list of numbers, including the decimal part (average([1, 2]) is 1.5). An empty list gives 0.",
+    hint: "Python has two kinds of division. Which one keeps the decimals?",
+    bugCount: 1,
+    timeLimitSec: 180,
+    basePoints: 100,
+    tags: ["integer-division", "math"],
+    buggy:
+      'def average(numbers):\n    """Mean of a list of numbers; an empty list gives 0."""\n    if not numbers:\n        return 0\n    total = sum(numbers)\n    return total // len(numbers)\n',
+    tests:
+      "def test_whole_average():\n    assert average([2, 4, 6]) == 4\n\n\ndef test_keeps_the_decimal_part():\n    assert average([1, 2]) == 1.5\n\n\ndef test_single_number():\n    assert average([7]) == 7\n\n\ndef test_empty_list_is_zero():\n    assert average([]) == 0\n",
+  },
+  {
+    id: "count-words",
+    title: "Count words",
+    language: "python",
+    level: "easy",
+    description:
+      "count_words(text) returns the number of words in the text. Words are separated by any amount of whitespace, and an empty or blank text has 0 words.",
+    hint: 'What does "a  b".split(" ") return when there are two spaces?',
+    bugCount: 1,
+    timeLimitSec: 180,
+    basePoints: 100,
+    tags: ["strings", "split", "edge-case"],
+    buggy:
+      'def count_words(text):\n    """Number of words in `text`.\n\n    Any amount of whitespace separates words.\n    """\n    words = text.split(" ")\n    return len(words)\n',
+    tests:
+      'def test_counts_simple_words():\n    assert count_words("hello brave new world") == 4\n\n\ndef test_extra_spaces_do_not_add_words():\n    assert count_words("hello    world") == 2\n\n\ndef test_spaces_around_the_text():\n    assert count_words("  padded text  ") == 2\n\n\ndef test_empty_text_has_no_words():\n    assert count_words("") == 0\n    assert count_words("   ") == 0\n',
+  },
+  {
+    id: "is-palindrome",
+    title: "Palindrome",
+    language: "python",
+    level: "easy",
+    description:
+      'is_palindrome(text) is True when the text reads the same backwards, ignoring spaces and upper or lower case. "Never odd or even" is a palindrome.',
+    hint: 'Are "A" and "a" the same letter for the == operator?',
+    bugCount: 1,
+    timeLimitSec: 180,
+    basePoints: 100,
+    tags: ["strings", "case", "edge-case"],
+    buggy:
+      'def is_palindrome(text):\n    """True if `text` reads the same backwards, ignoring case and spaces."""\n    cleaned = text.replace(" ", "")\n    backwards = cleaned[::-1]\n    return cleaned == backwards\n',
+    tests:
+      'def test_simple_palindrome():\n    assert is_palindrome("level")\n\n\ndef test_not_a_palindrome():\n    assert not is_palindrome("python")\n\n\ndef test_ignores_spaces():\n    assert is_palindrome("nurses run")\n\n\ndef test_ignores_case():\n    assert is_palindrome("Never odd or even")\n',
+  },
+  {
+    id: "sum-to",
+    title: "Sum to n",
+    language: "python",
+    level: "easy",
+    description:
+      "sum_to(n) adds up the whole numbers from 1 to n, including n. sum_to(4) is 10. For n of 0 the sum is 0.",
+    hint: "What is the last number range(1, n) gives you?",
+    bugCount: 1,
+    timeLimitSec: 180,
+    basePoints: 100,
+    tags: ["off-by-one", "range", "loops"],
+    buggy:
+      'def sum_to(n):\n    """Add up the whole numbers from 1 to n, including n. sum_to(4) is 10."""\n    total = 0\n    for number in range(1, n):\n        total += number\n    return total\n',
+    tests:
+      "def test_small_sum():\n    assert sum_to(4) == 10\n\n\ndef test_one():\n    assert sum_to(1) == 1\n\n\ndef test_ten():\n    assert sum_to(10) == 55\n\n\ndef test_zero_is_zero():\n    assert sum_to(0) == 0\n",
+  },
+  {
+    id: "letter-grade",
+    title: "Letter grades",
+    language: "python",
+    level: "medium",
+    description:
+      "letter_grade(score) turns a score from 0 to 100 into a letter - 90 and up is A, 80 and up is B, 70 and up is C, 60 and up is D, anything lower is F. A score outside 0 to 100 raises ValueError. class_summary counts how many of each letter there are.",
+    hint: "What should a score of exactly 90 get? Check the comparison against each limit.",
+    bugCount: 1,
+    timeLimitSec: 300,
+    basePoints: 200,
+    tags: ["comparison", "boundary", "off-by-one"],
+    buggy:
+      'GRADES = [(90, "A"), (80, "B"), (70, "C"), (60, "D")]\n\n\ndef letter_grade(score):\n    """Letter for a score from 0 to 100.\n\n    90 and up is A, 80 and up is B, 70 and up is C, 60 and up is D, and\n    anything lower is F. A score outside 0-100 raises ValueError.\n    """\n    if score < 0 or score > 100:\n        raise ValueError("score must be between 0 and 100")\n    for minimum, letter in GRADES:\n        if score > minimum:\n            return letter\n    return "F"\n\n\ndef class_summary(scores):\n    """Count of each letter grade, e.g. {"A": 2, "C": 1}."""\n    summary = {}\n    for score in scores:\n        letter = letter_grade(score)\n        summary[letter] = summary.get(letter, 0) + 1\n    return summary\n',
+    tests:
+      'def test_clear_grades():\n    assert letter_grade(95) == "A"\n    assert letter_grade(75) == "C"\n    assert letter_grade(30) == "F"\n\n\ndef test_the_limit_itself_gets_the_higher_letter():\n    assert letter_grade(90) == "A"\n    assert letter_grade(60) == "D"\n\n\ndef test_just_below_a_limit():\n    assert letter_grade(89) == "B"\n\n\ndef test_scores_outside_the_range_are_rejected():\n    for bad in (-1, 101):\n        try:\n            letter_grade(bad)\n        except ValueError:\n            continue\n        raise AssertionError("expected ValueError for %s" % bad)\n\n\ndef test_class_summary_counts_letters():\n    assert class_summary([100, 85, 90, 40, 82]) == {"A": 2, "B": 2, "F": 1}\n',
+  },
+  {
+    id: "make-multipliers",
+    title: "Make multipliers",
+    language: "python",
+    level: "medium",
+    description:
+      "make_multipliers(factors) returns one function per factor; each function multiplies the number it receives by its own factor. scale_all(factors, value) calls all of them with the same value. make_multipliers([2, 3])[1](10) is 30.",
+    hint: "When does a lambda look up the variable from the loop?",
+    bugCount: 1,
+    timeLimitSec: 300,
+    basePoints: 200,
+    tags: ["closure", "late-binding", "lambda"],
+    buggy:
+      'def make_multipliers(factors):\n    """One function per factor.\n\n    make_multipliers([2, 3])[1](10) is 30.\n    """\n    multipliers = []\n    for factor in factors:\n        multipliers.append(lambda value: value * factor)\n    return multipliers\n\n\ndef apply_all(functions, value):\n    """The result of calling every function with `value`."""\n    return [function(value) for function in functions]\n\n\ndef scale_all(factors, value):\n    """`value` multiplied by each factor, in order."""\n    return apply_all(make_multipliers(factors), value)\n\n\ndef double_and_triple(value):\n    """Shortcut for scaling by 2 and by 3."""\n    return scale_all([2, 3], value)\n',
+    tests:
+      "def test_each_function_uses_its_own_factor():\n    double, triple = make_multipliers([2, 3])\n    assert double(10) == 20\n    assert triple(10) == 30\n\n\ndef test_one_function_per_factor():\n    assert len(make_multipliers([5, 6, 7])) == 3\n\n\ndef test_scale_all():\n    assert scale_all([2, 3, 4], 10) == [20, 30, 40]\n\n\ndef test_shortcut_and_empty_list():\n    assert double_and_triple(5) == [10, 15]\n    assert scale_all([], 5) == []\n",
+  },
+  {
+    id: "new-board",
+    title: "Game board",
+    language: "python",
+    level: "medium",
+    description:
+      "new_board(rows, cols) creates a grid of 0s where every cell can be changed on its own. place(board, row, col, mark) puts a mark in one cell, count_marks counts how many cells hold a mark, and is_full says whether no 0 is left.",
+    hint: "After placing one mark, how many cells hold it? Look at how the rows are created.",
+    bugCount: 1,
+    timeLimitSec: 300,
+    basePoints: 200,
+    tags: ["aliasing", "nested-lists", "mutation"],
+    buggy:
+      'def new_board(rows, cols):\n    """A rows x cols grid filled with 0. Every cell is independent."""\n    return [[0] * cols] * rows\n\n\ndef place(board, row, col, mark):\n    """Put `mark` in one cell and return the board."""\n    board[row][col] = mark\n    return board\n\n\ndef count_marks(board, mark):\n    """How many cells hold `mark`."""\n    return sum(row.count(mark) for row in board)\n\n\ndef is_full(board):\n    """True when no cell is still 0."""\n    return all(cell != 0 for row in board for cell in row)\n\n\ndef rows_with(board, mark):\n    """Row numbers (counting from 0) that hold `mark`."""\n    return [index for index, row in enumerate(board) if mark in row]\n',
+    tests:
+      'def test_new_board_is_all_zeros():\n    assert new_board(2, 3) == [[0, 0, 0], [0, 0, 0]]\n\n\ndef test_placing_changes_one_cell():\n    board = place(new_board(3, 3), 1, 1, "X")\n    assert board == [[0, 0, 0], [0, "X", 0], [0, 0, 0]]\n\n\ndef test_counts_marks():\n    board = new_board(2, 2)\n    place(board, 0, 0, "O")\n    place(board, 1, 1, "O")\n    assert count_marks(board, "O") == 2\n\n\ndef test_full_board():\n    board = new_board(2, 2)\n    assert not is_full(board)\n    for row in range(2):\n        for col in range(2):\n            place(board, row, col, "X")\n    assert is_full(board)\n',
+  },
+  {
+    id: "percent-done",
+    title: "Percent done",
+    language: "python",
+    level: "medium",
+    description:
+      'percent_done(done, total) is the share of finished tasks as a whole percentage, and halves round UP (1 of 8 is 12.5 so it shows 13). No tasks at all counts as 0 percent. progress_label turns it into text like "50% done (4/8)".',
+    hint: "Try 1 of 8 and 0 of 0. What does round() do with 12.5?",
+    bugCount: 2,
+    timeLimitSec: 300,
+    basePoints: 200,
+    tags: ["rounding", "division-by-zero", "banker-rounding"],
+    buggy:
+      'import math\n\n\ndef percent_done(done, total):\n    """Whole-number percentage of finished tasks.\n\n    Halves round up: 1 of 8 is 12.5, which shows as 13.\n    No tasks at all counts as 0 percent.\n    """\n    return round(done * 100 / total)\n\n\ndef progress_label(done, total):\n    """Text such as "50% done (4/8)"."""\n    return "%d%% done (%d/%d)" % (percent_done(done, total), done, total)\n\n\ndef is_complete(done, total):\n    """True when every task is done and there is at least one task."""\n    return total > 0 and done >= total\n\n\ndef tasks_left(done, total):\n    """How many tasks are still open (never below 0)."""\n    return max(total - done, 0)\n\n\ndef is_started(done):\n    """True when at least one task is done."""\n    return done > 0\n',
+    tests:
+      'def test_plain_percentages():\n    assert percent_done(4, 8) == 50\n    assert percent_done(8, 8) == 100\n\n\ndef test_rounds_to_the_nearest_whole_number():\n    assert percent_done(1, 3) == 33\n    assert percent_done(2, 3) == 67\n\n\ndef test_halves_round_up():\n    assert percent_done(1, 8) == 13\n    assert percent_done(5, 8) == 63\n\n\ndef test_no_tasks_is_zero_percent():\n    assert percent_done(0, 0) == 0\n    assert progress_label(0, 0) == "0% done (0/0)"\n\n\ndef test_label_and_completion():\n    assert progress_label(4, 8) == "50% done (4/8)"\n    assert is_complete(3, 3)\n    assert not is_complete(0, 0)\n',
+  },
+  {
+    id: "remove-negatives",
+    title: "Remove negatives",
+    language: "python",
+    level: "medium",
+    description:
+      "remove_negatives(numbers) removes every negative number from the list IN PLACE and returns how many were removed. average_without_negatives gives the mean of the non-negative numbers (0 if none) and must not change the list it is given.",
+    hint: "What happens to the loop when you remove items from the list it is walking over?",
+    bugCount: 1,
+    timeLimitSec: 300,
+    basePoints: 200,
+    tags: ["mutation-during-iteration", "lists", "loops"],
+    buggy:
+      'def remove_negatives(numbers):\n    """Remove every negative number from the list, in place.\n\n    Returns how many numbers were removed.\n    """\n    removed = 0\n    for number in numbers:\n        if number < 0:\n            numbers.remove(number)\n            removed += 1\n    return removed\n\n\ndef average_without_negatives(numbers):\n    """Mean of the non-negative numbers (0 if there are none).\n\n    The list that is passed in is not changed.\n    """\n    kept = list(numbers)\n    remove_negatives(kept)\n    return sum(kept) / len(kept) if kept else 0\n\n\ndef count_negatives(numbers):\n    """How many numbers are below zero."""\n    return sum(1 for number in numbers if number < 0)\n',
+    tests:
+      "def test_removes_a_negative():\n    numbers = [3, -1, 4]\n    assert remove_negatives(numbers) == 1\n    assert numbers == [3, 4]\n\n\ndef test_removes_neighbouring_negatives():\n    numbers = [-1, -2, -3, 5]\n    assert remove_negatives(numbers) == 3\n    assert numbers == [5]\n\n\ndef test_nothing_to_remove():\n    numbers = [1, 2]\n    assert remove_negatives(numbers) == 0\n    assert numbers == [1, 2]\n\n\ndef test_average_ignores_negatives_and_keeps_the_input():\n    numbers = [2, -5, 4, -1]\n    assert average_without_negatives(numbers) == 3\n    assert numbers == [2, -5, 4, -1]\n    assert count_negatives(numbers) == 2\n",
+  },
+  {
+    id: "add-months",
+    title: "Monthly dates",
+    language: "python",
+    level: "hard",
+    description:
+      "add_months(day, months) moves a date by whole months; if the day does not exist in the new month it uses the last day of that month (Jan 31 plus 1 month is Feb 28, or Feb 29 in a leap year). billing_dates(start, count) lists monthly billing dates counted from the START date, so Jan 31 gives Jan 31, Feb 28, Mar 31. age_in_years only counts a birthday once it has been reached.",
+    hint: "Check the month number maths, the shortest months, and whether each billing date is computed from the start or from the previous date.",
+    bugCount: 5,
+    timeLimitSec: 480,
+    basePoints: 300,
+    tags: ["dates", "calendar", "off-by-one", "edge-case"],
+    buggy:
+      'import calendar\nfrom datetime import date\n\n\ndef month_name(month):\n    """English name of a month number (1-12)."""\n    return calendar.month_name[month]\n\n\ndef days_in_month(year, month):\n    """Number of days in the given month (month is 1-12)."""\n    return calendar.monthrange(year, month)[0]\n\n\ndef add_months(day, months):\n    """Move a date by whole months.\n\n    If the day does not exist in the new month, the last day of that month is\n    used: Jan 31 + 1 month is Feb 28 (Feb 29 in a leap year).\n    """\n    index = day.year * 12 + (day.month) + months\n    year = index // 12\n    month = index % 12 + 1\n    new_day = day.day\n    return date(year, month, new_day)\n\n\ndef billing_dates(start, count):\n    """The first `count` monthly billing dates, starting with `start`.\n\n    Every date is worked out from `start`, so the day is never lost:\n    Jan 31 gives Jan 31, Feb 28, Mar 31, Apr 30, ...\n    """\n    dates = []\n    current = start\n    for _ in range(count):\n        dates.append(current)\n        current = add_months(current, 1)\n    return dates\n\n\ndef last_day_of_month(day):\n    """The last date of the month that `day` is in."""\n    return date(day.year, day.month, days_in_month(day.year, day.month))\n\n\ndef is_month_end(day):\n    """True when `day` is the last day of its month."""\n    return day == last_day_of_month(day)\n\n\ndef days_until(today, target):\n    """Whole days from `today` to `target` (negative if it is in the past)."""\n    return (target - today).days\n\n\ndef age_in_years(born, today):\n    """Whole years between `born` and `today`.\n\n    A birthday that has not been reached yet this year does not count.\n    """\n    years = today.year - born.year\n    return years\n',
+    tests:
+      "def test_adds_months_within_a_year():\n    assert add_months(date(2024, 3, 15), 2) == date(2024, 5, 15)\n\n\ndef test_wraps_over_the_new_year():\n    assert add_months(date(2024, 11, 10), 3) == date(2025, 2, 10)\n    assert add_months(date(2024, 12, 5), 1) == date(2025, 1, 5)\n\n\ndef test_goes_back_in_time():\n    assert add_months(date(2024, 1, 20), -2) == date(2023, 11, 20)\n\n\ndef test_short_months_use_their_last_day():\n    assert add_months(date(2023, 1, 31), 1) == date(2023, 2, 28)\n    assert add_months(date(2024, 1, 31), 1) == date(2024, 2, 29)\n\n\ndef test_billing_dates_are_counted_from_the_start():\n    assert billing_dates(date(2023, 1, 31), 4) == [\n        date(2023, 1, 31),\n        date(2023, 2, 28),\n        date(2023, 3, 31),\n        date(2023, 4, 30),\n    ]\n\n\ndef test_age_waits_for_the_birthday():\n    born = date(2000, 6, 15)\n    assert age_in_years(born, date(2024, 6, 14)) == 23\n    assert age_in_years(born, date(2024, 6, 15)) == 24\n",
+  },
+  {
+    id: "merge-intervals",
+    title: "Merge intervals",
+    language: "python",
+    level: "hard",
+    description:
+      "merge_intervals(intervals) merges overlapping or touching [start, end] intervals - [[1, 3], [2, 6], [8, 10], [6, 7]] becomes [[1, 7], [8, 10]]. The input list and the intervals inside it must not change. free_slots uses it to list the gaps in a day that no interval covers.",
+    hint: "Think about the order the intervals are visited in, an interval that sits fully inside another, touching ends, and what is shared with the input.",
+    bugCount: 4,
+    timeLimitSec: 480,
+    basePoints: 300,
+    tags: ["intervals", "sorting", "aliasing", "boundary"],
+    buggy:
+      'def merge_intervals(intervals):\n    """Merge overlapping or touching [start, end] intervals.\n\n    merge_intervals([[1, 3], [2, 6], [8, 10], [6, 7]]) -> [[1, 7], [8, 10]]\n    The input list and the intervals inside it must not change.\n    """\n    if not intervals:\n        return []\n    ordered = list(intervals)\n    merged = [ordered[0]]\n    for start, end in ordered[1:]:\n        last = merged[-1]\n        if start < last[1]:\n            last[1] = end\n        else:\n            merged.append([start, end])\n    return merged\n\n\ndef total_covered(intervals):\n    """Total length covered by the intervals (overlaps count once)."""\n    return sum(end - start for start, end in merge_intervals(intervals))\n\n\ndef is_free(intervals, start, end):\n    """True when [start, end] does not overlap any interval.\n\n    Touching an interval at one end is fine.\n    """\n    return all(end <= s or start >= e for s, e in merge_intervals(intervals))\n\n\ndef overlaps(a, b):\n    """True when two [start, end] intervals share more than a single point."""\n    return a[0] < b[1] and b[0] < a[1]\n\n\ndef free_slots(intervals, day_start, day_end):\n    """Gaps inside [day_start, day_end] that no interval covers."""\n    free = []\n    cursor = day_start\n    for start, end in merge_intervals(intervals):\n        if start > cursor:\n            free.append([cursor, start])\n        cursor = max(cursor, end)\n    if cursor < day_end:\n        free.append([cursor, day_end])\n    return free\n\n\ndef longest_free_slot(intervals, day_start, day_end):\n    """The longest gap from free_slots, or None when the day is full."""\n    slots = free_slots(intervals, day_start, day_end)\n    return max(slots, key=lambda slot: slot[1] - slot[0], default=None)\n',
+    tests:
+      "def test_merges_overlapping_intervals():\n    assert merge_intervals([[1, 3], [2, 6], [8, 10]]) == [[1, 6], [8, 10]]\n\n\ndef test_input_order_does_not_matter():\n    assert merge_intervals([[8, 10], [1, 3], [2, 6]]) == [[1, 6], [8, 10]]\n\n\ndef test_an_interval_inside_another_is_absorbed():\n    assert merge_intervals([[1, 10], [2, 3], [4, 5]]) == [[1, 10]]\n\n\ndef test_touching_intervals_are_merged():\n    assert merge_intervals([[1, 2], [2, 3]]) == [[1, 3]]\n\n\ndef test_the_input_is_not_changed():\n    intervals = [[1, 3], [2, 6]]\n    merge_intervals(intervals)\n    assert intervals == [[1, 3], [2, 6]]\n\n\ndef test_free_slots_and_coverage():\n    booked = [[9, 10], [10, 12], [13, 14]]\n    assert free_slots(booked, 8, 17) == [[8, 9], [12, 13], [14, 17]]\n    assert total_covered(booked) == 4\n    assert is_free(booked, 12, 13)\n",
+  },
+  {
+    id: "rate-limiter",
+    title: "Rate limiter",
+    language: "python",
+    level: "hard",
+    description:
+      "RateLimiter(limit, window) allows at most `limit` calls in any `window` seconds. Time is passed in as `now`, so nothing is random. A call made exactly `window` seconds after an earlier one no longer counts against it. Refused calls are not remembered. retry_after(now) says how many seconds to wait until the next call would be allowed.",
+    hint: "Look at when a call leaves the window, the order of recording and checking, and the formula for the waiting time.",
+    bugCount: 3,
+    timeLimitSec: 480,
+    basePoints: 300,
+    tags: ["sliding-window", "deque", "boundary", "off-by-one"],
+    buggy:
+      'from collections import deque\n\n\nclass RateLimiter:\n    """Allows at most `limit` calls in any window of `window` seconds.\n\n    Time is passed in (`now`, in seconds) so the behaviour is predictable.\n    A call made at time t counts while now - t < window.\n    """\n\n    def __init__(self, limit, window):\n        if limit < 1 or window <= 0:\n            raise ValueError("limit must be at least 1 and window above 0")\n        self.limit = limit\n        self.window = window\n        self.calls = deque()\n\n    def _forget_old(self, now):\n        """Drop the calls that have left the window."""\n        while self.calls and now - self.calls[0] > self.window:\n            self.calls.popleft()\n\n    def allow(self, now):\n        """Record a call at `now` if it is allowed. Refused calls are not kept."""\n        self._forget_old(now)\n        self.calls.append(now)\n        if len(self.calls) > self.limit:\n            return False\n        return True\n\n    def remaining(self, now):\n        """How many more calls would be allowed right now."""\n        self._forget_old(now)\n        return self.limit - len(self.calls)\n\n    def retry_after(self, now):\n        """Seconds to wait until the next call is allowed (0 if allowed now)."""\n        self._forget_old(now)\n        if len(self.calls) < self.limit:\n            return 0\n        return self.calls[0] + self.window\n\n    def reset(self):\n        """Forget every call."""\n        self.calls.clear()\n\n    def is_full(self, now):\n        """True when the next call would be refused."""\n        return self.remaining(now) <= 0\n\n    def wait_text(self, now):\n        """A friendly message such as "try again in 7s"."""\n        seconds = self.retry_after(now)\n        if seconds == 0:\n            return "go ahead"\n        return "try again in %ds" % seconds\n',
+    tests:
+      "def test_allows_calls_up_to_the_limit():\n    limiter = RateLimiter(2, 10)\n    assert limiter.allow(0)\n    assert limiter.allow(1)\n    assert not limiter.allow(2)\n\n\ndef test_calls_leave_the_window_after_window_seconds():\n    limiter = RateLimiter(1, 10)\n    assert limiter.allow(0)\n    assert not limiter.allow(9)\n    assert limiter.allow(10)\n\n\ndef test_refused_calls_are_not_remembered():\n    limiter = RateLimiter(1, 10)\n    assert limiter.allow(0)\n    assert not limiter.allow(5)\n    assert limiter.allow(10)\n\n\ndef test_remaining_calls():\n    limiter = RateLimiter(3, 10)\n    limiter.allow(0)\n    assert limiter.remaining(1) == 2\n\n\ndef test_retry_after_is_a_waiting_time():\n    limiter = RateLimiter(2, 10)\n    limiter.allow(3)\n    limiter.allow(4)\n    assert limiter.retry_after(6) == 7\n    assert limiter.retry_after(14) == 0\n",
+  },
+  {
+    id: "shopping-cart",
+    title: "Shopping cart",
+    language: "python",
+    level: "hard",
+    description:
+      "Cart holds items (name, price in cents, quantity). A new Cart() starts empty and never shares items with another cart, and Cart(items) copies the list it is given. average_price is the average price of one unit in cents and keeps the decimals. most_expensive returns the line with the highest total (price x quantity), or None for an empty cart.",
+    hint: "Look at what a new cart starts from, what average_price divides with, and what max is comparing.",
+    bugCount: 3,
+    timeLimitSec: 480,
+    basePoints: 300,
+    tags: ["mutable-default", "integer-division", "max-key", "class"],
+    buggy:
+      'class Cart:\n    """A shopping cart. Prices are whole cents.\n\n    Each item is a dict: {"name": str, "price": int, "quantity": int}.\n    A new cart never shares its items with another cart, and Cart(items)\n    makes its own copy of the list it is given.\n    """\n\n    def __init__(self, items=[]):\n        self.items = items\n\n    def add(self, name, price, quantity=1):\n        """Add a line to the cart."""\n        self.items.append({"name": name, "price": price, "quantity": quantity})\n\n    def count_units(self):\n        """Total number of units over all lines."""\n        return sum(item["quantity"] for item in self.items)\n\n    def subtotal(self):\n        """Sum of price x quantity over all lines, in cents."""\n        return sum(item["price"] * item["quantity"] for item in self.items)\n\n    def average_price(self):\n        """Average price of one unit in cents, e.g. 250.5. 0 for an empty cart."""\n        units = self.count_units()\n        if units == 0:\n            return 0\n        return self.subtotal() // units\n\n    def most_expensive(self):\n        """The line with the highest total (price x quantity), or None."""\n        return max(\n            self.items,\n            key=lambda item: item["price"],\n            default=None,\n        )\n\n    def names(self):\n        """Names of all lines in the order they were added."""\n        return [item["name"] for item in self.items]\n\n    def remove(self, name):\n        """Remove every line called `name`. Returns how many lines were removed."""\n        before = len(self.items)\n        self.items = [item for item in self.items if item["name"] != name]\n        return before - len(self.items)\n\n    def is_empty(self):\n        """True when the cart has no lines."""\n        return not self.items\n',
+    tests:
+      'def test_subtotal_and_units():\n    cart = Cart()\n    cart.add("pen", 150, 4)\n    cart.add("book", 1200)\n    assert cart.subtotal() == 1800\n    assert cart.count_units() == 5\n\n\ndef test_new_carts_start_empty():\n    first = Cart()\n    first.add("pen", 150)\n    second = Cart()\n    assert second.names() == []\n\n\ndef test_cart_copies_the_list_it_is_given():\n    lines = [{"name": "pen", "price": 150, "quantity": 1}]\n    cart = Cart(lines)\n    cart.add("book", 1200)\n    assert len(lines) == 1\n    assert cart.names() == ["pen", "book"]\n\n\ndef test_average_price_keeps_the_decimals():\n    cart = Cart()\n    cart.add("a", 100)\n    cart.add("b", 401)\n    assert cart.average_price() == 250.5\n    assert Cart().average_price() == 0\n\n\ndef test_most_expensive_looks_at_the_line_total():\n    cart = Cart()\n    cart.add("pen", 150, 10)\n    cart.add("book", 1200, 1)\n    assert cart.most_expensive()["name"] == "pen"\n    assert Cart().most_expensive() is None\n',
+  },
+  {
+    id: "text-stats",
+    title: "Text statistics",
+    language: "python",
+    level: "hard",
+    description:
+      "words(text) returns the lowercase words of a text - letters and apostrophes only, and quotes around a word are not part of it ('hello' is hello). word_counts counts them and most_common(text, n) gives the n most used words as (word, count) pairs, equal counts in alphabetical order. diversity(text) is the share of different words, rounded to 2 places (0 for no words).",
+    hint: "Try capital letters, a word in single quotes, a tie in counts and a text with no words.",
+    bugCount: 4,
+    timeLimitSec: 480,
+    basePoints: 300,
+    tags: ["regex", "sorting", "strings", "division-by-zero"],
+    buggy:
+      'import re\n\n\ndef words(text):\n    """Lowercase words of `text`: letters and apostrophes only.\n\n    Quotes around a word are not part of it: \'hello\' gives hello.\n    """\n    found = re.findall(r"[a-z\']+", text)\n    return found\n\n\ndef word_counts(text):\n    """Dictionary of word -> number of times it is used."""\n    counts = {}\n    for word in words(text):\n        counts[word] = counts.get(word, 0) + 1\n    return counts\n\n\ndef most_common(text, n):\n    """The `n` most used words as (word, count) pairs.\n\n    Most used first. Words used equally often are in alphabetical order.\n    """\n    counts = word_counts(text)\n    ranked = sorted(counts.items(), key=lambda pair: -pair[1])\n    return ranked[:n]\n\n\ndef diversity(text):\n    """Share of different words, rounded to 2 places. 0 when there are no words."""\n    found = words(text)\n    return round(len(set(found)) / len(found), 2)\n\n\ndef average_length(text):\n    """Average word length, rounded to 1 place. 0 when there are no words."""\n    found = words(text)\n    if not found:\n        return 0\n    return round(sum(len(word) for word in found) / len(found), 1)\n\n\ndef longest_word(text):\n    """The longest word; the first one wins a tie. None when there are no words."""\n    found = words(text)\n    if not found:\n        return None\n    return max(found, key=len)\n\n\ndef unique_words(text):\n    """Different words in the order they first appear."""\n    return list(dict.fromkeys(words(text)))\n\n\ndef report(text, n=3):\n    """One line per common word, such as "the: 4"."""\n    return ["%s: %d" % (word, count) for word, count in most_common(text, n)]\n',
+    tests:
+      'def test_splits_words_and_ignores_punctuation():\n    assert words("Hello, world! It\'s 5 o\'clock.") == ["hello", "world", "it\'s", "o\'clock"]\n\n\ndef test_capital_letters_are_kept_as_lowercase_words():\n    assert word_counts("The cat and THE hat")["the"] == 2\n\n\ndef test_quotes_around_a_word_are_not_part_of_it():\n    assert words("He said \'hello\' twice") == ["he", "said", "hello", "twice"]\n\n\ndef test_equal_counts_are_alphabetical():\n    assert most_common("pear apple pear fig apple kiwi", 3) == [\n        ("apple", 2),\n        ("pear", 2),\n        ("fig", 1),\n    ]\n\n\ndef test_diversity_and_empty_text():\n    assert diversity("a b a b") == 0.5\n    assert diversity("") == 0\n    assert diversity("1 2 3 !!!") == 0\n\n\ndef test_average_length_and_report():\n    assert average_length("aa bbbb") == 3\n    assert report("x y x", 1) == ["x: 2"]\n',
+  },
+  {
+    id: "get-initials",
+    title: "Initials",
+    language: "typescript",
+    level: "easy",
+    description:
+      'getInitials(fullName) returns the upper-case first letters of the names, e.g. "ada lovelace" gives "AL". Extra spaces at the start, at the end or between names are ignored.',
+    hint: 'What does split(" ") return when two spaces are next to each other?',
+    bugCount: 1,
+    timeLimitSec: 180,
+    basePoints: 100,
+    tags: ["strings", "edge-case", "split"],
+    buggy:
+      '// Upper-case initials of a full name: "ada  lovelace" -> "AL".\n// Extra spaces around or between the names are ignored.\nfunction getInitials(fullName: string): string {\n  return fullName\n    .split(" ")\n    .map((part) => part[0].toUpperCase())\n    .join("");\n}\n',
+    tests:
+      'test("two names", () => {\n  expect(getInitials("ada lovelace")).toBe("AL");\n});\ntest("three names", () => {\n  expect(getInitials("Grace Brewster Hopper")).toBe("GBH");\n});\ntest("ignores extra spaces between names", () => {\n  expect(getInitials("alan   turing")).toBe("AT");\n});\ntest("ignores spaces around the name", () => {\n  expect(getInitials("  linus torvalds ")).toBe("LT");\n});\n',
+  },
+  {
+    id: "is-leap-year",
+    title: "Leap year",
+    language: "typescript",
+    level: "easy",
+    description:
+      "isLeapYear(year) is true for years divisible by 4, except century years (1900, 2100) which must also be divisible by 400. So 2000 and 2024 are leap years, 1900 and 2023 are not.",
+    hint: "Read the century rule again. What should happen to 1900?",
+    bugCount: 1,
+    timeLimitSec: 180,
+    basePoints: 100,
+    tags: ["wrong-return", "logic", "dates"],
+    buggy:
+      "// A year is a leap year when it is divisible by 4, except century years,\n// which must also be divisible by 400.\nfunction isLeapYear(year: number): boolean {\n  if (year % 400 === 0) return true;\n  if (year % 100 === 0) return true;\n  return year % 4 === 0;\n}\n",
+    tests:
+      'test("a normal leap year", () => {\n  expect(isLeapYear(2024)).toBe(true);\n});\ntest("a normal year", () => {\n  expect(isLeapYear(2023)).toBe(false);\n});\ntest("a century year divisible by 400", () => {\n  expect(isLeapYear(2000)).toBe(true);\n});\ntest("a century year not divisible by 400", () => {\n  expect(isLeapYear(1900)).toBe(false);\n  expect(isLeapYear(2100)).toBe(false);\n});\n',
+  },
+  {
     id: "paginate",
     title: "Paginate a list",
     language: "typescript",
@@ -55,6 +565,40 @@ export const PUZZLES: readonly PublicPuzzle[] = [
       'const letters: string[] = ["a", "b", "c", "d", "e"];\n\ntest("returns the first page", () => {\n  expect(paginate(letters, 1, 2)).toEqual(["a", "b"]);\n});\ntest("returns a partial last page", () => {\n  expect(paginate(letters, 3, 2)).toEqual(["e"]);\n});\ntest("returns nothing past the end", () => {\n  expect(paginate(letters, 4, 2)).toEqual([]);\n});\ntest("returns nothing below page 1", () => {\n  expect(paginate(letters, 0, 2)).toEqual([]);\n});\n',
   },
   {
+    id: "percentage",
+    title: "Percentage",
+    language: "typescript",
+    level: "easy",
+    description:
+      "percentage(part, total) is the share of part in total as a whole number, rounded to the nearest integer. When total is 0 there is nothing to divide, so the answer is 0.",
+    hint: "What does 0 / 0 give in JavaScript?",
+    bugCount: 1,
+    timeLimitSec: 180,
+    basePoints: 100,
+    tags: ["division-by-zero", "math", "edge-case"],
+    buggy:
+      "// Share of `part` in `total` as a whole-number percentage, rounded to the\n// nearest integer. An empty total (0) gives 0 instead of NaN.\nfunction percentage(part: number, total: number): number {\n  return Math.round((part / total) * 100);\n}\n",
+    tests:
+      'test("a half is 50 percent", () => {\n  expect(percentage(1, 2)).toBe(50);\n});\ntest("rounds to the nearest whole number", () => {\n  expect(percentage(1, 3)).toBe(33);\n  expect(percentage(2, 3)).toBe(67);\n});\ntest("everything is 100 percent", () => {\n  expect(percentage(8, 8)).toBe(100);\n});\ntest("an empty total gives 0", () => {\n  expect(percentage(0, 0)).toBe(0);\n  expect(percentage(5, 0)).toBe(0);\n});\n',
+  },
+  {
+    id: "remove-first",
+    title: "Remove first match",
+    language: "typescript",
+    level: "easy",
+    description:
+      "removeFirst(items, target) returns a copy of the list without the first occurrence of target. If target is not in the list, the copy is identical. The original list is never changed.",
+    hint: "indexOf returns -1 when nothing matches. Is -1 truthy? Is 0 falsy?",
+    bugCount: 1,
+    timeLimitSec: 180,
+    basePoints: 100,
+    tags: ["indexof", "truthiness", "arrays"],
+    buggy:
+      "// Returns a copy of `items` without the first occurrence of `target`.\n// If `target` is not there, the copy has the same items.\nfunction removeFirst<T>(items: T[], target: T): T[] {\n  const copy = [...items];\n  const index = copy.indexOf(target);\n  if (index) copy.splice(index, 1);\n  return copy;\n}\n",
+    tests:
+      'test("removes a match in the middle", () => {\n  expect(removeFirst(["a", "b", "c"], "b")).toEqual(["a", "c"]);\n});\ntest("removes a match at the start", () => {\n  expect(removeFirst(["a", "b", "c"], "a")).toEqual(["b", "c"]);\n});\ntest("removes only the first match", () => {\n  expect(removeFirst([1, 2, 1], 1)).toEqual([2, 1]);\n});\ntest("a missing item changes nothing", () => {\n  expect(removeFirst(["a", "b"], "z")).toEqual(["a", "b"]);\n});\ntest("does not change the original list", () => {\n  const items = ["a", "b"];\n  removeFirst(items, "a");\n  expect(items).toEqual(["a", "b"]);\n});\n',
+  },
+  {
     id: "cart-totals",
     title: "Cart totals",
     language: "typescript",
@@ -70,5 +614,158 @@ export const PUZZLES: readonly PublicPuzzle[] = [
       "interface CartItem {\n  name: string;\n  /** Price of one unit, in cents. */\n  price: number;\n  quantity: number;\n}\n\ninterface Totals {\n  subtotal: number;\n  shipping: number;\n  total: number;\n}\n\nconst SHIPPING_CENTS = 499;\nconst FREE_SHIPPING_FROM_CENTS = 5000;\n\n// Works out the cart totals in cents. Shipping is free when the subtotal is\n// 50.00 or more. An empty cart costs nothing, not even shipping.\nfunction cartTotals(items: CartItem[]): Totals {\n  if (items.length === 0) {\n    return { subtotal: 0, shipping: 0, total: 0 };\n  }\n  const subtotal = items.reduce((sum, item) => sum + item.price, 0);\n  const shipping = subtotal > FREE_SHIPPING_FROM_CENTS ? 0 : SHIPPING_CENTS;\n  return { subtotal, shipping, total: subtotal + shipping };\n}\n",
     tests:
       'const book: CartItem = { name: "Book", price: 1250, quantity: 1 };\n\ntest("charges shipping on a small order", () => {\n  expect(cartTotals([book])).toEqual({\n    subtotal: 1250,\n    shipping: 499,\n    total: 1749,\n  });\n});\ntest("multiplies by quantity", () => {\n  expect(cartTotals([{ ...book, quantity: 3 }]).subtotal).toBe(3750);\n});\ntest("ships free at exactly 50.00", () => {\n  const cart: CartItem[] = [{ name: "Lamp", price: 5000, quantity: 1 }];\n  expect(cartTotals(cart).shipping).toBe(0);\n});\ntest("ships free above 50.00", () => {\n  const cart: CartItem[] = [book, { name: "Lamp", price: 4000, quantity: 1 }];\n  expect(cartTotals(cart)).toEqual({\n    subtotal: 5250,\n    shipping: 0,\n    total: 5250,\n  });\n});\ntest("an empty cart costs nothing", () => {\n  expect(cartTotals([])).toEqual({ subtotal: 0, shipping: 0, total: 0 });\n});\n',
+  },
+  {
+    id: "chunk-array",
+    title: "Chunk an array",
+    language: "typescript",
+    level: "medium",
+    description:
+      "chunk(items, size) splits a list into groups of `size`; the last group may be shorter. chunk([1, 2, 3, 4, 5], 2) is [[1, 2], [3, 4], [5]]. toRows joins each group into one printable row.",
+    hint: "Which start positions does the loop visit? Try a list with only one item.",
+    bugCount: 1,
+    timeLimitSec: 300,
+    basePoints: 200,
+    tags: ["loop-bounds", "arrays", "off-by-one"],
+    buggy:
+      '// Splits `items` into groups of `size`. The last group may be shorter.\n// chunk([1, 2, 3, 4, 5], 2) -> [[1, 2], [3, 4], [5]]\nfunction chunk<T>(items: T[], size: number): T[][] {\n  if (size < 1) throw new Error("size must be at least 1");\n  const groups: T[][] = [];\n  for (let i = 0; i < items.length - size; i += size) {\n    groups.push(items.slice(i, i + size));\n  }\n  return groups;\n}\n\n// Lays names out in rows for printing, e.g. 5 names in rows of 2 -> 3 rows.\nfunction toRows(names: string[], perRow: number): string[] {\n  return chunk(names, perRow).map((row) => row.join(", "));\n}\n\n// How many rows are needed for `total` items, `perRow` to a row.\nfunction rowCount(total: number, perRow: number): number {\n  return Math.ceil(total / perRow);\n}\n',
+    tests:
+      'test("splits evenly", () => {\n  expect(chunk([1, 2, 3, 4], 2)).toEqual([\n    [1, 2],\n    [3, 4],\n  ]);\n});\ntest("keeps a shorter last group", () => {\n  expect(chunk([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);\n});\ntest("a list shorter than the size is one group", () => {\n  expect(chunk([1], 3)).toEqual([[1]]);\n});\ntest("an empty list has no groups", () => {\n  expect(chunk([], 3)).toEqual([]);\n});\ntest("rows match the row count", () => {\n  const names = ["Ann", "Bo", "Cy", "Di", "Ed"];\n  expect(toRows(names, 2)).toEqual(["Ann, Bo", "Cy, Di", "Ed"]);\n  expect(toRows(names, 2).length).toBe(rowCount(names.length, 2));\n});\n',
+  },
+  {
+    id: "format-profiles",
+    title: "Profile summaries",
+    language: "typescript",
+    level: "medium",
+    description:
+      'summarize(user) gives "Name (age) from City". The nickname replaces the name when it is not empty. A missing age is shown as "unknown" (but an age of 0 is a real age). A user without an address is "from an unknown city".',
+    hint: "One bug crashes, the other quietly shows the wrong text. Try a user without an address and a newborn.",
+    bugCount: 2,
+    timeLimitSec: 300,
+    basePoints: 200,
+    tags: ["null-handling", "optional-chaining", "nullish"],
+    buggy:
+      'interface User {\n  name: string;\n  nickname?: string;\n  age?: number;\n  address?: { city?: string };\n}\n\n// One-line summary for a user list: "Ada (36) from London".\n// - the nickname replaces the name when it is not empty\n// - a missing age shows as "unknown" (0 is a real age)\n// - a missing address or city shows as "an unknown city"\nfunction summarize(user: User): string {\n  const label = user.nickname || user.name;\n  const age = user.age || "unknown";\n  const city = user.address.city ?? "an unknown city";\n  return `${label} (${age}) from ${city}`;\n}\n\n// Summaries for a list of users, one per line, in the given order.\nfunction summarizeAll(users: User[]): string {\n  return users.map((user) => summarize(user)).join("\\n");\n}\n',
+    tests:
+      'test("a complete user", () => {\n  const user: User = { name: "Ada", age: 36, address: { city: "London" } };\n  expect(summarize(user)).toBe("Ada (36) from London");\n});\ntest("a nickname replaces the name", () => {\n  const user: User = {\n    name: "Robert",\n    nickname: "Bob",\n    age: 40,\n    address: { city: "Leeds" },\n  };\n  expect(summarize(user)).toBe("Bob (40) from Leeds");\n});\ntest("an empty nickname is ignored", () => {\n  const user: User = {\n    name: "Robert",\n    nickname: "",\n    age: 40,\n    address: { city: "Leeds" },\n  };\n  expect(summarize(user)).toBe("Robert (40) from Leeds");\n});\ntest("a missing address does not crash", () => {\n  expect(summarize({ name: "Cy", age: 5 })).toBe("Cy (5) from an unknown city");\n  expect(summarize({ name: "Cy", age: 5, address: {} })).toBe(\n    "Cy (5) from an unknown city",\n  );\n});\ntest("an age of 0 is shown, a missing age is unknown", () => {\n  expect(summarize({ name: "Baby", age: 0, address: { city: "Rome" } })).toBe(\n    "Baby (0) from Rome",\n  );\n  expect(summarize({ name: "Eve", address: { city: "Rome" } })).toBe(\n    "Eve (unknown) from Rome",\n  );\n});\ntest("lists several users in order", () => {\n  expect(\n    summarizeAll([\n      { name: "A", age: 1 },\n      { name: "B", age: 2 },\n    ]),\n  ).toBe("A (1) from an unknown city\\nB (2) from an unknown city");\n});\n',
+  },
+  {
+    id: "merge-settings",
+    title: "Merge settings",
+    language: "typescript",
+    level: "medium",
+    description:
+      "mergeSettings(overrides) returns the default settings with the user's choices on top. The notification flags are merged one by one, so choosing only `push` keeps the default for `email`. The DEFAULTS object must never change.",
+    hint: "Both bugs are about how the defaults are combined with the overrides. Call it twice and look at what the second call returns.",
+    bugCount: 2,
+    timeLimitSec: 300,
+    basePoints: 200,
+    tags: ["mutation", "object-spread", "defaults"],
+    buggy:
+      'interface Settings {\n  theme: string;\n  fontSize: number;\n  notifications: { email: boolean; push: boolean };\n}\n\ninterface Overrides {\n  theme?: string;\n  fontSize?: number;\n  notifications?: Partial<Settings["notifications"]>;\n}\n\nconst DEFAULTS: Settings = {\n  theme: "light",\n  fontSize: 14,\n  notifications: { email: true, push: false },\n};\n\n// The defaults with the user\'s choices on top. Notification flags are merged\n// one by one. DEFAULTS must never change.\nfunction mergeSettings(overrides: Overrides): Settings {\n  const merged: Settings = Object.assign(DEFAULTS, overrides);\n  merged.notifications = overrides.notifications ?? DEFAULTS.notifications;\n  return merged;\n}\n\n// A short line for a settings screen, e.g. "dark theme, 16px, email on, push off".\nfunction describeSettings(settings: Settings): string {\n  const { email, push } = settings.notifications;\n  const flag = (on: boolean) => (on ? "on" : "off");\n  return `${settings.theme} theme, ${settings.fontSize}px, email ${flag(email)}, push ${flag(push)}`;\n}\n',
+    tests:
+      'test("no overrides gives the defaults", () => {\n  expect(mergeSettings({})).toEqual({\n    theme: "light",\n    fontSize: 14,\n    notifications: { email: true, push: false },\n  });\n});\ntest("overrides replace single values", () => {\n  const settings = mergeSettings({ theme: "dark", fontSize: 18 });\n  expect(describeSettings(settings)).toBe(\n    "dark theme, 18px, email on, push off",\n  );\n});\ntest("a partial notification choice keeps the other default", () => {\n  const settings = mergeSettings({ notifications: { push: true } });\n  expect(settings.notifications).toEqual({ email: true, push: true });\n});\ntest("the defaults are not changed by a call", () => {\n  mergeSettings({ theme: "dark", notifications: { email: false } });\n  expect(mergeSettings({}).theme).toBe("light");\n  expect(mergeSettings({}).notifications.email).toBe(true);\n});\n',
+  },
+  {
+    id: "parse-price",
+    title: "Parse a price",
+    language: "typescript",
+    level: "medium",
+    description:
+      'parsePriceToCents(text) turns a typed price into whole cents. It accepts an optional "$" and thousands commas, so "$1,234.50" is 123450. Anything that is not a valid price with at most 2 decimals gives null. sumPrices adds up several prices, or gives null if any of them is invalid.',
+    hint: 'Try "19.99" and "1,000" by hand. What is 19.99 * 100 in JavaScript?',
+    bugCount: 2,
+    timeLimitSec: 300,
+    basePoints: 200,
+    tags: ["floating-point", "parsing", "money"],
+    buggy:
+      '// Converts a price typed by a customer into whole cents.\n// Accepts an optional "$" and thousands commas: "$1,234.50" -> 123450.\n// Returns null when the text is not a valid price.\nfunction parsePriceToCents(text: string): number | null {\n  const cleaned = text.trim().replace(/\\$/g, "");\n  if (!/^\\d+(\\.\\d{1,2})?$/.test(cleaned)) return null;\n  return Number(cleaned) * 100;\n}\n\n// Adds up several typed prices, or null if any of them is invalid.\nfunction sumPrices(texts: string[]): number | null {\n  let total = 0;\n  for (const text of texts) {\n    const cents = parsePriceToCents(text);\n    if (cents === null) return null;\n    total += cents;\n  }\n  return total;\n}\n\n// Formats cents as dollars with two decimals: 123450 -> "$1234.50".\nfunction formatCents(cents: number): string {\n  return "$" + (cents / 100).toFixed(2);\n}\n',
+    tests:
+      'test("parses a plain price", () => {\n  expect(parsePriceToCents("12.5")).toBe(1250);\n  expect(parsePriceToCents("7")).toBe(700);\n});\ntest("converts to exact whole cents", () => {\n  expect(parsePriceToCents("19.99")).toBe(1999);\n  expect(parsePriceToCents("0.29")).toBe(29);\n});\ntest("accepts a dollar sign and thousands commas", () => {\n  expect(parsePriceToCents("$1,234.50")).toBe(123450);\n});\ntest("rejects text that is not a price", () => {\n  expect(parsePriceToCents("abc")).toBe(null);\n  expect(parsePriceToCents("1.234")).toBe(null);\n  expect(parsePriceToCents("")).toBe(null);\n});\ntest("sums valid prices and rejects invalid ones", () => {\n  expect(formatCents(sumPrices(["$1.10", "2.20"]) ?? 0)).toBe("$3.30");\n  expect(sumPrices(["1.00", "oops"])).toBe(null);\n});\n',
+  },
+  {
+    id: "async-batches",
+    title: "Run in batches",
+    language: "typescript",
+    level: "hard",
+    description:
+      "mapInBatches(items, batchSize, worker) runs the worker on the items one batch at a time: the items of a batch run together, and the next batch starts only when the previous one is done. Results come back in the same order as the items, and onProgress(done, total) is called after every batch. settleInBatches never rejects: every item becomes { ok: true, value } or { ok: false, error } where error is the error's message.",
+    hint: 'Check how many items each batch really holds, whether the batch is awaited, and what "done" counts.',
+    bugCount: 4,
+    timeLimitSec: 480,
+    basePoints: 300,
+    tags: ["async", "await", "promises", "batching"],
+    buggy:
+      'type Progress = (done: number, total: number) => void;\n\n// Runs `worker` over `items` in batches: the items of one batch run at the same\n// time, and the next batch starts only after the previous one has finished (so\n// at most `batchSize` jobs run at once). Results keep the order of `items`.\n// If a worker rejects, the returned promise rejects with that error.\n// `onProgress(done, total)` is called after every batch.\nasync function mapInBatches<T, R>(\n  items: T[],\n  batchSize: number,\n  worker: (item: T) => Promise<R>,\n  onProgress?: Progress,\n): Promise<R[]> {\n  if (batchSize < 1) throw new Error("batchSize must be at least 1");\n  const results: R[] = [];\n  for (let i = 0; i < items.length; i += batchSize) {\n    const batch = items.slice(i, i + batchSize - 1);\n    const done = Promise.all(batch.map((item) => worker(item)));\n    results.push(...done);\n    onProgress?.(i + 1, items.length);\n  }\n  return results;\n}\n\ntype Outcome<R> = { ok: true; value: R } | { ok: false; error: string };\n\n// Like mapInBatches, but never rejects: every item gets an outcome, in order.\n// `error` is the message of the thrown Error.\nasync function settleInBatches<T, R>(\n  items: T[],\n  batchSize: number,\n  worker: (item: T) => Promise<R>,\n): Promise<Outcome<R>[]> {\n  return mapInBatches(items, batchSize, async (item): Promise<Outcome<R>> => {\n    try {\n      return { ok: true, value: await worker(item) };\n    } catch (error) {\n      return { ok: false, error: String(error) };\n    }\n  });\n}\n\n// How many batches mapInBatches needs for `total` items.\nfunction batchCount(total: number, batchSize: number): number {\n  return Math.ceil(total / batchSize);\n}\n',
+    tests:
+      'function later<T>(value: T, ms: number): Promise<T> {\n  return new Promise((resolve) => setTimeout(() => resolve(value), ms));\n}\n\ntest("keeps the order of the items", async () => {\n  const delays: Record<number, number> = { 1: 15, 2: 1, 3: 8 };\n  const result = await mapInBatches([1, 2, 3], 3, (n) =>\n    later(n * 10, delays[n]),\n  );\n  expect(result).toEqual([10, 20, 30]);\n});\ntest("every item is processed, including the last of each batch", async () => {\n  const seen: number[] = [];\n  await mapInBatches([1, 2, 3, 4, 5], 2, async (n) => {\n    seen.push(n);\n    return n;\n  });\n  expect(seen).toEqual([1, 2, 3, 4, 5]);\n});\ntest("a batch finishes before the next one starts", async () => {\n  let running = 0;\n  let peak = 0;\n  await mapInBatches([1, 2, 3, 4, 5, 6], 3, async (n) => {\n    running += 1;\n    peak = Math.max(peak, running);\n    await later(n, 2);\n    running -= 1;\n  });\n  expect(peak).toBe(3);\n});\ntest("reports progress after each batch", async () => {\n  const calls: Array<[number, number]> = [];\n  await mapInBatches(\n    [1, 2, 3, 4, 5],\n    2,\n    async (n) => n,\n    (done, total) => {\n      calls.push([done, total]);\n    },\n  );\n  expect(calls).toEqual([\n    [2, 5],\n    [4, 5],\n    [5, 5],\n  ]);\n});\ntest("settleInBatches reports values and error messages", async () => {\n  const outcomes = await settleInBatches([1, 2, 3], 2, async (n) => {\n    if (n === 2) throw new Error("two is broken");\n    return n * 2;\n  });\n  expect(outcomes).toEqual([\n    { ok: true, value: 2 },\n    { ok: false, error: "two is broken" },\n    { ok: true, value: 6 },\n  ]);\n  expect(batchCount(5, 2)).toBe(3);\n});\n',
+  },
+  {
+    id: "event-emitter",
+    title: "Event emitter",
+    language: "typescript",
+    level: "hard",
+    description:
+      "Emitter lets code subscribe to named events. on() returns a function that unsubscribes, once() runs a handler at most one time, and emit() calls the handlers in the order they were added and returns how many ran. A handler may unsubscribe itself while emit is running without making other handlers get skipped.",
+    hint: "Ask what each method does to the list of handlers while another loop is walking over it.",
+    bugCount: 3,
+    timeLimitSec: 480,
+    basePoints: 300,
+    tags: ["events", "mutation-during-iteration", "splice", "closures"],
+    buggy:
+      "type Handler = (payload: string) => void;\n\n// A tiny event emitter.\n//  - on(event, handler) subscribes and returns a function that unsubscribes.\n//  - once(event, handler) is like on, but the handler runs at most one time.\n//  - off(event, handler) removes exactly one subscription.\n//  - emit(event, payload) calls the handlers in the order they were added and\n//    returns how many ran. A handler may unsubscribe itself (or others) while\n//    it runs; that must not make other handlers get skipped.\nclass Emitter {\n  private handlers = new Map<string, Handler[]>();\n\n  on(event: string, handler: Handler): () => void {\n    const list = this.handlers.get(event) ?? [];\n    list.push(handler);\n    this.handlers.set(event, list);\n    return () => this.off(event, handler);\n  }\n\n  once(event: string, handler: Handler): () => void {\n    const off = this.on(event, (payload) => {\n      handler(payload);\n    });\n    return off;\n  }\n\n  off(event: string, handler: Handler): void {\n    const list = this.handlers.get(event);\n    if (!list) return;\n    const index = list.indexOf(handler);\n    if (index !== -1) list.splice(index);\n  }\n\n  emit(event: string, payload: string): number {\n    const list = this.handlers.get(event) ?? [];\n    let ran = 0;\n    for (const handler of list) {\n      handler(payload);\n      ran += 1;\n    }\n    return ran;\n  }\n\n  listenerCount(event: string): number {\n    return this.handlers.get(event)?.length ?? 0;\n  }\n\n  clear(event: string): void {\n    this.handlers.delete(event);\n  }\n}\n",
+    tests:
+      'function recorder(log: string[], name: string): Handler {\n  return (payload) => {\n    log.push(`${name}:${payload}`);\n  };\n}\n\ntest("calls handlers in the order they were added", () => {\n  const bus = new Emitter();\n  const log: string[] = [];\n  bus.on("ping", recorder(log, "a"));\n  bus.on("ping", recorder(log, "b"));\n  expect(bus.emit("ping", "x")).toBe(2);\n  expect(log).toEqual(["a:x", "b:x"]);\n});\ntest("an unsubscribed handler is not called again", () => {\n  const bus = new Emitter();\n  const log: string[] = [];\n  const offA = bus.on("ping", recorder(log, "a"));\n  bus.on("ping", recorder(log, "b"));\n  offA();\n  bus.emit("ping", "x");\n  expect(log).toEqual(["b:x"]);\n});\ntest("unsubscribing one handler keeps the ones after it", () => {\n  const bus = new Emitter();\n  const log: string[] = [];\n  bus.on("ping", recorder(log, "a"));\n  const offB = bus.on("ping", recorder(log, "b"));\n  bus.on("ping", recorder(log, "c"));\n  offB();\n  bus.emit("ping", "x");\n  expect(log).toEqual(["a:x", "c:x"]);\n  expect(bus.listenerCount("ping")).toBe(2);\n});\ntest("once runs a single time", () => {\n  const bus = new Emitter();\n  const log: string[] = [];\n  bus.once("ping", recorder(log, "a"));\n  bus.emit("ping", "1");\n  bus.emit("ping", "2");\n  expect(log).toEqual(["a:1"]);\n  expect(bus.listenerCount("ping")).toBe(0);\n});\ntest("a handler that unsubscribes itself does not skip the next one", () => {\n  const bus = new Emitter();\n  const log: string[] = [];\n  const off = bus.on("ping", () => off());\n  bus.on("ping", recorder(log, "b"));\n  expect(bus.emit("ping", "x")).toBe(2);\n  expect(log).toEqual(["b:x"]);\n});\ntest("emitting an event nobody listens to runs nothing", () => {\n  expect(new Emitter().emit("quiet", "x")).toBe(0);\n});\n',
+  },
+  {
+    id: "minesweeper",
+    title: "Minesweeper board",
+    language: "typescript",
+    level: "hard",
+    description:
+      'A board is a list of strings where "*" is a mine and "." is empty. annotate(board) replaces every empty cell with the number of mines in the (up to 8) cells around it, and keeps "." when that number is 0. hasWon checks that every cell without a mine has been revealed (revealed holds "row,col" strings, and the same cell may be listed twice).',
+    hint: "Check the cells on the last row and column, the cell you are counting around, how zero is printed, and repeated reveals.",
+    bugCount: 4,
+    timeLimitSec: 480,
+    basePoints: 300,
+    tags: ["grid", "bounds", "off-by-one", "sets"],
+    buggy:
+      '// Minesweeper helpers. A board is a list of strings: "*" is a mine and "."\n// is an empty cell. ["*.", ".."] has one mine in the top left corner.\ntype Board = string[];\n\nfunction inBounds(board: Board, row: number, col: number): boolean {\n  return row >= 0 && row <= board.length && col >= 0 && col < board[row].length;\n}\n\nfunction isMine(board: Board, row: number, col: number): boolean {\n  return inBounds(board, row, col) && board[row][col] === "*";\n}\n\n// Number of mines in the (up to) 8 cells around a cell, not counting the\n// cell itself.\nfunction countNeighbours(board: Board, row: number, col: number): number {\n  let count = 0;\n  for (let dr = -1; dr <= 1; dr++) {\n    for (let dc = -1; dc <= 1; dc++) {\n      if (isMine(board, row + dr, col + dc)) count += 1;\n    }\n  }\n  return count;\n}\n\n// Replaces every empty cell with the number of mines around it, and keeps\n// "." when that number is 0. Mines stay "*".\nfunction annotate(board: Board): Board {\n  return board.map((line, row) =>\n    [...line]\n      .map((cell, col) => {\n        if (cell === "*") return "*";\n        const count = countNeighbours(board, row, col);\n        return String(count);\n      })\n      .join(""),\n  );\n}\n\n// Total number of mines on the board.\nfunction mineCount(board: Board): number {\n  return board.join("").split("*").length - 1;\n}\n\n// The player wins when every cell without a mine has been revealed.\n// `revealed` holds "row,col" strings and may list a cell more than once.\nfunction hasWon(board: Board, revealed: string[]): boolean {\n  const safeCells = board.join("").length - mineCount(board);\n  return revealed.length >= safeCells;\n}\n',
+    tests:
+      'test("counts the mines around a cell", () => {\n  const board = ["*.*", "...", ".*."];\n  expect(countNeighbours(board, 1, 1)).toBe(3);\n  expect(countNeighbours(board, 0, 1)).toBe(2);\n  expect(countNeighbours(["*."], 0, 0)).toBe(0);\n});\ntest("cells on the last row and column are handled", () => {\n  const board = ["..*", "...", "..."];\n  expect(countNeighbours(board, 2, 2)).toBe(0);\n  expect(countNeighbours(board, 1, 1)).toBe(1);\n});\ntest("annotates a small board", () => {\n  expect(annotate(["*.", ".."])).toEqual(["*1", "11"]);\n});\ntest("cells with no mines around stay dots", () => {\n  expect(annotate(["*..", "...", "..."])).toEqual(["*1.", "11.", "..."]);\n  expect(annotate(["..", ".."])).toEqual(["..", ".."]);\n});\ntest("wins when every safe cell is revealed", () => {\n  const board = ["*.", ".."];\n  expect(hasWon(board, ["0,1", "1,0", "1,1"])).toBe(true);\n  expect(hasWon(board, ["0,1", "1,0"])).toBe(false);\n});\ntest("revealing the same cell twice does not count twice", () => {\n  const board = ["*.", ".."];\n  expect(hasWon(board, ["0,1", "0,1", "1,0"])).toBe(false);\n});\n',
+  },
+  {
+    id: "semver",
+    title: "Version compare",
+    language: "typescript",
+    level: "hard",
+    description:
+      'Versions look like "1.10.2". Missing parts count as 0 ("1.2" equals "1.2.0") and a suffix such as "-beta" is ignored ("1.2.3-beta" is 1.2.3). compareVersions returns -1, 0 or 1. latestVersion picks the highest version, sortVersions orders them from lowest to highest, and isAtLeast(version, minimum) is true when version is the same as or newer than minimum.',
+    hint: "1.10.0 is newer than 1.9.0. What do the compare function and the sort do with numbers that look like text?",
+    bugCount: 4,
+    timeLimitSec: 480,
+    basePoints: 300,
+    tags: ["sorting", "comparator", "parsing", "version"],
+    buggy:
+      '// Version helpers for strings like "1.10.2".\n// Missing parts count as 0 ("1.2" is "1.2.0") and a suffix such as "-beta" is\n// ignored ("1.2.3-beta" is 1.2.3).\ntype Version = [number, number, number];\n\nfunction parseVersion(version: string): Version {\n  const [major = 0, minor = 0, patch = 0] = version\n    .split(".")\n    .map((part) => Number(part));\n  return [major, minor, patch];\n}\n\n// -1 when a is older than b, 0 when equal, 1 when a is newer.\nfunction compareVersions(a: string, b: string): number {\n  const left = parseVersion(a);\n  const right = parseVersion(b);\n  for (let i = 0; i < 3; i++) {\n    if (left[i] !== right[i]) return left[i] - right[i];\n  }\n  return 0;\n}\n\n// Versions ordered from the lowest to the highest. Does not change the input.\nfunction sortVersions(versions: string[]): string[] {\n  return [...versions].sort((a, b) => compareVersions(a, b));\n}\n\n// The highest version, or null for an empty list.\nfunction latestVersion(versions: string[]): string | null {\n  if (versions.length === 0) return null;\n  return [...versions].sort().pop()!;\n}\n\n// True when `version` is the same as or newer than `minimum`.\nfunction isAtLeast(version: string, minimum: string): boolean {\n  return compareVersions(version, minimum) > 0;\n}\n\n// True when the text carries a suffix such as "-beta".\nfunction hasSuffix(version: string): boolean {\n  return version.includes("-");\n}\n\n// Versions that are newer than `current`, lowest first.\nfunction upgradesFrom(current: string, versions: string[]): string[] {\n  return sortVersions(versions).filter(\n    (version) => compareVersions(version, current) > 0,\n  );\n}\n',
+    tests:
+      'test("compares by major, minor, then patch", () => {\n  expect(compareVersions("2.0.0", "1.9.9")).toBe(1);\n  expect(compareVersions("1.2.0", "1.10.0")).toBe(-1);\n  expect(compareVersions("1.2.3", "1.2.4")).toBe(-1);\n});\ntest("equal versions, with missing parts or a suffix", () => {\n  expect(compareVersions("1.2", "1.2.0")).toBe(0);\n  expect(compareVersions("1.2.3-beta", "1.2.3")).toBe(0);\n});\ntest("sorts numbers as numbers, not as text", () => {\n  expect(sortVersions(["1.10.0", "1.9.0", "1.2.0"])).toEqual([\n    "1.2.0",\n    "1.9.0",\n    "1.10.0",\n  ]);\n});\ntest("finds the latest version", () => {\n  expect(latestVersion(["1.9.0", "1.10.0", "1.2.0"])).toBe("1.10.0");\n  expect(latestVersion([])).toBe(null);\n});\ntest("isAtLeast includes the minimum itself", () => {\n  expect(isAtLeast("1.4.0", "1.4.0")).toBe(true);\n  expect(isAtLeast("1.3.9", "1.4.0")).toBe(false);\n});\ntest("lists upgrades from the current version", () => {\n  expect(upgradesFrom("1.9.0", ["1.10.0", "1.2.0", "1.9.0", "2.0.0"])).toEqual([\n    "1.10.0",\n    "2.0.0",\n  ]);\n});\n',
+  },
+  {
+    id: "split-bill",
+    title: "Split the bill",
+    language: "typescript",
+    level: "hard",
+    description:
+      "splitBill(totalCents, people) splits a bill fairly without losing or inventing a cent. Everyone pays the same rounded-down share, and the leftover cents go one each to the first people: splitBill(1000, 3) is [334, 333, 333]. balances(totalCents, paid) tells how much each person still owes (negative means they get money back).",
+    hint: "The shares must always add up to the total. Try 1000 split 3 ways, and 1000 split 6 ways. Then check the sign of balances.",
+    bugCount: 3,
+    timeLimitSec: 480,
+    basePoints: 300,
+    tags: ["rounding", "integer-division", "money", "off-by-one"],
+    buggy:
+      '// Splits a bill (in cents) between people, fairly and without losing a cent.\n// Everyone pays the same rounded-down share, and the leftover cents go one\n// each to the first people in the list: splitBill(1000, 3) -> [334, 333, 333].\nfunction splitBill(totalCents: number, people: number): number[] {\n  if (!Number.isInteger(people) || people < 1) {\n    throw new Error("people must be a whole number of at least 1");\n  }\n  const base = Math.round(totalCents / people);\n  const leftover = totalCents - base * people;\n  return Array.from(\n    { length: people },\n    (_, i) => base + (i <= leftover ? 1 : 0),\n  );\n}\n\n// How much each person still owes: their share minus what they already paid.\n// A negative number means they are owed money back.\nfunction balances(totalCents: number, paid: number[]): number[] {\n  const shares = splitBill(totalCents, paid.length);\n  return shares.map((share, i) => paid[i] - share);\n}\n\n// True when the balances add up to zero: nobody paid too little or too much.\nfunction isSettled(amounts: number[]): boolean {\n  return amounts.reduce((sum, amount) => sum + amount, 0) === 0;\n}\n\n// Formats a split for display: [334, 333, 333] -> "$3.34 + $3.33 + $3.33".\nfunction formatSplit(shares: number[]): string {\n  return shares.map((cents) => "$" + (cents / 100).toFixed(2)).join(" + ");\n}\n\n// True when nobody pays more than one cent more than anyone else.\nfunction isFair(shares: number[]): boolean {\n  return Math.max(...shares) - Math.min(...shares) <= 1;\n}\n\n// What person number `index` (counting from 0) pays.\nfunction shareOf(totalCents: number, people: number, index: number): number {\n  return splitBill(totalCents, people)[index];\n}\n\n// The biggest share anyone has to pay.\nfunction largestShare(totalCents: number, people: number): number {\n  return Math.max(...splitBill(totalCents, people));\n}\n',
+    tests:
+      'function sum(values: number[]): number {\n  return values.reduce((total, value) => total + value, 0);\n}\n\ntest("splits evenly when it can", () => {\n  expect(splitBill(900, 3)).toEqual([300, 300, 300]);\n});\ntest("hands the leftover cents to the first people", () => {\n  expect(splitBill(1000, 3)).toEqual([334, 333, 333]);\n  expect(splitBill(1001, 3)).toEqual([334, 334, 333]);\n});\ntest("the shares always add up to the total", () => {\n  expect(sum(splitBill(1000, 6))).toBe(1000);\n  expect(sum(splitBill(1999, 4))).toBe(1999);\n  expect(largestShare(1000, 6)).toBe(167);\n  expect(isFair(splitBill(1000, 6))).toBe(true);\n  expect(shareOf(1000, 3, 2)).toBe(333);\n});\ntest("rejects fewer than one person", () => {\n  expect(() => splitBill(500, 0)).toThrow("at least 1");\n});\ntest("balances show who owes and who gets money back", () => {\n  expect(balances(1000, [1000, 0, 0])).toEqual([-666, 333, 333]);\n  expect(isSettled(balances(1000, [1000, 0, 0]))).toBe(true);\n});\ntest("formats a split for display", () => {\n  expect(formatSplit(splitBill(1000, 3))).toBe("$3.34 + $3.33 + $3.33");\n});\n',
   },
 ];

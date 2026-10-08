@@ -1,0 +1,12 @@
+{
+  "id": "inventory-reducer",
+  "title": "Inventory reducer",
+  "language": "javascript",
+  "level": "hard",
+  "description": "reduce(state, action) returns a NEW state and never changes the old one. State is { stock: { [sku]: number }, log: string[] }. \"receive\" adds to the stock, \"ship\" removes stock (shipping exactly what is left is fine; shipping more throws \"not enough <sku>\"), and \"discontinue\" removes a sku that has no stock left.",
+  "hint": "Compare the old state before and after each action. Which actions change it, and which comparison is too strict?",
+  "bugCount": 3,
+  "timeLimitSec": 480,
+  "basePoints": 300,
+  "tags": ["reducer", "mutation", "immutability", "comparison"]
+}

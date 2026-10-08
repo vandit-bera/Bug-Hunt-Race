@@ -1,0 +1,12 @@
+{
+  "id": "title-case",
+  "title": "Title case",
+  "language": "javascript",
+  "level": "easy",
+  "description": "titleCase(sentence) capitalises the first letter of every word and lowercases the rest. Words are separated by single spaces. An empty string stays empty.",
+  "hint": "Count how many words the loop actually visits.",
+  "bugCount": 1,
+  "timeLimitSec": 180,
+  "basePoints": 100,
+  "tags": ["loop-bounds", "strings"]
+}

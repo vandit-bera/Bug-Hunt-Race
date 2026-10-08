@@ -1,0 +1,12 @@
+{
+  "id": "make-multipliers",
+  "title": "Make multipliers",
+  "language": "python",
+  "level": "medium",
+  "description": "make_multipliers(factors) returns one function per factor; each function multiplies the number it receives by its own factor. scale_all(factors, value) calls all of them with the same value. make_multipliers([2, 3])[1](10) is 30.",
+  "hint": "When does a lambda look up the variable from the loop?",
+  "bugCount": 1,
+  "timeLimitSec": 300,
+  "basePoints": 200,
+  "tags": ["closure", "late-binding", "lambda"]
+}
