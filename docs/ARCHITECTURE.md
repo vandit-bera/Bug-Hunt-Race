@@ -437,17 +437,6 @@ Room screens so far:
 - All room screens share one Supabase client per tab
   (`getBrowserDbClient()`).
 
-Room screens so far:
-
-- `/room/new` (Create Room): settings, then the admin's name and avatar.
-  Creates the room and goes to `/room/<code>`.
-- `/room/<code>`: finds the caller's seat with `findMyMembership` (so a
-  reload keeps it), then connects. The admin sees the ready panel: code,
-  invite link `<site>/join/<code>` with Copy and Share, QR (made in the
-  browser) with a full-screen view, the Lock switch and "n / 30".
-- All room screens share one Supabase client per tab
-  (`getBrowserDbClient()`).
-
 - **One channel per room**, `room:<room id>`:
   - `postgres_changes` UPDATE on `rooms` (`id=eq.<id>`): the new row is
     applied as is.
