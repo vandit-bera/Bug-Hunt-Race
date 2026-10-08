@@ -3,6 +3,7 @@ import {
   DbError,
   advanceRoom,
   createRoom,
+  findMyMembership,
   findRoomByCode,
   getRoom,
   joinRoom,
@@ -148,6 +149,83 @@ describe("findRoomByCode", () => {
     await expect(findRoomByCode(fake.client, "BUG0KX")).resolves.toBeNull();
     await expect(findRoomByCode(fake.client, "BUG7")).resolves.toBeNull();
     expect(fake.rpc).not.toHaveBeenCalled();
+  });
+});
+
+describe("findMyMembership", () => {
+  it("returns the caller's seat in the open room with that code", async () => {
+    const fake = createFakeClient({
+      from: [
+        { data: room, error: null },
+        { data: player, error: null },
+      ],
+    });
+
+    await expect(
+      findMyMembership(fake.client, "bug-7kx", "user-1"),
+    ).resolves.toEqual({ room, player });
+    expect(fake.queries).toEqual([
+      {
+        table: "rooms",
+        calls: [
+          ["select", []],
+          ["eq", ["code", "BUG7KX"]],
+          ["neq", ["status", "closed"]],
+          ["maybeSingle", []],
+        ],
+      },
+      {
+        table: "players",
+        calls: [
+          ["select", []],
+          ["eq", ["room_id", "room-1"]],
+          ["eq", ["user_id", "user-1"]],
+          ["is", ["left_at", null]],
+          ["maybeSingle", []],
+        ],
+      },
+    ]);
+  });
+
+  it("returns null when the caller cannot see the room", async () => {
+    const fake = createFakeClient({ from: [{ data: null, error: null }] });
+
+    await expect(
+      findMyMembership(fake.client, "BUG7KX", "user-1"),
+    ).resolves.toBeNull();
+    expect(fake.queries).toHaveLength(1);
+  });
+
+  it("returns null when the caller left the room", async () => {
+    const fake = createFakeClient({
+      from: [
+        { data: room, error: null },
+        { data: null, error: null },
+      ],
+    });
+
+    await expect(
+      findMyMembership(fake.client, "BUG7KX", "user-1"),
+    ).resolves.toBeNull();
+  });
+
+  it("returns null for malformed codes without calling the database", async () => {
+    const fake = createFakeClient({});
+
+    await expect(
+      findMyMembership(fake.client, "BUG0KX", "user-1"),
+    ).resolves.toBeNull();
+    expect(fake.from).not.toHaveBeenCalled();
+  });
+
+  it("throws a DbError when a query fails", async () => {
+    const fake = createFakeClient({
+      from: [{ data: null, error: { message: "network down" } }],
+    });
+
+    await expect(
+      findMyMembership(fake.client, "BUG7KX", "user-1"),
+    ).rejects.toBeInstanceOf(DbError);
   });
 });
 

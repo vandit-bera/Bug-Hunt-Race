@@ -83,6 +83,40 @@ export async function joinRoom(
   return withRoom(client, player);
 }
 
+/**
+ * The caller's seat in the open room with this code, or null if they are not
+ * in it (never joined, left, or the room is closed). Reads only: unlike
+ * `joinRoom` it never takes a seat, so a lobby can check "am I in this room?"
+ * on reload.
+ */
+export async function findMyMembership(
+  client: DbClient,
+  code: string,
+  userId: string,
+): Promise<RoomMembership | null> {
+  const normalized = normalizeRoomCode(code);
+  if (!isValidRoomCode(normalized)) return null;
+
+  const { data: room, error: roomError } = await client
+    .from("rooms")
+    .select()
+    .eq("code", normalized)
+    .neq("status", "closed")
+    .maybeSingle();
+  if (roomError) throw toDbError(roomError);
+  if (!room) return null;
+
+  const { data: player, error: playerError } = await client
+    .from("players")
+    .select()
+    .eq("room_id", room.id)
+    .eq("user_id", userId)
+    .is("left_at", null)
+    .maybeSingle();
+  if (playerError) throw toDbError(playerError);
+  return player ? { room, player } : null;
+}
+
 /** Players still in a room the caller belongs to, in join order. */
 export async function listPlayers(
   client: DbClient,
