@@ -62,7 +62,7 @@ export function InvitePanel({
 
   return (
     <Card className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <CardTitle className="mb-0">Invite players</CardTitle>
         <Badge
           variant={playerCount >= maxPlayers ? "danger" : "accent"}

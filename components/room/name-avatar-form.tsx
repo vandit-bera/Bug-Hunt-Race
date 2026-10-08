@@ -66,7 +66,7 @@ export function NameAvatarForm({
 
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 text-sm font-bold">Pick an avatar</legend>
-        <div className="grid grid-cols-6 gap-2">
+        <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
           {AVATAR_EMOJIS.map((emoji) => (
             <label key={emoji} className="relative flex justify-center">
               <input
