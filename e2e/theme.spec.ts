@@ -72,3 +72,64 @@ test("tooltip closes on Escape and the modal ignores clicks on its padding", asy
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
 });
+
+test("system theme follows the OS on a page without a ThemeToggle", async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto("/no-such-page");
+  await expect(page.getByRole("radiogroup")).toHaveCount(0);
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+
+  await page.emulateMedia({ colorScheme: "dark" });
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+});
+
+test("tooltip closes on Escape while shown by mouse hover", async ({
+  page,
+}) => {
+  await page.goto("/styleguide");
+  await page.getByRole("button", { name: "Hover or focus me" }).first().hover();
+  const tooltip = page.getByRole("tooltip").first();
+  await expect(tooltip).toHaveCSS("opacity", "1");
+  await page.keyboard.press("Escape");
+  await expect(tooltip).toHaveCSS("opacity", "0");
+});
+
+test("theme toggle uses a roving tabindex and arrow keys", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto("/");
+  const radios = page.getByRole("radio");
+  await expect(radios).toHaveCount(3);
+  await expect(radios.nth(0)).toHaveAttribute("tabindex", "-1");
+  await expect(radios.nth(1)).toHaveAttribute("tabindex", "-1");
+  await expect(radios.nth(2)).toHaveAttribute("tabindex", "0");
+
+  await page.getByRole("radio", { name: /System/ }).focus();
+  await page.keyboard.press("ArrowLeft");
+  await expect(page.getByRole("radio", { name: /Dark/ })).toBeChecked();
+  await expect(page.getByRole("radio", { name: /Dark/ })).toBeFocused();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+
+  await page.keyboard.press("ArrowUp");
+  await expect(page.getByRole("radio", { name: /Light/ })).toBeChecked();
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByRole("radio", { name: /System/ })).toBeChecked();
+});
+
+test("tooltip Escape still works for a focused trigger after hover leaves", async ({
+  page,
+}) => {
+  await page.goto("/styleguide");
+  const trigger = page
+    .getByRole("button", { name: "Hover or focus me" })
+    .first();
+  await trigger.focus();
+  await trigger.hover();
+  await page.mouse.move(0, 0);
+  const tooltip = page.getByRole("tooltip").first();
+  await expect(tooltip).toHaveCSS("opacity", "1");
+  await page.keyboard.press("Escape");
+  await expect(tooltip).toHaveCSS("opacity", "0");
+});

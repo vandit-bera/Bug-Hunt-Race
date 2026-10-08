@@ -1,6 +1,12 @@
 "use client";
 
-import { cloneElement, useId, useState, type ReactElement } from "react";
+import {
+  cloneElement,
+  useEffect,
+  useId,
+  useState,
+  type ReactElement,
+} from "react";
 import { cn } from "./cn";
 
 export function Tooltip({
@@ -12,16 +18,39 @@ export function Tooltip({
 }) {
   const id = useId();
   const [dismissed, setDismissed] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const active = hovered || focused;
+
+  // Escape must work for hover too (WCAG 1.4.13), where focus is not inside.
+  useEffect(() => {
+    if (!active) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setDismissed(true);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [active]);
+
+  const describedBy = [children.props["aria-describedby"], id]
+    .filter(Boolean)
+    .join(" ");
+
   return (
     <span
       className="group relative inline-flex"
-      onKeyDown={(event) => {
-        if (event.key === "Escape") setDismissed(true);
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => {
+        setHovered(false);
+        if (!focused) setDismissed(false);
       }}
-      onBlur={() => setDismissed(false)}
-      onMouseLeave={() => setDismissed(false)}
+      onFocus={() => setFocused(true)}
+      onBlur={() => {
+        setFocused(false);
+        if (!hovered) setDismissed(false);
+      }}
     >
-      {cloneElement(children, { "aria-describedby": id })}
+      {cloneElement(children, { "aria-describedby": describedBy })}
       <span
         id={id}
         role="tooltip"

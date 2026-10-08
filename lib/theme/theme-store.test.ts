@@ -103,6 +103,19 @@ describe("theme-store", () => {
     unsubscribe();
   });
 
+  it("notifies each listener once per external event", () => {
+    const listeners = [vi.fn(), vi.fn(), vi.fn()];
+    const unsubscribes = listeners.map((l) => subscribeTheme(l));
+
+    env.fire(env.mediaHandlers);
+    env.fire(env.windowHandlers.get("storage"));
+
+    listeners.forEach((l) => expect(l).toHaveBeenCalledTimes(2));
+    expect(env.mediaHandlers.size).toBe(1);
+    expect(env.windowHandlers.get("storage")?.size).toBe(1);
+    unsubscribes.forEach((u) => u());
+  });
+
   it("unsubscribe removes every listener", () => {
     const listener = vi.fn();
     const unsubscribe = subscribeTheme(listener);
