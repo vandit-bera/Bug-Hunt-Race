@@ -57,16 +57,6 @@ describe("Node runner", () => {
     });
   });
 
-  it("reports a crash after the result as an error", async () => {
-    const result = await runInNode({
-      language: "javascript",
-      code: "",
-      tests:
-        'test("crash", () => new Promise(() => setTimeout(() => { throw new Error("late"); }, 0)));',
-    });
-    expect(result).toMatchObject({ status: "error", error: "late" });
-  });
-
   it("refuses a request for another language", async () => {
     const result = await createNodeRunner("javascript").run({
       language: "typescript",

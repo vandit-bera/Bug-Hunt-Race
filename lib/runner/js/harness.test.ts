@@ -6,8 +6,10 @@ afterEach(() => {
   globalThis.console = originalConsole;
 });
 
+const noCrashes = () => {};
+
 function run(code: string, tests: string, maxOutputChars = 1_000) {
-  return runHarness({ code, tests, maxOutputChars });
+  return runHarness({ code, tests, maxOutputChars }, noCrashes);
 }
 
 async function messageOf(assertion: string) {
@@ -167,11 +169,35 @@ describe("runHarness", () => {
     const shipped = new Function(
       `return ${runHarness.toString()}`,
     )() as typeof runHarness;
-    const outcome = await shipped({
-      code: "const x = 1;",
-      tests: 'test("x", () => expect(x).toBe(1));',
-      maxOutputChars: 100,
-    });
+    const outcome = await shipped(
+      {
+        code: "const x = 1;",
+        tests: 'test("x", () => expect(x).toBe(1));',
+        maxOutputChars: 100,
+      },
+      noCrashes,
+    );
     expect(outcome.status).toBe("passed");
+  });
+
+  it("ends the run as an error on an uncaught error, keeping output", async () => {
+    let report: (error: unknown) => void = () => {};
+    const outcome = await runHarness(
+      {
+        code: 'console.log("before");',
+        tests: 'test("waits", () => new Promise(() => {}));',
+        maxOutputChars: 100,
+      },
+      (handler) => {
+        report = handler;
+        setTimeout(() => report(new RangeError("late")), 0);
+      },
+    );
+    expect(outcome).toEqual({
+      status: "error",
+      tests: [],
+      output: "before\n",
+      error: "RangeError: late",
+    });
   });
 });

@@ -21,11 +21,19 @@ const THREAD_SOURCE = `
 const { parentPort, workerData } = require("node:worker_threads");
 const lockDownGlobals = ${lockDownGlobals.toString()};
 const runHarness = ${runHarness.toString()};
+// Match the Web Worker: \`self\` is the global scope, unhandled rejections are
+// ignored, and uncaught errors are reported by the harness.
+const host = process;
+host.on("unhandledRejection", () => {});
+const onUncaughtError = (handler) => host.on("uncaughtException", handler);
+globalThis.self = globalThis;
 lockDownGlobals(globalThis, workerData.blocked);
 // A Web Worker stays alive until terminated; without this a test that never
 // settles would end the thread early instead of hitting the timeout.
 setInterval(() => {}, 1 << 30);
-runHarness(workerData.input).then((outcome) => parentPort.postMessage(outcome));
+runHarness(workerData.input, onUncaughtError).then((outcome) =>
+  parentPort.postMessage(outcome),
+);
 `;
 
 const openThreadSession: OpenSession = (request): SandboxSession => {

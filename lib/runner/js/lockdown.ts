@@ -1,6 +1,7 @@
 /**
  * Globals removed from the sandbox before user code runs: network, storage,
- * nested workers, messaging back to the page, and (in Node) process access.
+ * nested workers, messaging back to the page or closing the worker, and
+ * Node-only APIs.
  */
 export const BLOCKED_GLOBALS = [
   "fetch",
@@ -22,8 +23,14 @@ export const BLOCKED_GLOBALS = [
   "SharedWorker",
   "Notification",
   "postMessage",
+  "close",
+  // Node-only globals, blocked in both so results match.
   "process",
   "require",
+  "global",
+  "Buffer",
+  "setImmediate",
+  "clearImmediate",
 ] as const;
 
 /**

@@ -11,6 +11,15 @@ import { BLOCKED_GLOBALS, lockDownGlobals } from "./lockdown";
  */
 declare const self: DedicatedWorkerGlobalScope;
 
+// Same policy as the Node thread: unhandled rejections are ignored (a test
+// fails only through what it awaits); uncaught errors end the run as `error`.
+self.addEventListener("unhandledrejection", (event) => event.preventDefault());
+const onUncaughtError = (handler: (error: unknown) => void) =>
+  self.addEventListener("error", (event) => {
+    event.preventDefault();
+    handler(event.error ?? new Error(event.message));
+  });
+
 self.addEventListener(
   "message",
   (event: MessageEvent<RunRequest>) => {
@@ -18,7 +27,7 @@ self.addEventListener(
     if (!port) return;
     const prepared = prepareHarnessInput(event.data);
     const result: Promise<HarnessOutcome> = prepared.ok
-      ? runHarness(prepared.input)
+      ? runHarness(prepared.input, onUncaughtError)
       : Promise.resolve({
           status: "error",
           tests: [],

@@ -223,4 +223,80 @@ export const RUNNER_CASES: RunnerCase[] = [
     },
     expected: { status: "passed" },
   },
+  {
+    name: "Unhandled rejections are ignored",
+    request: {
+      language: "javascript",
+      code: 'Promise.reject(new Error("boom"));',
+      tests:
+        'test("ok", async () => {\n  await new Promise((r) => setTimeout(r, 50));\n});',
+    },
+    expected: { status: "passed" },
+  },
+  {
+    name: "Uncaught error in a timer ends the run",
+    request: {
+      language: "javascript",
+      code: 'setTimeout(() => {\n  throw new Error("late");\n}, 0);',
+      tests:
+        'test("ok", async () => {\n  await new Promise((r) => setTimeout(r, 50));\n});',
+    },
+    expected: { status: "error", tests: [], error: "Error: late" },
+  },
+  {
+    name: "self is the global scope and close is blocked",
+    request: {
+      language: "javascript",
+      code: "",
+      tests:
+        'test("self", () => {\n  expect(self).toBe(globalThis);\n});\ntest("close", () => {\n  self.close();\n});',
+    },
+    expected: {
+      status: "failed",
+      tests: [
+        { name: "self", passed: true },
+        {
+          name: "close",
+          passed: false,
+          message: "Error: close is blocked in the sandbox",
+        },
+      ],
+    },
+  },
+  {
+    name: "Node-only globals are blocked",
+    request: {
+      language: "javascript",
+      code: "",
+      tests:
+        'test("buffer", () => {\n  Buffer.from("x");\n});\ntest("global", () => {\n  global.x = 1;\n});',
+    },
+    expected: {
+      status: "failed",
+      tests: [
+        {
+          name: "buffer",
+          passed: false,
+          message: "Error: Buffer is blocked in the sandbox",
+        },
+        {
+          name: "global",
+          passed: false,
+          message: "Error: global is blocked in the sandbox",
+        },
+      ],
+    },
+  },
+  {
+    name: "Stack overflow is an error",
+    request: {
+      language: "javascript",
+      code: "function f() {\n  return f();\n}\nf();",
+      tests: 'test("noop", () => {});',
+    },
+    expected: {
+      status: "error",
+      error: "RangeError: Maximum call stack size exceeded",
+    },
+  },
 ];

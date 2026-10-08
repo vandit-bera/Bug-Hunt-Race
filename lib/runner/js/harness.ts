@@ -22,11 +22,18 @@ export interface HarnessOutcome {
  * `expect(x).toBe(y) / .toEqual(y) / .toThrow(match?)`. The code and the tests
  * share one scope, so tests can call anything the code declares.
  *
+ * `onUncaughtError` subscribes to errors thrown outside the awaited code
+ * (e.g. in a `setTimeout` callback); the environment wires it to its own
+ * error event so both report the same message.
+ *
  * This function must stay self-contained (no references to anything outside
  * its body): the Node entry point ships it to a worker thread as source text
  * via `runHarness.toString()`, so the browser and CI run the exact same code.
  */
-export async function runHarness(input: HarnessInput): Promise<HarnessOutcome> {
+export async function runHarness(
+  input: HarnessInput,
+  onUncaughtError: (handler: (error: unknown) => void) => void,
+): Promise<HarnessOutcome> {
   type TestFn = () => unknown;
 
   const describe = (value: unknown, seen: unknown[] = []): string => {
@@ -208,40 +215,55 @@ export async function runHarness(input: HarnessInput): Promise<HarnessOutcome> {
   const AsyncFunction = Object.getPrototypeOf(async () => {})
     .constructor as FunctionConstructor;
 
-  let program: (...args: unknown[]) => Promise<unknown>;
-  try {
-    program = new AsyncFunction(
-      "test",
-      "expect",
-      "console",
-      `${input.code}\n;\n${input.tests}`,
-    ) as typeof program;
-  } catch (error) {
-    return finish({ status: "error", tests: [], error: errorMessage(error) });
-  }
-
-  try {
-    await program(test, expect, capturedConsole);
-  } catch (error) {
-    return finish({ status: "error", tests: [], error: errorMessage(error) });
-  }
-  collecting = false;
-
-  if (registered.length === 0) {
-    return finish({ status: "error", tests: [], error: "No tests were found" });
-  }
-
-  const results: TestCaseResult[] = [];
-  for (const { name, fn } of registered) {
+  const execute = async (): Promise<HarnessOutcome> => {
+    let program: (...args: unknown[]) => Promise<unknown>;
     try {
-      await fn();
-      results.push({ name, passed: true });
+      program = new AsyncFunction(
+        "test",
+        "expect",
+        "console",
+        `${input.code}\n;\n${input.tests}`,
+      ) as typeof program;
     } catch (error) {
-      results.push({ name, passed: false, message: errorMessage(error) });
+      return finish({ status: "error", tests: [], error: errorMessage(error) });
     }
-  }
-  return finish({
-    status: results.every((result) => result.passed) ? "passed" : "failed",
-    tests: results,
-  });
+
+    try {
+      await program(test, expect, capturedConsole);
+    } catch (error) {
+      return finish({ status: "error", tests: [], error: errorMessage(error) });
+    }
+    collecting = false;
+
+    if (registered.length === 0) {
+      return finish({
+        status: "error",
+        tests: [],
+        error: "No tests were found",
+      });
+    }
+
+    const results: TestCaseResult[] = [];
+    for (const { name, fn } of registered) {
+      try {
+        await fn();
+        results.push({ name, passed: true });
+      } catch (error) {
+        results.push({ name, passed: false, message: errorMessage(error) });
+      }
+    }
+    return finish({
+      status: results.every((result) => result.passed) ? "passed" : "failed",
+      tests: results,
+    });
+  };
+
+  const crashed = new Promise<HarnessOutcome>((resolve) =>
+    onUncaughtError((error) =>
+      resolve(
+        finish({ status: "error", tests: [], error: errorMessage(error) }),
+      ),
+    ),
+  );
+  return Promise.race([execute(), crashed]);
 }

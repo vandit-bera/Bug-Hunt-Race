@@ -149,6 +149,12 @@ test("async works too", async () => {
   test only, with a message such as `Expected 5, received -1`.
 - `status`: `passed` if every test passed; `failed` if any failed; `error` on
   a syntax error, a throw at the top level, a crash, or **no tests**.
+- Unhandled promise rejections are ignored: a test fails only through what it
+  awaits. An error thrown outside awaited code (e.g. in a `setTimeout`
+  callback) ends the run as `error`, e.g. `Error: late`.
+- `self` is the global scope in both environments; `close()` and Node-only
+  globals (`process`, `require`, `global`, `Buffer`, `setImmediate`) are
+  blocked in both, so the browser and Node give the same result.
 - `console.log/info/warn/error/debug` are captured into `output`, capped at
   `MAX_OUTPUT_CHARS` (10 000) with a `… output truncated` note. Output is lost
   on timeout (the worker is killed).
@@ -160,7 +166,7 @@ test("async works too", async () => {
 - **Blocked globals** (`lib/runner/js/lockdown.ts`): `fetch`, `XMLHttpRequest`,
   `WebSocket`, `EventSource`, `WebTransport`, `importScripts`, `indexedDB`,
   `caches`, `navigator`, `postMessage`, nested `Worker`s, `BroadcastChannel`,
-  `Notification`, and `process` / `require` for Node. Each is replaced by a
+  `Notification`, `close`, and the Node-only globals listed above. Each is replaced by a
   non-configurable stub that throws `<name> is blocked in the sandbox`, and
   the original is deleted from the prototype chain.
 - **Everything else on the network, including dynamic `import()`:** the
@@ -170,9 +176,14 @@ test("async works too", async () => {
   cross-origin script. Same-origin scripts stay loadable, because Turbopack
   loads the worker's own chunks that way.
 - **DOM, `localStorage`, cookies:** not present in workers.
-- **Memory:** not capped in the browser (there is no API for it); a runaway
-  allocation crashes the worker, which returns `error`. Node threads are capped
-  at 256 MB.
+- **Memory:** there is no browser-side cap (no API for one). Most runaway
+  loops hit the 5 s timeout first, but allocating fast enough (e.g.
+  `while (true) a.push(new Array(1e6).fill(1))`) can crash the **whole tab**,
+  not just the worker. Node threads are capped at 256 MB.
+- **Node entry is for trusted code only.** The thread gets the same lockdown,
+  but Node cannot apply the worker CSP, so dynamic `import()` (`node:fs`,
+  `data:` URLs) still works there. It runs puzzle files from this repo in CI,
+  which are reviewed like any other code; never point it at player code.
 
 If Turbopack renames its worker bootstrap (`turbopack-worker-*.js`), the CSP
 header stops matching; the E2E test `network APIs are blocked, including
