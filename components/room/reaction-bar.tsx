@@ -44,7 +44,7 @@ export function ReactionBar({
     <div
       role="group"
       aria-label="Send a reaction"
-      className="inline-flex flex-wrap gap-1 rounded-2xl border-2 border-border bg-surface-raised p-1.5 sm:gap-2 sm:rounded-full"
+      className="inline-flex flex-wrap gap-1 rounded-2xl border-2 border-border bg-surface-raised p-1.5 tap:gap-0 tap:p-0.5 sm:gap-2 sm:rounded-full"
     >
       {REACTION_EMOJIS.map((emoji) => (
         <button
@@ -54,7 +54,7 @@ export function ReactionBar({
           aria-disabled={cooling}
           onClick={(event) => react(emoji, event.timeStamp)}
           className={cn(
-            "size-9 rounded-full text-xl sm:size-10 sm:text-2xl transition-transform duration-100 hover:bg-surface motion-safe:hover:scale-110 motion-safe:active:scale-95",
+            "size-9 rounded-full text-xl sm:size-10 tap:min-h-11 tap:min-w-11 sm:text-2xl transition-transform duration-100 hover:bg-surface motion-safe:hover:scale-110 motion-safe:active:scale-95",
             cooling && "cursor-not-allowed opacity-50",
           )}
         >

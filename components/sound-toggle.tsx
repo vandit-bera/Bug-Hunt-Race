@@ -13,7 +13,7 @@ export function SoundToggle({ className }: { className?: string }) {
       aria-label="Mute sound"
       onClick={() => setMuted(!muted)}
       className={cn(
-        "rounded-lg border-2 border-border bg-surface px-3 py-2 text-sm font-bold hover:bg-surface-raised",
+        "inline-flex items-center justify-center tap:min-h-11 tap:min-w-11 rounded-lg border-2 border-border bg-surface px-3 py-2 text-sm font-bold hover:bg-surface-raised",
         className,
       )}
     >
