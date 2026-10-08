@@ -604,7 +604,7 @@ from a determined attacker with many IPs. Migration
 | Display name               | 1–24 chars, no control chars   | `private.clean_display_name` → `invalid_display_name`                   |
 | No HTML in names / avatars | `<` and `>` rejected           | `private.clean_display_name`, `private.check_avatar`                    |
 | Avatar                     | 1–16 chars                     | `private.check_avatar` → `invalid_avatar`                               |
-| Players per room           | 50 (game rule: 30)             | `join_room` → `room_full`                                               |
+| Players per room           | 30                             | `join_room` → `room_full`                                               |
 | New anonymous users per IP | 30 per hour (Supabase default) | Supabase Auth → Rate Limits (dashboard; `supabase/config.toml` locally) |
 
 - The room limit counts creates in `private.room_creations` (pruned per user
@@ -688,8 +688,8 @@ budget in `scripts/bundle-budget.ts`:
 
 | Page               | Budget (gzip) | At TB-41 |
 | ------------------ | ------------- | -------- |
-| `/` Home           | 185 KB        | 175.7 KB |
-| `/solo` Solo setup | 190 KB        | 179.3 KB |
+| `/` Home           | 185 KB        | 175.9 KB |
+| `/solo` Solo setup | 190 KB        | 179.5 KB |
 
 About 170 KB of that is React and Next.js, shared by every page. Keep heavy
 code off these pages:

@@ -106,7 +106,10 @@ for (const language of ["javascript", "typescript", "python"] as const) {
     test.setTimeout(90_000);
     const violations = await watchCspViolations(page);
     await page.goto(`/solo/play?language=${language}&level=easy&round=0`);
-    await expect(page.locator(".monaco-editor .view-lines")).toBeVisible();
+    // The editor appears after the 3-2-1-Go countdown.
+    await expect(page.locator(".monaco-editor .view-lines")).toBeVisible({
+      timeout: 15_000,
+    });
     await page.getByRole("button", { name: "Run Tests" }).click();
     // Every puzzle's buggy code fails its tests.
     await expect(page.getByText("Failed: ").first()).toBeAttached({

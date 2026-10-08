@@ -7,7 +7,7 @@
 --    already enforced (names 1-24 chars, avatars 1-16).
 --
 -- Not enforced here (see docs/ARCHITECTURE.md#abuse-limits): new anonymous
--- users per IP (a Supabase Auth setting), joins (rooms are capped at 50
+-- users per IP (a Supabase Auth setting), joins (rooms are capped at 30
 -- players), Realtime messages.
 
 -- Room creation rate limit ---------------------------------------------------
