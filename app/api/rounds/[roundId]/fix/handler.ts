@@ -20,6 +20,19 @@ const STATUS: Record<string, number> = {
   round_not_over: 403,
 };
 
+// PostgREST refuses a malformed or unverifiable token (PGRST301-303), and the
+// anon role may not call the function at all (42501): both mean "not signed in".
+const AUTH_FAILURES = new Set(["PGRST301", "PGRST302", "PGRST303", "42501"]);
+
+function errorCode(error: unknown): string {
+  if (!(error instanceof DbError)) return "unknown";
+  const cause = error.cause as { code?: unknown } | undefined;
+  if (typeof cause?.code === "string" && AUTH_FAILURES.has(cause.code)) {
+    return "not_authenticated";
+  }
+  return error.code;
+}
+
 function json(body: RoundFix | RoundFixError, status: number): Response {
   // Per player and per moment (before / after the round ends): never cache.
   return Response.json(body, {
@@ -52,7 +65,7 @@ export async function handleFixRequest(
   try {
     puzzleId = await deps.revealPuzzle(token, roundId);
   } catch (error) {
-    const code = error instanceof DbError ? error.code : "unknown";
+    const code = errorCode(error);
     return json({ error: code }, STATUS[code] ?? 500);
   }
 
