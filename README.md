@@ -57,6 +57,13 @@ your machine is out of file watchers: close other dev servers or run
   3000). If port 3000 is taken by another app, pick another port:
   `E2E_PORT=3100 pnpm test:e2e`.
 
+## Code runner
+
+Player code runs in the browser, in a sandboxed Web Worker. Try it at
+[`/dev/runner`](http://localhost:3000/dev/runner) (a dev page; the game screens
+replace it later). How it works and what is blocked:
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#code-runner-plug-in-interface).
+
 ## Local database
 
 Needs Docker. The Supabase CLI is a dev dependency, so no global install.
