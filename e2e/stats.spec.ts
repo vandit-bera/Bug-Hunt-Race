@@ -88,3 +88,9 @@ for (const width of [320, 340, 375]) {
     expect(overflow).toBe(0);
   });
 }
+
+test("home links to My Stats", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("link", { name: "My Stats" }).click();
+  await expect(page.getByRole("heading", { name: "My Stats" })).toBeVisible();
+});
