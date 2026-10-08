@@ -307,6 +307,35 @@ flowchart LR
   scripts that use the harness globals, and buggy and fix declare the same
   names.
 
+## Solo Practice and scoring
+
+Screens: `/` (home), `/solo` (pick language and level), `/solo/play` (the
+game and the result screen). The game link carries its settings:
+`/solo/play?language=python&level=mixed&round=0`; "Play again" adds 1 to
+`round`, which is how Mixed steps Easy, Medium, Hard (levels with no puzzles
+are skipped). Everything is client side; nothing is sent to Supabase.
+
+- **Scoring** (`lib/game/scoring.ts`, pure, reused by Race Rooms):
+  `score = base + speedBonus - hintPenalty`, never below 0.
+  - `base` is the level's base points (100 / 200 / 300).
+  - `speedBonus = round(base * 0.5 * timeLeft / timeLimit)`: up to +50% for an
+    instant solve, 0 when solved at the last second.
+  - `hintPenalty = round(base * 0.25)` per hint (the solo game allows one).
+  - Unsolved, time-up and gave-up rounds score 0, and so does a solve that
+    lands after the time limit.
+- **Personal best** (`lib/game/solo-storage.ts`): kept in `localStorage` per
+  language + selected level (Mixed has its own best). More points win; equal
+  points are decided by the faster time.
+- **Puzzle picking** (`lib/game/solo-pick.ts`): random from the language +
+  level pool, without repeats until every puzzle there has been played; the
+  played ids are in `localStorage` too.
+- **Editor:** Monaco, bundled with the app (no CDN) and loaded on demand. Only
+  the editor worker runs, so there are no type-checker squiggles that would
+  point at the bug.
+- **Give up / time up:** the result screen shows 0 points and the last test
+  run. The reference fix is never sent to the browser (see Puzzles), so there
+  is no "show the answer".
+
 ## Room state machine
 
 Copied from TB-19 §12. The room's current state lives in the database and is

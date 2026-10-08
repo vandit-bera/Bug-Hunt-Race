@@ -23,9 +23,11 @@ const send = (event: WorkerEvent) => postToPage(event);
 
 /** Downloads every Pyodide file, reporting byte progress (0 to 1). */
 async function download(baseUrl: string, onProgress: (value: number) => void) {
-  const manifest = (await (
-    await fetch(`${baseUrl}/manifest.json`)
-  ).json()) as PyodideManifest;
+  const manifestResponse = await fetch(`${baseUrl}/manifest.json`);
+  if (!manifestResponse.ok) {
+    throw new Error(`Could not download Python (${manifestResponse.status})`);
+  }
+  const manifest = (await manifestResponse.json()) as PyodideManifest;
   const total = Object.values(manifest.files).reduce((a, b) => a + b, 0);
   let received = 0;
   for (const file of Object.keys(manifest.files)) {
