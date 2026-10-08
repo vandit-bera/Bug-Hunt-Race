@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Silkscreen } from "next/font/google";
+import { ThemeSync } from "@/components/theme-sync";
 import { ToastProvider } from "@/components/ui/toast";
 import { getThemeInitScript } from "@/lib/theme/theme";
 import "./globals.css";
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: getThemeInitScript() }} />
       </head>
       <body className="flex min-h-full flex-col font-sans">
+        <ThemeSync />
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>

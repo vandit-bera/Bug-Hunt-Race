@@ -16,19 +16,33 @@ function notify() {
   listeners.forEach((listener) => listener());
 }
 
-export function subscribeTheme(listener: () => void): () => void {
-  listeners.add(listener);
-  const onExternalChange = () => {
-    applyTheme();
-    notify();
-  };
+function onExternalChange() {
+  applyTheme();
+  notify();
+}
+
+let detachExternal: (() => void) | null = null;
+
+// One shared pair of OS/cross-tab listeners, so an event notifies each subscriber once.
+function attachExternal() {
   window.addEventListener("storage", onExternalChange);
   const media = window.matchMedia(DARK_QUERY);
   media.addEventListener("change", onExternalChange);
-  return () => {
-    listeners.delete(listener);
+  detachExternal = () => {
     window.removeEventListener("storage", onExternalChange);
     media.removeEventListener("change", onExternalChange);
+  };
+}
+
+export function subscribeTheme(listener: () => void): () => void {
+  if (listeners.size === 0) attachExternal();
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+    if (listeners.size === 0) {
+      detachExternal?.();
+      detachExternal = null;
+    }
   };
 }
 
