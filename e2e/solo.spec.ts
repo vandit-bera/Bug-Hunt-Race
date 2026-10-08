@@ -372,6 +372,7 @@ for (const width of [320, 375]) {
       expect(pageOverflow).toBe(false);
     });
   }
+}
 
 for (const width of [360, 375]) {
   test(`the game page does not scroll sideways at ${width}px`, async ({
