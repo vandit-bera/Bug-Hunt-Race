@@ -42,6 +42,7 @@ your machine is out of file watchers: close other dev servers or run
 | `pnpm test:watch`           | Unit tests in watch mode                      |
 | `pnpm test:e2e`             | End-to-end tests (Playwright)                 |
 | `pnpm test:e2e:multiplayer` | Multi-player E2E tests (needs local Supabase) |
+| `pnpm load:room`            | Load test: 30 players × 3 rounds, local only  |
 | `pnpm puzzles:check`        | Check every puzzle: buggy fails, fix passes   |
 | `pnpm puzzles:build`        | Regenerate the puzzle index the app imports   |
 | `pnpm db:start`             | Start local Supabase (Docker)                 |
@@ -62,6 +63,12 @@ your machine is out of file watchers: close other dev servers or run
 - **Multi-player** E2E tests live in `e2e/multiplayer/`, need a running local
   Supabase and are skipped without one. How to run and write them:
   [`e2e/README.md`](e2e/README.md).
+- **Load test**: `pnpm load:room` fills one room with 30 headless players on
+  the local Supabase, plays 3 rounds and prints latencies, Realtime message
+  rates and correctness checks (exits 1 on a failed check). It refuses any
+  non-local Supabase. `--join-over 30` spreads the joins over 30 s instead of
+  all at once. Results and what they mean for the free plan:
+  [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#capacity).
 
 ## Code runner
 
@@ -93,7 +100,8 @@ puzzle check → build → bundle budget → E2E. A second job starts a fresh
 Supabase database from the migrations, runs the pgTAP tests and checks
 `lib/db/types.ts` is up to date. A third job starts a local Supabase
 (database, auth, API, Realtime) and runs the two-browser room E2E tests. A PR
-cannot merge unless CI is green.
+cannot merge unless CI is green. The 30-player load test is too slow for every
+PR: run it by hand from the Actions tab ("Load test", `.github/workflows/load.yml`).
 
 ## Environment variables
 
