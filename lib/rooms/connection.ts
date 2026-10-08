@@ -137,7 +137,16 @@ export function connectToRoom(
   }
 
   const channel = client
-    .channel(`room:${roomId}`, { config: { presence: { key: playerId } } })
+    .channel(`room:${roomId}`, {
+      config: {
+        presence: { key: playerId },
+        // Report SUBSCRIBED only once the database changes stream is live.
+        // Without it, a change between the channel join and the stream
+        // starting is in neither the reload below nor the stream, e.g. a
+        // player who joins then never shows up for the others.
+        postgres_changes_options: { wait: true },
+      },
+    })
     .on<Room>(
       "postgres_changes",
       {
