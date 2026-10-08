@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Silkscreen } from "next/font/google";
+import { Footer } from "@/components/footer";
 import { SoundArm } from "@/components/sound-arm";
 import { ThemeSync } from "@/components/theme-sync";
 import { ToastProvider } from "@/components/ui/toast";
@@ -41,6 +42,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <ThemeSync />
         <SoundArm />
         <ToastProvider>{children}</ToastProvider>
+        <Footer />
       </body>
     </html>
   );

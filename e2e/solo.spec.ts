@@ -167,7 +167,9 @@ test("a hint costs points after a confirm", async ({ page }) => {
   await expect(page.getByText(puzzle.meta.hint)).toBeVisible();
   await setCode(page, puzzle.fix);
   await page.getByRole("button", { name: "Run Tests" }).click();
-  await expect(page.getByText("Hint penalty")).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("Hint penalty", { exact: true })).toBeVisible({
+    timeout: 15_000,
+  });
 });
 
 test("give up shows 0 points", async ({ page }) => {

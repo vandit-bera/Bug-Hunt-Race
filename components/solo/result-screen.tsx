@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef } from "react";
+import { RulesButton } from "@/components/rules-modal";
 import { AnimatedNumber } from "@/components/fx/animated-number";
 import { Confetti } from "@/components/fx/confetti";
 import { ScorePopup } from "@/components/fx/score-popup";
@@ -132,6 +133,7 @@ export function ResultScreen({
           Change settings
         </Link>
       </div>
+      <RulesButton className="self-start" />
     </Card>
   );
 }
