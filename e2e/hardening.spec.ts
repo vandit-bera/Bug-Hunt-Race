@@ -119,10 +119,16 @@ for (const language of ["javascript", "typescript", "python"] as const) {
   });
 }
 
-test("Home headings go h1 → h2 with no skipped level", async ({ page }) => {
+test("Home headings never skip a level", async ({ page }) => {
   await page.goto("/");
-  await expect(
-    page.getByRole("heading", { level: 2, name: "Race Room" }),
-  ).toBeVisible();
-  await expect(page.getByRole("heading", { level: 3 })).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  const levels = await page
+    .locator("h1, h2, h3, h4, h5, h6")
+    .evaluateAll((headings) => headings.map((h) => Number(h.tagName[1])));
+  for (const [i, level] of levels.entries()) {
+    expect(
+      level,
+      `heading ${i + 1} of ${levels.join(", ")}`,
+    ).toBeLessThanOrEqual((levels[i - 1] ?? 0) + 1);
+  }
 });
