@@ -31,7 +31,8 @@ export interface Pick {
 
 /**
  * Picks a random puzzle that was not played yet. Once every puzzle in the
- * pool has been played, the history starts again from the picked one.
+ * pool has been played, the history starts again from the picked one, which
+ * is never the last played puzzle unless it is the only one.
  * Returns null for an empty pool. `random` returns [0, 1).
  */
 export function pickPuzzle(
@@ -41,9 +42,12 @@ export function pickPuzzle(
 ): Pick | null {
   if (pool.length === 0) return null;
   const poolIds = new Set(pool.map((puzzle) => puzzle.id));
-  const seen = new Set(played.filter((id) => poolIds.has(id)));
+  const inPool = played.filter((id) => poolIds.has(id));
+  const seen = new Set(inPool);
   const fresh = pool.filter((puzzle) => !seen.has(puzzle.id));
-  const candidates = fresh.length > 0 ? fresh : pool;
+  const last = inPool.at(-1);
+  const rest = pool.filter((puzzle) => puzzle.id !== last);
+  const candidates = fresh.length > 0 ? fresh : rest.length > 0 ? rest : pool;
   const puzzle = candidates[Math.floor(random() * candidates.length)];
   const history = fresh.length > 0 ? [...seen] : [];
   return { puzzle, played: [...history, puzzle.id] };

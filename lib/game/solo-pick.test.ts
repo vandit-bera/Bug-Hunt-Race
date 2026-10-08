@@ -51,8 +51,20 @@ describe("pickPuzzle", () => {
 
   it("starts the history again after the pool is exhausted", () => {
     const pick = pickPuzzle(pool, ["a", "b", "c"], () => 0.99)!;
-    expect(pick.puzzle.id).toBe("c");
-    expect(pick.played).toEqual(["c"]);
+    expect(pick.puzzle.id).toBe("b");
+    expect(pick.played).toEqual(["b"]);
+  });
+
+  it("never picks the last played puzzle after the pool is exhausted", () => {
+    for (const random of [0, 0.5, 0.99]) {
+      const pick = pickPuzzle(pool, ["a", "c", "b"], () => random)!;
+      expect(pick.puzzle.id).not.toBe("b");
+    }
+  });
+
+  it("uses the last played id that is still in the pool", () => {
+    const pick = pickPuzzle(pool, ["a", "b", "c", "gone"], () => 0.99)!;
+    expect(pick.puzzle.id).toBe("b");
   });
 
   it("ignores played ids that are not in the pool", () => {
