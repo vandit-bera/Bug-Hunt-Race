@@ -24,9 +24,12 @@ function installNetworkSwitch() {
 
   window.WebSocket = class extends NativeWebSocket {
     constructor(url: string | URL, protocols?: string | string[]) {
-      // Port 9 (discard) refuses the connection: an error and a close
-      // without an open, like a real network failure.
-      super(offline ? "ws://127.0.0.1:9" : url, protocols);
+      // Offline, point at a path that does not exist on the same origin
+      // (allowed by the CSP): the connection fails with an error and a
+      // close, never an open, like a real network failure.
+      const target = new URL(url, window.location.href);
+      if (offline) target.pathname = "/__offline";
+      super(target, protocols);
       open.add(this);
       this.addEventListener("close", () => open.delete(this));
     }
