@@ -1,0 +1,12 @@
+{
+  "id": "cart-totals",
+  "title": "Cart totals",
+  "language": "typescript",
+  "level": "medium",
+  "description": "cartTotals(items) returns the subtotal, shipping and total in cents. Each line costs price × quantity. Shipping is 4.99, and free when the subtotal is 50.00 or more. An empty cart costs nothing, not even shipping.",
+  "hint": "There are two bugs: one in how the subtotal is added up, one at the free-shipping boundary.",
+  "bugCount": 2,
+  "timeLimitSec": 300,
+  "basePoints": 200,
+  "tags": ["boundary", "reduce", "money"]
+}

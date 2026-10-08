@@ -18,6 +18,9 @@ import { PYTHON_HARNESS } from "./harness-source";
 
 const THREAD_SOURCE = `
 const { parentPort, workerData } = require("node:worker_threads");
+// esbuild's keepNames (used by tsx, which runs the puzzle checker) wraps
+// functions in \`__name(fn, "name")\`; names are cosmetic, so a no-op will do.
+const __name = (target) => target;
 const lockDownGlobals = ${lockDownGlobals.toString()};
 const runPuzzle = ${runPuzzle.toString()};
 (async () => {

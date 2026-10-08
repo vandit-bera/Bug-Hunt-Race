@@ -1,0 +1,12 @@
+{
+  "id": "retry-until-success",
+  "title": "Retry until success",
+  "language": "javascript",
+  "level": "medium",
+  "description": "retry(task, options) calls the async task until it succeeds, at most `attempts` times, waiting `delayMs` between tries and calling onRetry(error, attempt) before each retry. It resolves with the first success or rejects with the last error.",
+  "hint": "A try/catch only catches a rejected promise if something waits for it.",
+  "bugCount": 1,
+  "timeLimitSec": 300,
+  "basePoints": 200,
+  "tags": ["async", "promises", "error-handling"]
+}

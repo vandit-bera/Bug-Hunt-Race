@@ -17,6 +17,10 @@ const eslintConfig = defineConfig([
     "playwright-report/**",
     "public/pyodide/**",
     ".scratch/**",
+    // Puzzle code is plain script run by the test harness (global `test` and
+    // `expect`, buggy and fix declare the same names), not app code.
+    "puzzles/**",
+    "lib/puzzles/fixtures/**",
   ]),
 ]);
 

@@ -56,8 +56,12 @@ export class PythonWorkerPool {
 
   private ensureSpare(): Promise<ReadyWorker> {
     if (!this.spare) {
-      this.spare = this.boot();
-      this.spare.catch(() => {});
+      const spare = this.boot();
+      this.spare = spare;
+      // A failed boot must not stick: the next warm() or run tries again.
+      spare.catch(() => {
+        if (this.spare === spare) this.spare = null;
+      });
     }
     return this.spare;
   }

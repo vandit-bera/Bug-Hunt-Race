@@ -1,0 +1,12 @@
+{
+  "id": "double-it",
+  "title": "Fixture double-it",
+  "language": "javascript",
+  "level": "easy",
+  "description": "double(n) returns n times two.",
+  "hint": "Read the operator.",
+  "bugCount": 1,
+  "timeLimitSec": 180,
+  "basePoints": 100,
+  "tags": ["fixture"]
+}

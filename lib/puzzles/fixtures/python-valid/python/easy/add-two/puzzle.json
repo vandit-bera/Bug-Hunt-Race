@@ -1,0 +1,12 @@
+{
+  "id": "add-two",
+  "title": "Fixture add-two",
+  "language": "python",
+  "level": "easy",
+  "description": "add(a, b) returns the sum of a and b.",
+  "hint": "Read the operator.",
+  "bugCount": 1,
+  "timeLimitSec": 180,
+  "basePoints": 100,
+  "tags": ["fixture"]
+}
