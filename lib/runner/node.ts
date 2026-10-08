@@ -19,6 +19,10 @@ import type { CodeRunner, LanguageId, RunRequest, RunResult } from "./types";
 // to the thread as text. That keeps one implementation for both environments.
 const THREAD_SOURCE = `
 const { parentPort, workerData } = require("node:worker_threads");
+// esbuild's keepNames (used by tsx, which runs the puzzle checker) wraps
+// functions in \`__name(fn, "name")\`, so their source refers to a helper that
+// only exists in the parent. Names are cosmetic here; a no-op is enough.
+const __name = (target) => target;
 const lockDownGlobals = ${lockDownGlobals.toString()};
 const runHarness = ${runHarness.toString()};
 // Match the Web Worker: \`self\` is the global scope, unhandled rejections are

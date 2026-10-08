@@ -1,0 +1,11 @@
+{
+  "id": "bad-meta",
+  "title": "Fixture bad-meta",
+  "language": "javascript",
+  "level": "expert",
+  "description": "double(n) returns n times two.",
+  "bugCount": 0,
+  "timeLimitSec": 180,
+  "basePoints": 100,
+  "tags": []
+}

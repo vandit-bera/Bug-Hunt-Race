@@ -1,0 +1,12 @@
+{
+  "id": "paginate",
+  "title": "Paginate a list",
+  "language": "typescript",
+  "level": "easy",
+  "description": "paginate(items, page, perPage) returns the items on the given page. Pages start at 1. A page past the end, or a page below 1, is empty.",
+  "hint": "Work out by hand where page 1 should start.",
+  "bugCount": 1,
+  "timeLimitSec": 180,
+  "basePoints": 100,
+  "tags": ["off-by-one", "arrays"]
+}

@@ -15,6 +15,10 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     "test-results/**",
     "playwright-report/**",
+    // Puzzle code is plain script run by the test harness (global `test` and
+    // `expect`, buggy and fix declare the same names), not app code.
+    "puzzles/**",
+    "lib/puzzles/fixtures/**",
   ]),
 ]);
 
