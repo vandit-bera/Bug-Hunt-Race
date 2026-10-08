@@ -119,6 +119,34 @@ test("Ctrl/Cmd+Enter runs the tests", async ({ page }) => {
   });
 });
 
+for (const [opener, title] of [
+  ["Give up", "Give up?"],
+  ["Hint (costs points)", "Show the hint?"],
+] as const) {
+  test(`Ctrl/Cmd+Enter does nothing while "${title}" is open`, async ({
+    page,
+  }) => {
+    await start(page, "javascript", "Easy");
+    const puzzle = await currentPuzzle(page);
+    await setCode(page, puzzle.fix);
+    await page.getByRole("button", { name: opener }).click();
+    const dialog = page.getByRole("dialog", { name: title });
+    await expect(dialog).toBeVisible();
+    await page.keyboard.press("ControlOrMeta+Enter");
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: "Keep trying" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(
+      page.getByText("Press Run Tests (Ctrl/Cmd+Enter) to check your fix."),
+    ).toBeVisible();
+
+    await page.keyboard.press("ControlOrMeta+Enter");
+    await expect(
+      page.getByRole("heading", { name: "Bug squashed!" }),
+    ).toBeVisible({ timeout: 15_000 });
+  });
+}
+
 test("a hint costs points after a confirm", async ({ page }) => {
   await start(page, "javascript", "Easy");
   const puzzle = await currentPuzzle(page);
