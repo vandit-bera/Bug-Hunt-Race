@@ -130,6 +130,34 @@ test("Ctrl/Cmd+Enter runs the tests", async ({ page }) => {
   });
 });
 
+for (const [opener, title] of [
+  ["Give up", "Give up?"],
+  ["Hint (costs points)", "Show the hint?"],
+] as const) {
+  test(`Ctrl/Cmd+Enter does nothing while "${title}" is open`, async ({
+    page,
+  }) => {
+    await start(page, "javascript", "Easy");
+    const puzzle = await currentPuzzle(page);
+    await setCode(page, puzzle.fix);
+    await page.getByRole("button", { name: opener }).click();
+    const dialog = page.getByRole("dialog", { name: title });
+    await expect(dialog).toBeVisible();
+    await page.keyboard.press("ControlOrMeta+Enter");
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: "Keep trying" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(
+      page.getByText("Press Run Tests (Ctrl/Cmd+Enter) to check your fix."),
+    ).toBeVisible();
+
+    await page.keyboard.press("ControlOrMeta+Enter");
+    await expect(
+      page.getByRole("heading", { name: "Bug squashed!" }),
+    ).toBeVisible({ timeout: 15_000 });
+  });
+}
+
 test("a hint costs points after a confirm", async ({ page }) => {
   await start(page, "javascript", "Easy");
   const puzzle = await currentPuzzle(page);
@@ -311,3 +339,33 @@ test("the score popup sits beside the score, not over the heading", async ({
   const title = await heading.boundingBox();
   expect(popup && title && popup.y >= title.y + title.height).toBe(true);
 });
+
+for (const width of [320, 375]) {
+  for (const colorScheme of ["light", "dark"] as const) {
+    test(`setup cards fit at ${width}px in ${colorScheme} theme`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await page.emulateMedia({ colorScheme });
+      await page.goto("/solo");
+      await expect(page.locator("html")).toHaveAttribute(
+        "data-theme",
+        colorScheme,
+      );
+      const cards = page.locator("fieldset label > span");
+      await expect(cards).toHaveCount(7);
+      for (const card of await cards.all()) {
+        await expect(card).toBeVisible();
+        const { scrollWidth, clientWidth } = await card.evaluate((el) => ({
+          scrollWidth: el.scrollWidth,
+          clientWidth: el.clientWidth,
+        }));
+        expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
+      }
+      const pageOverflow = await page.evaluate(
+        () => document.documentElement.scrollWidth > window.innerWidth,
+      );
+      expect(pageOverflow).toBe(false);
+    });
+  }
+}

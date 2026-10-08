@@ -25,6 +25,7 @@ import {
   type RoomPlayer,
   type RoomSettings,
 } from "@/components/room";
+import { RoomFunDemo } from "./room-fun-demo";
 
 const COLOR_TOKENS = [
   "background",
@@ -282,6 +283,10 @@ export function Showcase({ theme }: { theme: "light" | "dark" }) {
             action={<Button size="sm">Reconnect</Button>}
           />
         </div>
+      </Section>
+
+      <Section title="Room fun: reactions, solve toasts, live ranks">
+        <RoomFunDemo />
       </Section>
     </div>
   );
