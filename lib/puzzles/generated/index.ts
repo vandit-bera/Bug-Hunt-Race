@@ -293,21 +293,21 @@ export const PUZZLES: readonly PublicPuzzle[] = [
       "def test_whole_average():\n    assert average([2, 4, 6]) == 4\n\n\ndef test_keeps_the_decimal_part():\n    assert average([1, 2]) == 1.5\n\n\ndef test_single_number():\n    assert average([7]) == 7\n\n\ndef test_empty_list_is_zero():\n    assert average([]) == 0\n",
   },
   {
-    id: "count-words",
-    title: "Count words",
+    id: "cheapest-items",
+    title: "Cheapest items",
     language: "python",
     level: "easy",
     description:
-      "count_words(text) returns the number of words in the text. Words are separated by any amount of whitespace, and an empty or blank text has 0 words.",
-    hint: 'What does "a  b".split(" ") return when there are two spaces?',
+      "cheapest(prices, count) returns the count lowest prices, lowest first. If there are fewer prices than count, it returns all of them sorted. The original list must not be changed.",
+    hint: "What does list.sort() give back?",
     bugCount: 1,
     timeLimitSec: 180,
     basePoints: 100,
-    tags: ["strings", "split", "edge-case"],
+    tags: ["sorting", "return-value", "lists"],
     buggy:
-      'def count_words(text):\n    """Number of words in `text`.\n\n    Any amount of whitespace separates words.\n    """\n    words = text.split(" ")\n    return len(words)\n',
+      'def cheapest(prices, count):\n    """The `count` lowest prices, lowest first.\n\n    The original list is left as it was.\n    """\n    ordered = prices.sort()\n    return ordered[:count]\n',
     tests:
-      'def test_counts_simple_words():\n    assert count_words("hello brave new world") == 4\n\n\ndef test_extra_spaces_do_not_add_words():\n    assert count_words("hello    world") == 2\n\n\ndef test_spaces_around_the_text():\n    assert count_words("  padded text  ") == 2\n\n\ndef test_empty_text_has_no_words():\n    assert count_words("") == 0\n    assert count_words("   ") == 0\n',
+      "def test_returns_lowest_prices_first():\n    assert cheapest([30, 10, 20, 40], 2) == [10, 20]\n\n\ndef test_count_larger_than_list():\n    assert cheapest([5, 3], 5) == [3, 5]\n\n\ndef test_original_list_is_unchanged():\n    prices = [9, 1, 5]\n    cheapest(prices, 2)\n    assert prices == [9, 1, 5]\n\n\ndef test_zero_items():\n    assert cheapest([4, 2], 0) == []\n",
   },
   {
     id: "is-palindrome",
@@ -361,23 +361,6 @@ export const PUZZLES: readonly PublicPuzzle[] = [
       'def test_clear_grades():\n    assert letter_grade(95) == "A"\n    assert letter_grade(75) == "C"\n    assert letter_grade(30) == "F"\n\n\ndef test_the_limit_itself_gets_the_higher_letter():\n    assert letter_grade(90) == "A"\n    assert letter_grade(60) == "D"\n\n\ndef test_just_below_a_limit():\n    assert letter_grade(89) == "B"\n\n\ndef test_scores_outside_the_range_are_rejected():\n    for bad in (-1, 101):\n        try:\n            letter_grade(bad)\n        except ValueError:\n            continue\n        raise AssertionError("expected ValueError for %s" % bad)\n\n\ndef test_class_summary_counts_letters():\n    assert class_summary([100, 85, 90, 40, 82]) == {"A": 2, "B": 2, "F": 1}\n',
   },
   {
-    id: "make-multipliers",
-    title: "Make multipliers",
-    language: "python",
-    level: "medium",
-    description:
-      "make_multipliers(factors) returns one function per factor; each function multiplies the number it receives by its own factor. scale_all(factors, value) calls all of them with the same value. make_multipliers([2, 3])[1](10) is 30.",
-    hint: "When does a lambda look up the variable from the loop?",
-    bugCount: 1,
-    timeLimitSec: 300,
-    basePoints: 200,
-    tags: ["closure", "late-binding", "lambda"],
-    buggy:
-      'def make_multipliers(factors):\n    """One function per factor.\n\n    make_multipliers([2, 3])[1](10) is 30.\n    """\n    multipliers = []\n    for factor in factors:\n        multipliers.append(lambda value: value * factor)\n    return multipliers\n\n\ndef apply_all(functions, value):\n    """The result of calling every function with `value`."""\n    return [function(value) for function in functions]\n\n\ndef scale_all(factors, value):\n    """`value` multiplied by each factor, in order."""\n    return apply_all(make_multipliers(factors), value)\n\n\ndef double_and_triple(value):\n    """Shortcut for scaling by 2 and by 3."""\n    return scale_all([2, 3], value)\n',
-    tests:
-      "def test_each_function_uses_its_own_factor():\n    double, triple = make_multipliers([2, 3])\n    assert double(10) == 20\n    assert triple(10) == 30\n\n\ndef test_one_function_per_factor():\n    assert len(make_multipliers([5, 6, 7])) == 3\n\n\ndef test_scale_all():\n    assert scale_all([2, 3, 4], 10) == [20, 30, 40]\n\n\ndef test_shortcut_and_empty_list():\n    assert double_and_triple(5) == [10, 15]\n    assert scale_all([], 5) == []\n",
-  },
-  {
     id: "new-board",
     title: "Game board",
     language: "python",
@@ -410,6 +393,23 @@ export const PUZZLES: readonly PublicPuzzle[] = [
       'import math\n\n\ndef percent_done(done, total):\n    """Whole-number percentage of finished tasks.\n\n    Halves round up: 1 of 8 is 12.5, which shows as 13.\n    No tasks at all counts as 0 percent.\n    """\n    return round(done * 100 / total)\n\n\ndef progress_label(done, total):\n    """Text such as "50% done (4/8)"."""\n    return "%d%% done (%d/%d)" % (percent_done(done, total), done, total)\n\n\ndef is_complete(done, total):\n    """True when every task is done and there is at least one task."""\n    return total > 0 and done >= total\n\n\ndef tasks_left(done, total):\n    """How many tasks are still open (never below 0)."""\n    return max(total - done, 0)\n\n\ndef is_started(done):\n    """True when at least one task is done."""\n    return done > 0\n',
     tests:
       'def test_plain_percentages():\n    assert percent_done(4, 8) == 50\n    assert percent_done(8, 8) == 100\n\n\ndef test_rounds_to_the_nearest_whole_number():\n    assert percent_done(1, 3) == 33\n    assert percent_done(2, 3) == 67\n\n\ndef test_halves_round_up():\n    assert percent_done(1, 8) == 13\n    assert percent_done(5, 8) == 63\n\n\ndef test_no_tasks_is_zero_percent():\n    assert percent_done(0, 0) == 0\n    assert progress_label(0, 0) == "0% done (0/0)"\n\n\ndef test_label_and_completion():\n    assert progress_label(4, 8) == "50% done (4/8)"\n    assert is_complete(3, 3)\n    assert not is_complete(0, 0)\n',
+  },
+  {
+    id: "positive-stats",
+    title: "Positive stats",
+    language: "python",
+    level: "medium",
+    description:
+      "describe(values) returns (lowest, highest, average) of the values greater than zero, and None when there are none. describe([4, -1, 2, 6]) is (2, 6, 4.0). spread(values) is highest minus lowest, or 0 when there are no positive values.",
+    hint: "Can you loop over a generator a second time?",
+    bugCount: 1,
+    timeLimitSec: 300,
+    basePoints: 200,
+    tags: ["generators", "iterators", "lists"],
+    buggy:
+      'def positive_values(values):\n    """The values greater than zero, in order."""\n    return (value for value in values if value > 0)\n\n\ndef describe(values):\n    """Lowest, highest and average of the positive values.\n\n    describe([4, -1, 2, 6]) is (2, 6, 4.0).\n    With no positive values it returns None.\n    """\n    positives = positive_values(values)\n    if not positives:\n        return None\n    lowest = min(positives)\n    highest = max(positives)\n    average = sum(positives) / len(positives)\n    return (lowest, highest, average)\n\n\ndef spread(values):\n    """Highest minus lowest positive value, or 0 if there are none."""\n    stats = describe(values)\n    if stats is None:\n        return 0\n    return stats[1] - stats[0]\n',
+    tests:
+      "def test_positive_values_keeps_order():\n    assert list(positive_values([3, -2, 0, 7])) == [3, 7]\n\n\ndef test_describe_mixed_values():\n    assert describe([4, -1, 2, 6]) == (2, 6, 4.0)\n\n\ndef test_describe_single_value():\n    assert describe([5]) == (5, 5, 5.0)\n\n\ndef test_no_positive_values():\n    assert describe([-1, 0]) is None\n    assert describe([]) is None\n\n\ndef test_spread():\n    assert spread([4, -1, 2, 6]) == 4\n    assert spread([-3]) == 0\n",
   },
   {
     id: "remove-negatives",

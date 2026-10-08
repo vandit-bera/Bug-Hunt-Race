@@ -1,0 +1,12 @@
+{
+  "id": "positive-stats",
+  "title": "Positive stats",
+  "language": "python",
+  "level": "medium",
+  "description": "describe(values) returns (lowest, highest, average) of the values greater than zero, and None when there are none. describe([4, -1, 2, 6]) is (2, 6, 4.0). spread(values) is highest minus lowest, or 0 when there are no positive values.",
+  "hint": "Can you loop over a generator a second time?",
+  "bugCount": 1,
+  "timeLimitSec": 300,
+  "basePoints": 200,
+  "tags": ["generators", "iterators", "lists"]
+}

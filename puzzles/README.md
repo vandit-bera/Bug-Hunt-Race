@@ -91,8 +91,14 @@ test("async code works too", async () => {
 ```
 
 Matchers: `toBe` (`Object.is`), `toEqual` (deep), `toThrow(text?)`. See
-`docs/ARCHITECTURE.md` for the full harness behaviour. Python puzzles arrive
-with the Python runner (TB-19 task 6).
+`docs/ARCHITECTURE.md` for the full harness behaviour.
+
+Python tests are plain `def test_*()` functions that use `assert`:
+
+```python
+def test_returns_the_first_page():
+    assert paginate(["a", "b", "c"], 1, 2) == ["a", "b"]
+```
 
 ## What makes a good puzzle
 
