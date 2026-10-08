@@ -25,6 +25,7 @@ components/           Reusable UI components.
 lib/runner/           Code-runner plug-in interface, language config, runners.
 lib/game/             Pure game logic: scoring, room state machine, room codes.
 lib/db/               Supabase client, generated types, typed data access.
+lib/rooms/            Live room connection: Realtime, presence, heartbeats.
 lib/puzzles/          Puzzle format, loader, checker, generated puzzle index.
 puzzles/              Puzzle files: <language>/<level>/<id>/ (see puzzles/README.md).
 supabase/             Local Supabase config, SQL migrations, dev seed, pgTAP tests.
@@ -339,8 +340,8 @@ are skipped). Everything is client side; nothing is sent to Supabase.
 ## Room state machine
 
 Copied from TB-19 §12. The room's current state lives in the database and is
-broadcast over Supabase Realtime. Only the admin moves the room between states
-(except time-based transitions).
+broadcast over Supabase Realtime. Only the admin moves the room between states;
+the database itself closes abandoned rooms.
 
 ```mermaid
 stateDiagram-v2
@@ -362,8 +363,91 @@ stateDiagram-v2
 
 The state ids in code (`RoomState` in `lib/game/types.ts`) are `lobby`,
 `countdown`, `round_live`, `paused`, `round_results`, `final_leaderboard`,
-`closed`. Every transition above gets a unit test when the machine is
-implemented; any transition not listed is rejected.
+`closed`.
+
+The machine is `lib/game/room-machine.ts` (pure, `transition(room, event,
+actor)`). The database enforces the same table, `private.room_transitions`,
+in `advance_room()`; a unit test fails if the two drift apart. Any (state,
+event) pair not listed is rejected with `invalid_transition`, and only the
+room admin may call `advance_room()` (`not_room_admin` otherwise).
+
+| Event         | From → to                               | By     | Notes                                         |
+| ------------- | --------------------------------------- | ------ | --------------------------------------------- |
+| `start`       | lobby → countdown                       | admin  | round 1                                       |
+| `begin_round` | countdown → round_live                  | admin  | countdown over (3.4 may move it to timer)     |
+| `pause`       | round_live → paused                     | admin  |                                               |
+| `resume`      | paused → round_live                     | admin  |                                               |
+| `end_round`   | round_live → round_results              | admin  | solved, time up or Skip                       |
+| `next_round`  | round_results → countdown               | admin  | only if a round is left; round + 1            |
+| `finish`      | round_results → final_leaderboard       | admin  | only after the last round (or "until I stop") |
+| `stop`        | round_live / paused → final_leaderboard | admin  |                                               |
+| `play_again`  | final_leaderboard → lobby               | admin  | round back to 0                               |
+| `close`       | final_leaderboard → closed              | admin  |                                               |
+| `abandon`     | any open state → closed                 | system | nobody seen for 10 min (see below)            |
+
+`abandon` widens the diagram's "Lobby → Closed: empty for 10 min" to every
+open state, so a room everyone walked away from mid-game also frees its code.
+
+## Rooms and Realtime
+
+`lib/db` has the room actions; `lib/rooms` keeps a live view of one room.
+
+```ts
+const { room, player } = await joinRoom(db, { code, displayName, avatar });
+const connection = connectToRoom(db, {
+  roomId: room.id,
+  playerId: player.id,
+  onChange: ({ room, players, online }) => render(room, players, online),
+  onClosed: () => showRoomNotFound(),
+});
+await advanceRoom(db, room.id, "start"); // admin only
+await setRoomLocked(db, room.id, true); // admin only
+connection.disconnect(); // stop listening, keep the seat
+await connection.leave(); // leave for good
+```
+
+React components can use `useRoomConnection(db, roomId, playerId)`, and
+`roomErrorMessage(error)` gives "Room not found", "Room is full", … for a
+`DbError`. `/dev/rooms` is a bare test page for all of this until the race
+screens (3.2–3.5) exist.
+
+- **One channel per room**, `room:<room id>`:
+  - `postgres_changes` UPDATE on `rooms` (`id=eq.<id>`): the new row is
+    applied as is.
+  - `postgres_changes` on `players` (`room_id=eq.<id>`): the player list is
+    reloaded (simpler than merging partial rows, and still one query).
+  - **Presence**, keyed by player id: who has the page open right now. Fast
+    (~1 s) but UI-only; anyone who knows the room id could join the channel,
+    so nothing authoritative is decided from it.
+  - On every (re)subscribe the room and players are reloaded, so changes
+    missed while offline are picked up.
+- **Security:** Realtime applies RLS to `postgres_changes`, so a client only
+  receives rows of rooms it is in. Rows are never deleted through the API
+  (leaving sets `left_at`), so no unfiltered DELETE events exist.
+- **Heartbeats:** `connectToRoom` calls `room_heartbeat()` every 5 s. The
+  database stores the time in `private.player_presence` (not in `players`,
+  so heartbeats do not spam Realtime). A player not seen for **15 s** gets
+  `connected = false`; that change is what other clients see.
+- **Admin hand-over:** whenever a heartbeat or join finds the admin
+  disconnected (or gone), the **earliest-joined connected player** becomes
+  admin. If the admin leaves, it happens at once. With nobody connected a
+  dropped admin keeps the role; one who left loses it, and the next player to
+  connect takes it. A returning ex-admin does not get the role back.
+- **Reconnect:** identity is the anonymous Supabase session stored in the
+  browser, so `join_room()` from the same browser returns the same player,
+  name and score, even when the room is locked or full ("kick-free").
+- **Leaving:** `leave_room()` sets `left_at`: the seat and the name are free
+  again, scores stay. Coming back later returns the same player (same scores)
+  but obeys the lock, the cap and the name rules like a new player.
+- **Auto-close:** a room in which nobody has been seen for **10 minutes**
+  (an empty room counts from its creation) is closed by the next
+  `find_open_room()`, `create_room()`, `join_room()` or heartbeat. There is no
+  cron job: until someone touches it, an abandoned room just sits there, and
+  every lookup treats it as closed. Closed and unknown codes both give "Room
+  not found".
+- **Limits:** 30 players per room (`room_full` for the 31st). Browsers slow
+  timers in background tabs; after several minutes hidden, heartbeats can
+  stall and the player counts as disconnected until the tab is visible again.
 
 ## Data model
 
@@ -402,8 +486,9 @@ erDiagram
     text display_name "unique per room, case-insensitive"
     text avatar "emoji"
     bool is_admin "mirrors rooms.admin_player_id"
-    bool connected
+    bool connected "set by heartbeats"
     timestamptz joined_at
+    timestamptz left_at "set by leave_room"
   }
   puzzles {
     text id PK "slug from puzzles/"
@@ -459,14 +544,14 @@ auth**, and `auth.uid()` identifies the player in every policy. A player row
 links that user to one room, so rejoining from the same browser keeps the
 name and score.
 
-| Table / view       | Read                       | Write                                                     |
-| ------------------ | -------------------------- | --------------------------------------------------------- |
-| `rooms`            | Players in that room       | Admin only: `status`, settings, `locked`, `current_round` |
-| `players`          | Players in that room       | Own `connected` flag only                                 |
-| `puzzles`          | Anyone                     | Nobody (migrations / seed only)                           |
-| `rounds`           | Players in that room       | Nobody yet (Phase 3 adds round functions)                 |
-| `scores`           | Players in that room       | Nobody: only `record_score()`                             |
-| `room_leaderboard` | Players in that room (RLS) | n/a (view, `security_invoker`)                            |
+| Table / view       | Read                       | Write                                                      |
+| ------------------ | -------------------------- | ---------------------------------------------------------- |
+| `rooms`            | Players in that room       | Admin only: settings (`language`, `level`, `total_rounds`) |
+| `players`          | Players in that room       | Nobody: only the functions below                           |
+| `puzzles`          | Anyone                     | Nobody (migrations / seed only)                            |
+| `rounds`           | Players in that room       | Nobody yet (Phase 3 adds round functions)                  |
+| `scores`           | Players in that room       | Nobody: only `record_score()`                              |
+| `room_leaderboard` | Players in that room (RLS) | n/a (view, `security_invoker`)                             |
 
 Everything else goes through `security definer` functions that check
 `auth.uid()` themselves:
@@ -475,11 +560,15 @@ Everything else goes through `security definer` functions that check
 | ------------------------------------------------------------------ | -------------------- | ---------------------------------------------------------------------------------------------------- |
 | `find_open_room(code)`                                             | Anyone               | Status, lock, full flag and settings of an open room. Nothing else.                                  |
 | `create_room(language, level, display_name, avatar, total_rounds)` | Signed in            | New room in `lobby` with a fresh code; caller becomes admin.                                         |
-| `join_room(code, display_name, avatar)`                            | Signed in            | Joins an open, unlocked, non-full room (max 50). "Riya" → "Riya (2)". Rejoin returns the old player. |
+| `join_room(code, display_name, avatar)`                            | Signed in            | Joins an open, unlocked, non-full room (max 30). "Riya" → "Riya (2)". Rejoin returns the old player. |
+| `room_heartbeat(room_id)`                                          | Players in the room  | "Still here". Marks silent players disconnected, hands over admin. Returns the room status.          |
+| `leave_room(room_id)`                                              | Players in the room  | Frees the seat and name, keeps scores; passes the admin role on.                                     |
+| `advance_room(room_id, event)`                                     | Room admin           | Moves the room through the state machine.                                                            |
+| `set_room_locked(room_id, locked)`                                 | Room admin           | Locks or unlocks the room to new players.                                                            |
 | `record_score(round_id, passed, hint_used)`                        | Players in the round | Server measures solve time and computes points. A pass is final.                                     |
 
 Errors are raised with a stable code as the message (`room_not_found`,
-`room_locked`, `room_full`, `round_not_live`, ...); `lib/db` turns them into a
+`room_locked`, `room_full`, `not_room_admin`, `invalid_transition`, ...); `lib/db` turns them into a
 typed `DbError`.
 
 Scoring (TB-19 §3) lives in `private.calculate_points`: base points (Easy 100 /
@@ -515,7 +604,7 @@ await getLeaderboard(db, room.id);
 ```bash
 pnpm db:start   # local Supabase in Docker (API on :54321, Postgres on :54322)
 pnpm db:reset   # recreate from migrations + supabase/seed.sql
-pnpm db:test    # pgTAP tests in supabase/tests (RLS, codes, names, scoring)
+pnpm db:test    # pgTAP tests in supabase/tests (RLS, codes, names, scoring, rooms)
 pnpm db:types   # regenerate lib/db/types.ts after changing a migration
 ```
 
