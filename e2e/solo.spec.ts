@@ -7,7 +7,7 @@ const puzzles = loadPuzzles("puzzles").flatMap((entry) =>
 
 /** The puzzle on screen: the game picks at random, so read its title. */
 async function currentPuzzle(page: Page) {
-  await expect(page.getByRole("timer")).toBeVisible();
+  await expect(page.getByRole("timer")).toBeVisible(COUNTDOWN_WAIT);
   const heading = page.getByRole("main").getByRole("heading", { level: 1 });
   await expect(heading).toBeVisible();
   const title = (await heading.textContent()) ?? "";
@@ -22,11 +22,22 @@ const LABELS: Record<string, string> = {
   python: "Python",
 };
 
-async function start(page: Page, language: string, level: string) {
+/** Time for the 3-2-1-Go countdown before the puzzle appears. */
+const COUNTDOWN_WAIT = { timeout: 10_000 };
+
+async function start(
+  page: Page,
+  language: string,
+  level: string,
+  { skipCountdown = true } = {},
+) {
   await page.goto("/solo");
   await page.getByLabel(LABELS[language], { exact: true }).check();
   await page.getByLabel(level, { exact: false }).check();
   await page.getByRole("link", { name: "Start" }).click();
+  if (skipCountdown) {
+    await expect(page.getByRole("timer")).toBeVisible(COUNTDOWN_WAIT);
+  }
 }
 
 /**
@@ -93,7 +104,7 @@ for (const language of ["javascript", "typescript"] as const) {
     await expect(page.getByText("New personal best!")).toBeVisible();
 
     await page.getByRole("link", { name: "Play again" }).click();
-    await expect(page.getByRole("timer")).toBeVisible();
+    await expect(page.getByRole("timer")).toBeVisible(COUNTDOWN_WAIT);
     expect(errors).toEqual([]);
   });
 }
@@ -143,7 +154,8 @@ test("give up shows 0 points", async ({ page }) => {
 
 test("time running out ends the game with 0 points", async ({ page }) => {
   await page.clock.install();
-  await start(page, "javascript", "Easy");
+  await start(page, "javascript", "Easy", { skipCountdown: false });
+  await page.clock.runFor(4_000);
   await expect(page.getByRole("timer")).toHaveText("3:00");
   await page.clock.fastForward(181_000);
   await expect(page.getByRole("heading", { name: "Time's up" })).toBeVisible();
@@ -170,7 +182,9 @@ test("Mixed steps Easy, Medium, Hard on Play again", async ({ page }) => {
   await page.getByRole("button", { name: "Give up" }).click();
   await page.getByRole("button", { name: "Give up" }).last().click();
   await page.getByRole("link", { name: "Play again" }).click();
-  await expect(page.locator("header").getByText("Medium")).toBeVisible();
+  await expect(page.locator("header").getByText("Medium")).toBeVisible(
+    COUNTDOWN_WAIT,
+  );
 });
 
 test("Python: setup, fix the bug, see the result", async ({ page }) => {
@@ -180,4 +194,120 @@ test("Python: setup, fix the bug, see the result", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "Bug squashed!" }),
   ).toBeVisible({ timeout: 60_000 });
+});
+
+test("a countdown runs before the puzzle appears", async ({ page }) => {
+  await start(page, "javascript", "Easy", { skipCountdown: false });
+  await expect(page.getByText("Get ready…")).toBeVisible();
+  await expect(page.getByRole("timer")).toBeHidden();
+  await expect(page.getByRole("timer")).toBeVisible(COUNTDOWN_WAIT);
+});
+
+test("solving shows confetti and counts the score up", async ({ page }) => {
+  await start(page, "javascript", "Easy");
+  await solveWithFix(page);
+  await expect(page.getByTestId("confetti")).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByTestId("score-popup")).toBeVisible();
+  await expect(page.getByText(/\d+ points/).first()).toBeVisible();
+});
+
+test("reduced motion: no confetti or popup, score shown at once", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await start(page, "javascript", "Easy");
+  await solveWithFix(page);
+  await expect(
+    page.getByRole("heading", { name: "Bug squashed!" }),
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByTestId("confetti")).toHaveCount(0);
+  await expect(page.getByTestId("score-popup")).toHaveCount(0);
+  await expect(page.getByText(/\d+ points/).first()).toBeVisible();
+});
+
+test("pass and fail sounds play on Run Tests once the player has interacted", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const played: string[] = [];
+    Object.assign(window, { played });
+    window.Audio = class {
+      src: string;
+      volume = 1;
+      constructor(src: string) {
+        this.src = src;
+      }
+      play() {
+        played.push(this.src);
+        return Promise.resolve();
+      }
+    } as unknown as typeof Audio;
+  });
+  await start(page, "javascript", "Easy");
+  await page.getByRole("button", { name: "Run Tests" }).click();
+  await expect(page.getByText("Failed: ").first()).toBeAttached({
+    timeout: 15_000,
+  });
+  await solveWithFix(page);
+  await expect(
+    page.getByRole("heading", { name: "Bug squashed!" }),
+  ).toBeVisible({ timeout: 15_000 });
+  const played = await page.evaluate(
+    () => (window as unknown as { played: string[] }).played,
+  );
+  expect(played.map((src) => src.split("/").pop())).toEqual(
+    expect.arrayContaining(["fail.wav", "solved.wav"]),
+  );
+});
+
+test("the first game's countdown ticks after the Start click", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const played: string[] = [];
+    Object.assign(window, { played });
+    window.Audio = class {
+      src: string;
+      volume = 1;
+      constructor(src: string) {
+        this.src = src;
+      }
+      play() {
+        played.push(this.src);
+        return Promise.resolve();
+      }
+    } as unknown as typeof Audio;
+  });
+  await page.goto("/solo");
+  await page.getByRole("link", { name: "Start" }).click();
+  await expect(page.getByRole("timer")).toBeVisible(COUNTDOWN_WAIT);
+  const played = await page.evaluate(
+    () => (window as unknown as { played: string[] }).played,
+  );
+  expect(played.map((src) => src.split("/").pop())).toEqual([
+    "tick.wav",
+    "tick.wav",
+    "tick.wav",
+    "go.wav",
+  ]);
+});
+
+test("the game header fits a 375 px screen", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await start(page, "javascript", "Easy");
+  const width = await page.evaluate(() => document.documentElement.scrollWidth);
+  expect(width).toBeLessThanOrEqual(375);
+  await expect(page.getByRole("radio", { name: /System/ })).toBeInViewport();
+});
+
+test("the score popup sits beside the score, not over the heading", async ({
+  page,
+}) => {
+  await start(page, "javascript", "Easy");
+  await solveWithFix(page);
+  const heading = page.getByRole("heading", { name: "Bug squashed!" });
+  await expect(heading).toBeVisible({ timeout: 15_000 });
+  const popup = await page.getByTestId("score-popup").boundingBox();
+  const title = await heading.boundingBox();
+  expect(popup && title && popup.y >= title.y + title.height).toBe(true);
 });
