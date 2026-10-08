@@ -12,7 +12,7 @@ const variants = {
 };
 
 const sizes = {
-  sm: "h-9 px-3 text-sm",
+  sm: "h-9 px-3 text-sm tap:h-11 tap:min-w-11",
   md: "h-11 px-5 text-base",
   lg: "h-14 px-7 text-lg",
 };
