@@ -19,4 +19,10 @@ describe("SoloSetup", () => {
     expect(html).toContain("2 puzzles in this pool.");
     expect(html).toContain("/solo/play");
   });
+
+  it("gives the Start link a descriptive name for screen readers and SEO", () => {
+    const pools = countPools([{ language: "javascript", level: "easy" }]);
+    const html = renderToStaticMarkup(<SoloSetup pools={pools} />);
+    expect(html).toContain('Start<span class="sr-only"> solo practice</span>');
+  });
 });
