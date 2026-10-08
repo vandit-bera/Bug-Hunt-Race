@@ -14,18 +14,23 @@ import {
   type PlayerProfile,
 } from "./name-avatar";
 
+/** `nameError` shows a rejection from the server on the name field. */
 export function NameAvatarForm({
   onSubmit,
   submitLabel = "Continue",
   loading = false,
+  nameError,
 }: {
   onSubmit: (profile: PlayerProfile) => void;
   submitLabel?: string;
   loading?: boolean;
+  nameError?: string;
 }) {
   const [name, setName] = useState("");
   const [avatar, setAvatar] = useState(AVATAR_EMOJIS[0]);
   const [showError, setShowError] = useState(false);
+  // A server rejection is about the name that was sent; editing it clears it.
+  const [submittedName, setSubmittedName] = useState<string>();
 
   useEffect(() => {
     const saved = loadProfile();
@@ -49,6 +54,7 @@ export function NameAvatarForm({
           return;
         }
         const profile = { name: name.trim(), avatar };
+        setSubmittedName(profile.name);
         saveProfile(profile);
         onSubmit(profile);
       }}
@@ -60,7 +66,10 @@ export function NameAvatarForm({
         maxLength={NAME_MAX_LENGTH + 10}
         autoComplete="nickname"
         placeholder="BugSlayer"
-        error={showError && error ? error : undefined}
+        error={
+          (showError && error) ||
+          (name.trim() === submittedName ? nameError : undefined)
+        }
         hint={`1 to ${NAME_MAX_LENGTH} characters`}
       />
 
