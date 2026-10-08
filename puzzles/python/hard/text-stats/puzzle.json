@@ -4,8 +4,8 @@
   "language": "python",
   "level": "hard",
   "description": "words(text) returns the lowercase words of a text - letters and apostrophes only, and quotes around a word are not part of it ('hello' is hello). word_counts counts them and most_common(text, n) gives the n most used words as (word, count) pairs, equal counts in alphabetical order. diversity(text) is the share of different words, rounded to 2 places (0 for no words).",
-  "hint": "Try capital letters, a word in single quotes, a tie in counts and a text with no words.",
-  "bugCount": 4,
+  "hint": "Try capital letters, a tie in counts and a text with no words.",
+  "bugCount": 3,
   "timeLimitSec": 480,
   "basePoints": 300,
   "tags": ["regex", "sorting", "strings", "division-by-zero"]

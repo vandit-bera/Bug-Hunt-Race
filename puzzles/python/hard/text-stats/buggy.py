@@ -7,7 +7,7 @@ def words(text):
     Quotes around a word are not part of it: 'hello' gives hello.
     """
     found = re.findall(r"[a-z']+", text)
-    return found
+    return [word.strip("'") for word in found if word.strip("'")]
 
 
 def word_counts(text):

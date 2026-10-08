@@ -30,7 +30,7 @@ function annotate(board: Board): Board {
       .map((cell, col) => {
         if (cell === "*") return "*";
         const count = countNeighbours(board, row, col);
-        return String(count);
+        return count === 0 ? "." : String(count);
       })
       .join(""),
   );

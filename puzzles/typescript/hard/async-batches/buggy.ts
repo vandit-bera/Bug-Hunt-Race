@@ -35,7 +35,10 @@ async function settleInBatches<T, R>(
     try {
       return { ok: true, value: await worker(item) };
     } catch (error) {
-      return { ok: false, error: String(error) };
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   });
 }
