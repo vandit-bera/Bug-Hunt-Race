@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { LaptopBanner } from "@/components/solo/laptop-banner";
 import { CodeEditor } from "@/components/solo/editor-loader";
 import {
   formatTime,
@@ -214,10 +215,7 @@ function Board({
   const hintCost = Math.round(puzzle.basePoints * HINT_PENALTY_RATIO);
   return (
     <>
-      <p className="rounded-lg border-2 border-warning p-3 text-sm md:hidden">
-        💻 Coding works best on a laptop. You can still play here, but typing
-        code on a small screen is hard.
-      </p>
+      <LaptopBanner />
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-2">
           <h1 className="font-display text-2xl font-bold">{puzzle.title}</h1>

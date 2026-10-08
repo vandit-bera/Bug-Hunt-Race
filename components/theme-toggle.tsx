@@ -50,7 +50,7 @@ export function ThemeToggle() {
           tabIndex={theme === option ? 0 : -1}
           onClick={() => setTheme(option)}
           className={cn(
-            "rounded-md px-3 py-1.5 text-sm font-bold",
+            "min-h-11 rounded-md px-3 text-sm font-bold",
             theme === option
               ? "bg-primary text-primary-foreground"
               : "text-foreground hover:bg-surface-raised",

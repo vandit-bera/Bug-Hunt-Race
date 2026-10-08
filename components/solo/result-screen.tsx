@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef } from "react";
+import { RulesButton } from "@/components/rules-modal";
 import { TestResults } from "@/components/solo/test-results";
 import { buttonClass } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -123,6 +124,7 @@ export function ResultScreen({
           Change settings
         </Link>
       </div>
+      <RulesButton className="self-start" />
     </Card>
   );
 }

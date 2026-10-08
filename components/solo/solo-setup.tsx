@@ -85,7 +85,10 @@ export function SoloSetup() {
   return (
     <>
       <div className="flex items-center justify-between gap-3">
-        <Link href="/" className="text-sm font-bold underline">
+        <Link
+          href="/"
+          className="inline-flex min-h-11 items-center text-sm font-bold underline"
+        >
           ← Home
         </Link>
         <ThemeToggle />
