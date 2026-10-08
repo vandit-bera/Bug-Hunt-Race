@@ -284,3 +284,17 @@ Service-role keys never go in this repo or in client code.
 The Supabase project must have **anonymous sign-ins** enabled
 (Authentication → Sign In / Providers). Locally, `supabase/config.toml`
 enables them.
+
+## Design system
+
+- Tokens are CSS variables in `app/globals.css` (light by default, dark via
+  `data-theme="dark"`), exposed to Tailwind as semantic colors (`bg-surface`,
+  `text-muted`, `text-primary`, `border-level-hard`, …). Use these, never raw hex.
+- Theme choice (Light / Dark / System, default System) lives in localStorage
+  under `bhr-theme`. An inline script in `<head>` sets `data-theme` before
+  first paint, so there is no flash. Logic: `lib/theme/`.
+- Base components are in `components/ui/`. Fonts via `next/font`: Silkscreen
+  (display), Geist (UI), Geist Mono (code).
+- Contrast is enforced by `lib/theme/tokens.test.ts` (WCAG AA). Animations are
+  disabled under `prefers-reduced-motion`.
+- Review everything at `/styleguide`.
