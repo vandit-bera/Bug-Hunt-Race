@@ -74,21 +74,22 @@ and reconnects, then the admin leaves and the role passes on.
 
 ### Fixture and helpers
 
-| Helper                                     | What it does                                                                                                                                 |
-| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `players(n)`                               | `n` players, each `{ name, page, context }` in its own browser context, so its own anonymous user. Names: Ana, Ben, Cleo, … Max 30 per test. |
-| `createRoom(page, name, settings?)`        | Opens the room lab, creates a **new** room and returns its code. `settings`: `language`, `level`, `totalRounds` (`null` = endless).          |
-| `joinRoom(page, code, name)`               | Fills in the join form. Does not wait, so you can also check rejections (locked or full room).                                               |
-| `waitForPlayers(page, n)`                  | Waits until that page lists exactly `n` players.                                                                                             |
-| `playerList(page)` / `playerRow(page, n)`  | Locators for the player list and one player's row (with `admin`, `online` / `offline` badges).                                               |
-| `setOffline(page)`                         | Cuts the player's network: Realtime socket closed, HTTP blocked. Others see them offline at once; the database after 15 s.                   |
-| `reconnect(page)`                          | Network back on. The client reconnects on its own backoff: wait with `RECONNECT`.                                                            |
-| `expectTimerNear(locator, s, opts?)`       | Asserts a timer shows about `s` seconds (default ± 2 s). Pass a function, e.g. `() => secondsUntil(deadline)`, for a running timer.          |
-| `openLobby(page, code)` / `expectLobby`    | Opens (or waits for) the real lobby, `/room/<code>`, of a room the player is in.                                                             |
-| `joinByCode` / `joinByLink(page, code, n)` | Joins through `/join` (typed code) or `/join/<code>` (invite link, QR). `enterName(page, n)` fills just the name step. Do not wait.          |
-| `scanInviteQr(page)`                       | Decodes the invite QR on the admin's lobby and returns the link, like a phone would.                                                         |
-| `seatPlayers(code, n)`                     | Seats `n` extra players through the database API, no browsers (e.g. to fill a room to 30).                                                   |
-| `requireSupabase()`                        | Skips the file when no Supabase is configured. Call it at the top of every multi-player spec.                                                |
+| Helper                                        | What it does                                                                                                                                 |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `players(n)`                                  | `n` players, each `{ name, page, context }` in its own browser context, so its own anonymous user. Names: Ana, Ben, Cleo, … Max 30 per test. |
+| `createRoom(page, name, settings?)`           | Opens the room lab, creates a **new** room and returns its code. `settings`: `language`, `level`, `totalRounds` (`null` = endless).          |
+| `createRoomFromScreen(page, name, settings?)` | Creates a room through the real Create Room screen (`/room/new`) and returns its code from the admin lobby URL.                              |
+| `joinRoom(page, code, name)`                  | Fills in the join form. Does not wait, so you can also check rejections (locked or full room).                                               |
+| `waitForPlayers(page, n)`                     | Waits until that page lists exactly `n` players.                                                                                             |
+| `playerList(page)` / `playerRow(page, n)`     | Locators for the player list and one player's row (with `admin`, `online` / `offline` badges).                                               |
+| `setOffline(page)`                            | Cuts the player's network: Realtime socket closed, HTTP blocked. Others see them offline at once; the database after 15 s.                   |
+| `reconnect(page)`                             | Network back on. The client reconnects on its own backoff: wait with `RECONNECT`.                                                            |
+| `expectTimerNear(locator, s, opts?)`          | Asserts a timer shows about `s` seconds (default ± 2 s). Pass a function, e.g. `() => secondsUntil(deadline)`, for a running timer.          |
+| `openLobby(page, code)` / `expectLobby`       | Opens (or waits for) the lobby, `/room/<code>`, of a room the player is in.                                                                  |
+| `joinByCode` / `joinByLink(page, code, n)`    | Joins through `/join` (typed code) or `/join/<code>` (invite link, QR). `enterName(page, n)` fills just the name step. Do not wait.          |
+| `scanInviteQr(page)`                          | Decodes the invite QR on the admin's lobby and returns the link, like a phone would.                                                         |
+| `seatPlayers(code, n)`                        | Seats `n` extra players through the database API, no browsers (e.g. to fill a room to 30).                                                   |
+| `requireSupabase()`                           | Skips the file when no Supabase is configured. Call it at the top of every multi-player spec.                                                |
 
 Timeouts to pass to `expect`: `LIVE` (3 s, a Realtime round trip),
 `RECONNECT` (20 s, after `reconnect`), `HAND_OVER` (30 s, admin hand-over
@@ -109,9 +110,8 @@ after a drop, which waits 15 s by design).
 - **Anonymous sign-ins are rate-limited per IP.** The local limit is raised
   in `supabase/config.toml` (`anonymous_users`) so a full run fits.
 
-`createRoom` and `joinRoom` drive the dev room lab (`/dev/rooms`); the join
-helpers (`support/join.ts`) drive the real join screens and lobby. When the
-Create Room screen lands, point `createRoom` at it; the specs stay the same.
+The helpers drive the dev room lab (`/dev/rooms`). When the real room screens
+land, point the helpers in `support/rooms.ts` at them; the specs stay the same.
 
 ## For QA
 

@@ -1,8 +1,9 @@
 import { createBrowserDbClient, type DbClient } from "@/lib/db";
 
-let shared: DbClient | null | undefined;
+let client: DbClient | undefined;
 
-function isConfigured() {
+/** Whether the public Supabase variables are set (see .env.example). */
+export function isDbConfigured(): boolean {
   return Boolean(
     process.env.NEXT_PUBLIC_SUPABASE_URL &&
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -10,18 +11,10 @@ function isConfigured() {
 }
 
 /**
- * The one Supabase client for this browser tab, or null when Supabase is not
- * configured. Shared so every room screen uses one auth session: two clients
- * in a tab log a "multiple GoTrueClient instances" warning. On the server
- * (prerendering a client component) it returns a throwaway client, never a
- * shared one.
+ * The tab's one Supabase client, shared by the room screens: a second client
+ * would make Supabase Auth warn about competing sessions. Browser only.
  */
-export function getBrowserDbClient(): DbClient | null {
-  if (typeof window === "undefined") {
-    return isConfigured() ? createBrowserDbClient() : null;
-  }
-  if (shared === undefined) {
-    shared = isConfigured() ? createBrowserDbClient() : null;
-  }
-  return shared;
+export function getBrowserDbClient(): DbClient {
+  client ??= createBrowserDbClient();
+  return client;
 }

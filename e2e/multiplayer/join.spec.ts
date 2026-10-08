@@ -3,6 +3,7 @@ import {
   LIVE,
   MAX_PLAYERS,
   createRoom,
+  createRoomFromScreen,
   enterName,
   expect,
   expectLobby,
@@ -76,8 +77,8 @@ test.describe("lobby", () => {
       ben.page.getByText("Waiting for the admin to start…"),
     ).toBeVisible();
     await expect(
-      ben.page.getByLabel("Room settings").filter({ visible: true }),
-    ).toContainText("JavaScript");
+      ben.page.getByTestId("room-settings").filter({ visible: true }),
+    ).toHaveText("JavaScript · Easy · 3 rounds");
 
     await ben.page.getByRole("button", { name: "Leave room" }).click();
     await expect(ben.page).toHaveURL("/");
@@ -111,12 +112,9 @@ test.describe("lobby", () => {
     await waitForPlayers(ana.page, 3);
   });
 
-  test("the admin sees the invite panel and can lock the room", async ({
-    players,
-  }) => {
+  test("only the admin sees the invite panel", async ({ players }) => {
     const [ana, ben] = await players(2);
-    const code = await createRoom(ana.page, ana.name);
-    await openLobby(ana.page, code);
+    const code = await createRoomFromScreen(ana.page, ana.name);
     await joinByLink(ben.page, code, ben.name);
     await expectLobby(ben.page, code);
 
@@ -126,8 +124,7 @@ test.describe("lobby", () => {
     await expect(
       ben.page.getByRole("heading", { name: "Invite players" }),
     ).toHaveCount(0);
-    await ana.page.getByRole("switch", { name: /Lock room/ }).click();
-    await expect(ana.page.getByText("Nobody new can join.")).toBeVisible(LIVE);
+    await waitForPlayers(ana.page, 2);
   });
 
   test("a player who joins mid-round waits for the next round", async ({

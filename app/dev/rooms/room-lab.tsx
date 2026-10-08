@@ -7,6 +7,7 @@ import { Card, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   advanceRoom,
+  createBrowserDbClient,
   createRoom,
   ensureSignedIn,
   joinRoom,
@@ -14,11 +15,7 @@ import {
   type DbClient,
   type RoomMembership,
 } from "@/lib/db";
-import {
-  getBrowserDbClient,
-  roomErrorMessage,
-  useRoomConnection,
-} from "@/lib/rooms";
+import { roomErrorMessage, useRoomConnection } from "@/lib/rooms";
 import { parseLabSettings } from "./lab-settings";
 
 // Survives a reload in this tab, so the lab can show a reconnect.
@@ -30,8 +27,17 @@ interface Saved {
   name: string;
 }
 
+function isConfigured() {
+  return Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  );
+}
+
 export function RoomLab() {
-  const [client] = useState(getBrowserDbClient);
+  const [client] = useState(() =>
+    isConfigured() ? createBrowserDbClient() : null,
+  );
   if (!client) {
     return (
       <p role="alert">

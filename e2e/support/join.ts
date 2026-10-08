@@ -4,8 +4,8 @@ import type { Database } from "@/lib/db/types";
 
 /**
  * Helpers for the real join screens (`/join`, `/join/<code>`) and the lobby
- * (`/room/<code>`). Rooms are still created in the room lab (`createRoom`)
- * until the Create Room screen exists.
+ * (`/room/<code>`). Create rooms with `createRoom` (room lab) or
+ * `createRoomFromScreen` (`/room/new`).
  */
 
 /** Opens the lobby of a room the page's player is already in. */
@@ -14,10 +14,13 @@ export async function openLobby(page: Page, code: string) {
   await expectLobby(page, code);
 }
 
+/** Waits for the lobby of `code`: "Room ready" for the admin, else "Lobby". */
 export async function expectLobby(page: Page, code: string) {
+  await expect(page).toHaveURL(`/room/${code}`);
   await expect(
-    page.getByRole("heading", { level: 1, name: `Room ${code}` }),
+    page.getByRole("heading", { level: 1, name: /^(Room ready|Lobby)$/ }),
   ).toBeVisible();
+  await expect(lobbyPlayers(page)).toBeVisible();
 }
 
 /** Fills in the name step of `/join/<code>` and joins. Does not wait. */

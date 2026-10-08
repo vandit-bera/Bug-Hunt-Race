@@ -11,61 +11,53 @@ import { useToast } from "@/components/ui/toast";
 import {
   findMyMembership,
   getSignedInUserId,
-  setRoomLocked,
   type DbClient,
   type Player,
   type RoomMembership,
 } from "@/lib/db";
 import { normalizeRoomCode } from "@/lib/game/room-code";
 import {
+  MAX_PLAYERS_PER_ROOM,
   getBrowserDbClient,
   roomErrorMessage,
   useRoomConnection,
 } from "@/lib/rooms";
-import { InvitePanel } from "./invite-panel";
 import { PlayerList, type RoomPlayer } from "./player-list";
 import { RoomErrorCard } from "./room-error-card";
-import { RoomSettingsSummary } from "./room-settings-summary";
-import { RoomTopBar } from "./room-top-bar";
-
-/** The room limit (private.max_players_per_room in the database). */
-const MAX_PLAYERS = 30;
+import { RoomHeader } from "./room-header";
+import { RoomReadyPanel } from "./room-ready-panel";
+import { describeRoomSettings } from "./room-settings";
 
 type Seat =
-  | { kind: "loading" }
-  | { kind: "unconfigured" }
-  | { kind: "failed"; message: string }
-  | { kind: "ready"; client: DbClient; membership: RoomMembership };
+  | { status: "loading" }
+  | { status: "error"; message: string }
+  | { status: "ready"; client: DbClient; membership: RoomMembership };
 
 /**
- * `/room/<code>`: finds the player's seat in the room (kept across reloads by
- * the browser's anonymous session) and shows the live lobby. Anyone without a
- * seat is sent to `/join/<code>` to pick a name first.
+ * The room page: finds the caller's seat in this room, then connects. The
+ * seat survives reloads (it belongs to the browser's anonymous session).
+ * Without a seat, the player goes to `/join/<code>` to pick a name first.
  */
 export function RoomLobby() {
   const code = normalizeRoomCode(useParams<{ code: string }>().code);
   const router = useRouter();
-  const [seat, setSeat] = useState<Seat>({ kind: "loading" });
+  const [seat, setSeat] = useState<Seat>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const client = getBrowserDbClient();
-      if (!client) {
-        if (!cancelled) setSeat({ kind: "unconfigured" });
-        return;
-      }
       try {
+        const client = getBrowserDbClient();
         const userId = await getSignedInUserId(client);
         const membership =
           userId && (await findMyMembership(client, code, userId));
         if (cancelled) return;
-        if (membership) setSeat({ kind: "ready", client, membership });
+        if (membership) setSeat({ status: "ready", client, membership });
         else router.replace(`/join/${code}`);
-      } catch (error) {
+      } catch (caught) {
         if (!cancelled) {
-          setSeat({ kind: "failed", message: roomErrorMessage(error) });
+          setSeat({ status: "error", message: roomErrorMessage(caught) });
         }
       }
     })();
@@ -74,44 +66,59 @@ export function RoomLobby() {
     };
   }, [code, router, attempt]);
 
-  if (seat.kind === "ready") {
-    return <Lobby client={seat.client} membership={seat.membership} />;
+  switch (seat.status) {
+    case "loading":
+      return (
+        <>
+          <RoomHeader title="Room" />
+          <Spinner size="lg" label="Loading the room" className="self-center" />
+        </>
+      );
+    case "error":
+      return (
+        <>
+          <RoomHeader title="Room" />
+          <RoomErrorCard
+            kind="disconnected"
+            action={
+              <Button
+                onClick={() => {
+                  setSeat({ status: "loading" });
+                  setAttempt((n) => n + 1);
+                }}
+              >
+                Try again
+              </Button>
+            }
+          />
+        </>
+      );
+    case "ready":
+      return <Lobby client={seat.client} membership={seat.membership} />;
   }
-
-  return (
-    <>
-      <RoomTopBar />
-      {seat.kind === "loading" && <Loading text={`Opening room ${code}…`} />}
-      {seat.kind === "unconfigured" && (
-        <p role="alert">
-          Rooms are not set up yet: Supabase is not configured. See
-          .env.example.
-        </p>
-      )}
-      {seat.kind === "failed" && (
-        <Card role="alert" className="flex flex-col items-center gap-3">
-          <p>{seat.message}</p>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setSeat({ kind: "loading" });
-              setAttempt((n) => n + 1);
-            }}
-          >
-            Try again
-          </Button>
-        </Card>
-      )}
-    </>
-  );
 }
 
-function Loading({ text }: { text: string }) {
+function RoomGone() {
   return (
-    <div className="flex items-center gap-2 text-muted">
-      <Spinner size="sm" label={text} />
-      <span aria-hidden="true">{text}</span>
-    </div>
+    <>
+      <RoomHeader title="Room" />
+      <RoomErrorCard
+        kind="not-found"
+        action={
+          <div className="flex flex-wrap justify-center gap-2">
+            <Link href="/join" className={buttonClass()}>
+              Try again
+            </Link>
+            <Link
+              href="/room/new"
+              className={buttonClass({ variant: "secondary" })}
+            >
+              Create a room
+            </Link>
+          </div>
+        }
+      />
+    </>
   );
 }
 
@@ -130,34 +137,17 @@ function Lobby({
     membership.player.id,
   );
   const [leaving, setLeaving] = useState(false);
+  if (live.closed && !leaving) return <RoomGone />;
 
   const room = live.view?.room ?? membership.room;
   const players = live.view?.players ?? [membership.player];
+  const me =
+    players.find((player) => player.id === membership.player.id) ??
+    membership.player;
+
+  // Presence notices a dropped player within a second; until it has
+  // synced, fall back to the database's slower view.
   const online = live.view?.online;
-  const selfId = membership.player.id;
-  const me = players.find((p) => p.id === selfId) ?? membership.player;
-
-  if (live.closed && !leaving) {
-    return (
-      <>
-        <RoomTopBar />
-        <RoomErrorCard
-          kind="not-found"
-          action={
-            <Link
-              href="/join"
-              className={buttonClass({ variant: "secondary" })}
-            >
-              Try again
-            </Link>
-          }
-        />
-      </>
-    );
-  }
-
-  // Presence updates within a second; until it has synced, fall back to the
-  // database's slower view.
   const isOnline = (player: Player) =>
     online && online.size > 0 ? online.has(player.id) : player.connected;
   const listed: RoomPlayer[] = players.map((player) => ({
@@ -173,86 +163,78 @@ function Lobby({
     try {
       await live.leave();
       router.push("/");
-    } catch (error) {
+    } catch (caught) {
       setLeaving(false);
-      toast({ title: roomErrorMessage(error), variant: "danger" });
-    }
-  }
-
-  async function changeLock(locked: boolean) {
-    try {
-      await setRoomLocked(client, room.id, locked);
-    } catch (error) {
-      toast({ title: roomErrorMessage(error), variant: "danger" });
+      toast({ title: roomErrorMessage(caught), variant: "danger" });
     }
   }
 
   return (
     <>
-      <RoomTopBar>
-        <ConnectionBadge
-          state={
-            live.error ? "reconnecting" : live.view ? "live" : "connecting"
-          }
-        />
-        <Button variant="danger" loading={leaving} onClick={() => void leave()}>
-          Leave room
-        </Button>
-      </RoomTopBar>
-
-      <header className="flex flex-col gap-1">
-        <h1 className="font-display text-3xl font-bold">
-          Room <span className="tracking-widest">{room.code}</span>
-        </h1>
-        <p role="status" className="text-muted">
-          {room.status !== "lobby"
-            ? "A round is in progress. Next round starts soon."
-            : me.is_admin
-              ? "You're the admin. Invite players, then start when everyone's in."
-              : "Waiting for the admin to start…"}
-        </p>
-      </header>
-
-      <div className="grid items-start gap-6 lg:grid-cols-2">
-        <div className="flex flex-col gap-6">
-          <Card>
-            <CardTitle as="h2">
-              Players ({players.length}/{MAX_PLAYERS})
-            </CardTitle>
-            <PlayerList players={listed} selfId={selfId} />
-          </Card>
-          <section aria-labelledby="room-settings-title">
-            <h2
-              id="room-settings-title"
-              className="mb-2 font-display text-lg font-bold"
-            >
-              Settings
-            </h2>
-            <RoomSettingsSummary
-              language={room.language}
-              level={room.level}
-              totalRounds={room.total_rounds}
+      <RoomHeader
+        title={me.is_admin ? "Room ready" : "Lobby"}
+        actions={
+          <>
+            <ConnectionBadge
+              state={
+                live.error !== null
+                  ? "reconnecting"
+                  : live.view
+                    ? "connected"
+                    : "connecting"
+              }
             />
-          </section>
-        </div>
-        {me.is_admin && (
-          <InvitePanel
-            roomCode={room.code}
-            link={`${window.location.origin}/join/${room.code}`}
-            playerCount={players.length}
-            maxPlayers={MAX_PLAYERS}
-            locked={room.locked}
-            onLockChange={(locked) => void changeLock(locked)}
-          />
-        )}
-      </div>
+            <Button
+              variant="danger"
+              loading={leaving}
+              onClick={() => void leave()}
+            >
+              Leave room
+            </Button>
+          </>
+        }
+      />
+      <p data-testid="room-settings" className="text-muted">
+        {describeRoomSettings({
+          language: room.language,
+          level: room.level,
+          totalRounds: room.total_rounds,
+        })}
+      </p>
+      {live.error !== null && (
+        <p role="status" className="text-sm font-bold text-warning">
+          Connection lost. Reconnecting…
+        </p>
+      )}
+      {room.status !== "lobby" ? (
+        <Card role="status">
+          A round is in progress. Next round starts soon.
+        </Card>
+      ) : (
+        !me.is_admin && (
+          <Card role="status">Waiting for the admin to start…</Card>
+        )
+      )}
+      {me.is_admin && (
+        <RoomReadyPanel
+          client={client}
+          room={room}
+          playerCount={players.length}
+        />
+      )}
+      <Card>
+        <CardTitle as="h2">
+          Players ({players.length}/{MAX_PLAYERS_PER_ROOM})
+        </CardTitle>
+        <PlayerList players={listed} selfId={me.id} />
+      </Card>
     </>
   );
 }
 
 const CONNECTION = {
   connecting: { label: "Connecting…", variant: "neutral" },
-  live: { label: "Connected", variant: "success" },
+  connected: { label: "Connected", variant: "success" },
   reconnecting: { label: "Reconnecting…", variant: "warning" },
 } as const;
 

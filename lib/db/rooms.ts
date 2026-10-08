@@ -84,10 +84,9 @@ export async function joinRoom(
 }
 
 /**
- * The caller's seat in the open room with this code, or null if they are not
- * in it (never joined, left, or the room is closed). Reads only: unlike
- * `joinRoom` it never takes a seat, so a lobby can check "am I in this room?"
- * on reload.
+ * The caller's own seat in the open room with this code, or null when they
+ * have none (never joined, left, or the room closed). Lets a room page pick
+ * the seat back up after a redirect or reload without joining again.
  */
 export async function findMyMembership(
   client: DbClient,

@@ -39,7 +39,6 @@ export function validateName(name: string): string | null {
   if (trimmed.length > NAME_MAX_LENGTH) {
     return `Names have at most ${NAME_MAX_LENGTH} characters.`;
   }
-  // The database rejects these too (no HTML in names).
   if (/[<>]/.test(trimmed)) return "Names can't contain < or >.";
   return null;
 }
