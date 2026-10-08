@@ -1,0 +1,31 @@
+name: Load test
+
+# 30-player room load test (scripts/load/room-30.ts) against a local Supabase
+# started in the runner. Too slow for every PR, so it only runs by hand.
+on:
+  workflow_dispatch:
+    inputs:
+      join_over:
+        description: Spread the joins over this many seconds (0 = all at once)
+        default: "0"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  room-30:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec supabase start -x studio,storage-api,imgproxy,mailpit,edge-runtime,logflare,vector,supavisor
+      - run: pnpm load:room --join-over "$JOIN_OVER"
+        env:
+          JOIN_OVER: ${{ inputs.join_over }}
