@@ -1,0 +1,12 @@
+{
+  "id": "cheapest-items",
+  "title": "Cheapest items",
+  "language": "python",
+  "level": "easy",
+  "description": "cheapest(prices, count) returns the count lowest prices, lowest first. If there are fewer prices than count, it returns all of them sorted. The original list must not be changed.",
+  "hint": "What does list.sort() give back?",
+  "bugCount": 1,
+  "timeLimitSec": 180,
+  "basePoints": 100,
+  "tags": ["sorting", "return-value", "lists"]
+}
