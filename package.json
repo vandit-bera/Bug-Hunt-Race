@@ -28,7 +28,8 @@
     "@supabase/supabase-js": "^2.117.3",
     "next": "16.4.0",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "sucrase": "^3.35.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.0",

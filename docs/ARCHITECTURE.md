@@ -85,6 +85,110 @@ Contract for implementations:
 Known trade-off (accepted): runs happen in the player's browser, so a
 determined player could fake a pass with dev tools. Fine for an internal game.
 
+### Using a runner
+
+```ts
+import { getRunner } from "@/lib/runner/registry"; // browser only
+
+const result = await getRunner("typescript").run({
+  language: "typescript",
+  code: playerCode,
+  tests: puzzle.tests,
+});
+```
+
+`getRunner(language)` returns a shared runner per language and throws for a
+language without one (Python until TB-19 task 6). Every `run` gets a **fresh
+worker**, so nothing leaks between runs; `dispose()` stops runs in flight.
+
+CI and other Node code use `runInNode(request)` from `@/lib/runner/node`. It
+uses the same compiler, harness and lockdown, in a `worker_threads` thread that
+is terminated on timeout, so a puzzle passes in CI exactly when it passes in
+the browser. An E2E test runs the shared cases in `lib/runner/test-cases.ts`
+in both and requires identical results.
+
+### JS/TS runner (`lib/runner/js/`)
+
+```mermaid
+sequenceDiagram
+  participant Page
+  participant Worker as Web Worker (one per run)
+  Page->>Worker: RunRequest + private MessagePort
+  Note over Worker: lockdown already applied<br/>compile (sucrase)<br/>run code + tests
+  Worker-->>Page: outcome on the port
+  Note over Page: after timeoutMs: worker.terminate()<br/>→ status "timeout"
+```
+
+- **Compile:** [sucrase](https://github.com/alangpierce/sucrase) strips
+  TypeScript types (no type checking, so type errors never block a run) and
+  parses JavaScript, so syntax errors read like
+  `SyntaxError in your code: Unexpected token (2:13)`. It adds about 48 KB
+  gzipped to the worker chunk only; the `typescript` package would be ~3 MB.
+  Modern syntax is kept as is. Puzzle code is a plain script: no
+  `import`/`export`.
+- **Scope:** the code and the tests run as one async function body, code
+  first, so tests can call anything the code declares and may use top-level
+  `await`. A name declared in both is a `SyntaxError`.
+- **Result back:** sent on a `MessagePort` that only the harness holds, so
+  player code cannot post a fake result to the page.
+
+### Test harness API (JS/TS)
+
+```js
+test("adds two numbers", () => {
+  expect(add(2, 3)).toBe(5); // Object.is
+  expect(parse("1,2")).toEqual([1, 2]); // deep: arrays, objects, Map, Set, Date, RegExp
+  expect(() => parse("")).toThrow(); // optional: toThrow("text") or toThrow(/regex/)
+});
+test("async works too", async () => {
+  expect(await load()).toEqual({ ok: true });
+});
+```
+
+- Tests run in order, one at a time. A failed `expect` or a throw fails that
+  test only, with a message such as `Expected 5, received -1`.
+- `status`: `passed` if every test passed; `failed` if any failed; `error` on
+  a syntax error, a throw at the top level, a crash, or **no tests**.
+- Unhandled promise rejections are ignored: a test fails only through what it
+  awaits. An error thrown outside awaited code (e.g. in a `setTimeout`
+  callback) ends the run as `error`, e.g. `Error: late`.
+- `self` is the global scope in both environments; `close()` and Node-only
+  globals (`process`, `require`, `global`, `Buffer`, `setImmediate`) are
+  blocked in both, so the browser and Node give the same result.
+- `console.log/info/warn/error/debug` are captured into `output`, capped at
+  `MAX_OUTPUT_CHARS` (10 000) with a `… output truncated` note. Output is lost
+  on timeout (the worker is killed).
+
+### Sandbox limits
+
+- **CPU:** the worker is terminated after `timeoutMs` (default 5 s), whatever
+  it is doing. The page stays responsive (E2E proves it).
+- **Blocked globals** (`lib/runner/js/lockdown.ts`): `fetch`, `XMLHttpRequest`,
+  `WebSocket`, `EventSource`, `WebTransport`, `importScripts`, `indexedDB`,
+  `caches`, `navigator`, `postMessage`, nested `Worker`s, `BroadcastChannel`,
+  `Notification`, `close`, and the Node-only globals listed above. Each is replaced by a
+  non-configurable stub that throws `<name> is blocked in the sandbox`, and
+  the original is deleted from the prototype chain.
+- **Everything else on the network, including dynamic `import()`:** the
+  worker script is served with
+  `Content-Security-Policy: default-src 'none'; script-src 'self' 'unsafe-eval'`
+  (`next.config.ts`). The browser blocks every connection and every
+  cross-origin script. Same-origin scripts stay loadable, because Turbopack
+  loads the worker's own chunks that way.
+- **DOM, `localStorage`, cookies:** not present in workers.
+- **Memory:** there is no browser-side cap (no API for one). Most runaway
+  loops hit the 5 s timeout first, but allocating fast enough (e.g.
+  `while (true) a.push(new Array(1e6).fill(1))`) can crash the **whole tab**,
+  not just the worker. Node threads are capped at 256 MB.
+- **Node entry is for trusted code only.** The thread gets the same lockdown,
+  but Node cannot apply the worker CSP, so dynamic `import()` (`node:fs`,
+  `data:` URLs) still works there. It runs puzzle files from this repo in CI,
+  which are reviewed like any other code; never point it at player code.
+
+If Turbopack renames its worker bootstrap (`turbopack-worker-*.js`), the CSP
+header stops matching; the E2E test `network APIs are blocked, including
+cross-origin import()` fails when that happens.
+
 ## Room state machine
 
 Copied from TB-19 §12. The room's current state lives in the database and is
