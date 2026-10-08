@@ -99,7 +99,7 @@ const result = await getRunner("typescript").run({
 ```
 
 `getRunner(language)` returns a shared runner per language and throws for a
-language without one (Python until TB-19 task 6). Every `run` gets a **fresh
+language without one. Every `run` gets a **fresh
 worker**, so nothing leaks between runs; `dispose()` stops runs in flight.
 
 CI and other Node code use `runInNode(request)` from `@/lib/runner/node`. It
@@ -189,6 +189,83 @@ test("async works too", async () => {
 If Turbopack renames its worker bootstrap (`turbopack-worker-*.js`), the CSP
 header stops matching; the E2E test `network APIs are blocked, including
 cross-origin import()` fails when that happens.
+
+### Python runner (`lib/runner/python/`)
+
+Python runs in the browser with [Pyodide](https://pyodide.org) (CPython
+compiled to WebAssembly) in a Web Worker, behind the same `CodeRunner`
+interface and the same `SandboxRunner` timeout logic as JS/TS.
+
+- **Self-hosted, pinned.** `pyodide` is an exact-version npm dependency
+  (`314.0.7`); `scripts/copy-pyodide.mjs` (run by `postinstall`) copies the
+  runtime (about 13 MB) to `public/pyodide/<version>/` (git-ignored). Why not
+  the CDN: no third-party host to trust or to be down during a game, the same
+  version in the browser and in Node, and same-origin files let the worker's
+  CSP stay at `'self'`. The versioned path is served `immutable`, so the
+  browser downloads it once.
+- **Warm spare** (`browser-pool.ts`). Booting Pyodide takes seconds, so the
+  pool keeps one booted worker in reserve. A run takes the spare and a new
+  one starts booting at once, which keeps "a fresh worker per run" and means
+  the next run after a timeout (which killed its worker) is instant. A spare
+  costs one idle Pyodide (a few tens of MB). Boot time is not part of the 5 s
+  run clock: `OpenSession` may be async and the timer starts after it opens.
+- **Preload.** `preloadRunner("python")` starts the download and boot; call it
+  from the lobby or setup screen. `getPreloadState(lang)` /
+  `subscribePreload(lang, cb)` (or the `usePreloadState(lang)` hook) give
+  `{ status: "idle" | "loading" | "ready" | "error", progress: 0..1, error? }`.
+  Progress is real download progress (bytes against `manifest.json`), then
+  Pyodide init. JS and TS are always `ready`.
+- **Node entry.** `runInNode({ language: "python", ... })` boots Pyodide from
+  `node_modules` in a `worker_threads` thread, with the same harness and
+  lockdown, and terminates it on timeout. It boots a fresh interpreter per
+  call (about 1 s), which is fine for the puzzle checker. Trusted code only,
+  like the JS entry.
+
+### Test harness API (Python)
+
+Puzzle tests are plain functions using `assert`:
+
+```python
+def test_adds_two_numbers():
+    assert add(2, 3) == 5
+```
+
+- The code and the tests run in one namespace, code first. Every function
+  named `test_*` defined by the tests runs in definition order; a failed
+  assert or any exception fails that test only.
+- A bare `assert a == b` (also `!=`, `<`, `in`, `is`, ...) is rewritten to
+  explain itself: `assert add(2, 3) == 5 (left: -1, right: 5)`. Other bare
+  asserts report their source (`assert is_valid(x)`). A custom message
+  (`assert x, "why"`) is used as written. Other exceptions read
+  `IndexError: list index out of range`.
+- `status`: `passed`, `failed`, or `error` for a syntax error
+  (`SyntaxError in your code: expected ':' (line 1)`), an exception at the top
+  level, or **no tests**. `async def` tests are not supported (reported as a
+  failed test).
+- `print` and `sys.stderr` output is captured into `output`, capped at
+  `MAX_OUTPUT_CHARS` like JS. Output is lost on timeout.
+
+### Python sandbox limits
+
+- **CPU:** the worker is terminated after `timeoutMs`, whatever Python is
+  doing (`while True: pass`). Same for Node.
+- **Network:** CPython in WebAssembly has no sockets, so `socket` and
+  `urllib` fail with `OSError`. Everything that goes through the browser
+  (`js.fetch`, `XMLHttpRequest`, `WebSocket`, `pyodide.http.pyfetch` and
+  `open_url`) hits the same lockdown stubs as the JS runner and
+  throws `<name> is blocked in the sandbox`. The lockdown is applied after
+  Pyodide has loaded, so the runtime itself still works.
+- **CSP:** the worker's CSP is `default-src 'none'; script-src 'self'
+'unsafe-eval'; connect-src 'self'`. Cross-origin requests, including
+  `import()`, are blocked by the browser. **Known limit:** same-origin
+  requests are not blocked by the CSP (Pyodide must download its files from
+  there); only the lockdown stubs stop them. A determined player could use a
+  Pyodide internal that keeps its own reference to `fetch`; they could reach
+  this site only, never another host. Acceptable for an internal game.
+- **Packages:** only the standard library; `micropip` is not installed and
+  `loadPackage` cannot download anything.
+- **Memory:** as for JS, there is no browser-side cap; a memory bomb can
+  crash the tab. Node threads are capped at 512 MB.
 
 ## Puzzles
 

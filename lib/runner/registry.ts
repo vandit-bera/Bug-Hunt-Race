@@ -1,11 +1,13 @@
 import { openWorkerSession } from "./js/browser-session";
+import { PythonRunner } from "./python/runner";
 import { SandboxRunner } from "./sandbox-runner";
 import type { CodeRunner, LanguageId } from "./types";
 
-/** Browser runners per language. Python (Pyodide) is added in TB-19 task 6. */
+/** Browser runners per language. */
 const factories: Partial<Record<LanguageId, () => CodeRunner>> = {
   javascript: () => new SandboxRunner("javascript", openWorkerSession),
   typescript: () => new SandboxRunner("typescript", openWorkerSession),
+  python: () => new PythonRunner(),
 };
 
 const runners = new Map<LanguageId, CodeRunner>();

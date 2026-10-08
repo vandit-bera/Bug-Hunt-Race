@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { runInNode } from "@/lib/runner/node";
 import type { RunRequest, RunResult } from "@/lib/runner/types";
 import { checkEntries } from "./check";
-import { loadPuzzles, type PuzzleEntry } from "./load";
+import { loadPuzzles } from "./load";
 
 const FIXTURES = "lib/puzzles/fixtures";
 
@@ -57,20 +57,6 @@ describe("checkEntries", () => {
         ],
       },
     ]);
-  });
-
-  it("reports a language without a Node runner instead of skipping it", async () => {
-    const [entry] = loadPuzzles(`${FIXTURES}/valid`);
-    const python: PuzzleEntry = {
-      ...entry,
-      puzzle: {
-        ...entry.puzzle!,
-        meta: { ...entry.puzzle!.meta, language: "python" },
-      },
-    };
-    const [result] = await checkEntries([python], runInNode);
-    expect(result.ok).toBe(false);
-    expect(result.errors[0]).toMatch(/cannot run python/);
   });
 
   it("limits how many runs happen at once and keeps the order", async () => {

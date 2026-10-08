@@ -21,6 +21,13 @@ describe("pnpm puzzles:check", () => {
     expect(code).toBe(0);
   });
 
+  it("checks a Python puzzle through the real tsx entry", () => {
+    const { code, stdout } = check("lib/puzzles/fixtures/python-valid");
+    expect(stdout).toContain("✓ python/easy/add-two");
+    expect(code).toBe(0);
+    // Boots Pyodide twice (buggy and fix), slow on a busy CI machine.
+  }, 60_000);
+
   it("exits non-zero and names each broken puzzle", () => {
     const { code, stdout } = check("lib/puzzles/fixtures/broken");
     expect(stdout).toContain("✗ javascript/easy/buggy-passes");
