@@ -9,6 +9,11 @@ const MESSAGES: Partial<Record<DbErrorCode, string>> = {
   invalid_display_name: "Names can't contain < or >",
   invalid_avatar: "Pick an avatar",
   rate_limited: "You're creating rooms too fast. Try again in a minute.",
+  no_puzzles: "No puzzles for this language and level yet",
+  joined_late: "You joined mid-round. You'll play from the next round.",
+  already_submitted: "Your result is already in",
+  round_not_live: "This round is over",
+  round_not_over: "The fix is shown when the round ends",
 };
 
 /** A short message for the player, e.g. "Room is full". */

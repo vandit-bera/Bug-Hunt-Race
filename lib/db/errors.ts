@@ -18,6 +18,10 @@ export const DB_ERROR_CODES = [
   "round_not_live",
   "not_room_admin",
   "invalid_transition",
+  "no_puzzles",
+  "joined_late",
+  "already_submitted",
+  "round_not_over",
 ] as const;
 
 export type DbErrorCode = (typeof DB_ERROR_CODES)[number] | "unknown";
