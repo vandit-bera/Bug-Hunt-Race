@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { DbError } from "@/lib/db";
+import { DbError, toDbError } from "@/lib/db";
 import { handleFixRequest, type FixRevealDeps } from "./handler";
 
 const ROUND_ID = "6b0c5c3e-2f43-4b55-9a3d-0d6c1e2a7f10";
@@ -70,6 +70,36 @@ describe("GET /api/rounds/<id>/fix", () => {
     expect(d.revealPuzzle).not.toHaveBeenCalled();
   });
 
+  it.each([
+    [
+      "a malformed token",
+      { code: "PGRST301", message: "Expected 3 parts in JWT; got 1" },
+    ],
+    [
+      "a token with a bad signature",
+      { code: "PGRST301", message: "No suitable key or wrong key type" },
+    ],
+    [
+      "the anon key instead of a player token",
+      {
+        code: "42501",
+        message: "permission denied for function reveal_round_puzzle",
+      },
+    ],
+  ])("treats %s as not signed in", async (_, dbError) => {
+    const d = deps({
+      revealPuzzle: vi.fn(async () => {
+        throw toDbError(dbError);
+      }),
+    });
+    const response = await handleFixRequest(request("bad"), ROUND_ID, d);
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: "not_authenticated" });
+    expect(d.fixFor).not.toHaveBeenCalled();
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+  });
+
   it("rejects a malformed round id before asking the database", async () => {
     const d = deps();
     const response = await handleFixRequest(request("t"), "../../etc", d);
@@ -86,10 +116,13 @@ describe("GET /api/rounds/<id>/fix", () => {
     expect(await response.json()).toEqual({ error: "fix_not_found" });
   });
 
-  it("hides unexpected errors behind a 500", async () => {
+  it.each([
+    ["a non-database error", new Error("connection refused")],
+    ["an unknown database error", toDbError({ message: "boom" })],
+  ])("hides %s behind a 500", async (_, thrown) => {
     const d = deps({
       revealPuzzle: vi.fn(async () => {
-        throw new Error("connection refused");
+        throw thrown;
       }),
     });
     const response = await handleFixRequest(request("t"), ROUND_ID, d);
