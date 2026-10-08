@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { securityHeaders } from "./lib/security/headers";
 
 /**
  * CSP for the code-runner Web Workers (see lib/runner/js/worker.ts and
@@ -21,6 +22,19 @@ const nextConfig: NextConfig = {
   partialPrefetching: true,
   async headers() {
     return [
+      {
+        // Pages and other responses. Built JS is left out: scripts take the
+        // page's policy, and the runner workers below need their own.
+        source: "/((?!_next/static/).*)",
+        headers: securityHeaders({
+          supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+          isDev: process.env.NODE_ENV === "development",
+        }),
+      },
+      {
+        source: "/_next/static/:path*",
+        headers: [{ key: "X-Content-Type-Options", value: "nosniff" }],
+      },
       {
         source: "/_next/static/chunks/:file(turbopack-worker-.*)",
         headers: [{ key: "Content-Security-Policy", value: RUNNER_WORKER_CSP }],
