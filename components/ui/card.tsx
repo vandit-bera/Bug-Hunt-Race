@@ -13,12 +13,14 @@ export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   );
 }
 
+/** `as` keeps the page's heading levels in order (h3 by default). */
 export function CardTitle({
+  as: Heading = "h3",
   className,
   ...props
-}: HTMLAttributes<HTMLHeadingElement>) {
+}: HTMLAttributes<HTMLHeadingElement> & { as?: "h2" | "h3" | "h4" }) {
   return (
-    <h3
+    <Heading
       className={cn("mb-2 font-display text-lg font-bold", className)}
       {...props}
     />

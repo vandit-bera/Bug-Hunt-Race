@@ -194,7 +194,8 @@ function Round({
   }, []);
 
   async function run() {
-    if (busy.current || finished.current) return;
+    // The Ctrl/Cmd+Enter shortcut must not act behind an open confirm dialog.
+    if (busy.current || finished.current || confirm !== null) return;
     busy.current = true;
     setRunning(true);
     const next = await getRunner(language).run({

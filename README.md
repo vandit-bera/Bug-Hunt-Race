@@ -32,6 +32,7 @@ your machine is out of file watchers: close other dev servers or run
 | --------------------------- | --------------------------------------------- |
 | `pnpm dev`                  | Start the dev server                          |
 | `pnpm build`                | Production build                              |
+| `pnpm bundle:check`         | First-load JS budget for Home and Solo setup  |
 | `pnpm start`                | Serve the production build                    |
 | `pnpm lint`                 | ESLint                                        |
 | `pnpm format`               | Format everything with Prettier               |
@@ -88,10 +89,11 @@ security rules and the data-access layer are described in
 
 GitHub Actions (`.github/workflows/ci.yml`) runs on every pull request and on
 pushes to `main`: install → lint → format check → typecheck → unit tests →
-puzzle check → build → E2E. A second job starts a fresh Supabase database from
-the migrations, runs the pgTAP tests and checks `lib/db/types.ts` is up to
-date. A third job starts a local Supabase (database, auth, API, Realtime)
-and runs the two-browser room E2E tests. A PR cannot merge unless CI is green.
+puzzle check → build → bundle budget → E2E. A second job starts a fresh
+Supabase database from the migrations, runs the pgTAP tests and checks
+`lib/db/types.ts` is up to date. A third job starts a local Supabase
+(database, auth, API, Realtime) and runs the two-browser room E2E tests. A PR
+cannot merge unless CI is green.
 
 ## Environment variables
 

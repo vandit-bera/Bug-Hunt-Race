@@ -10,7 +10,7 @@ import { cn } from "@/components/ui/cn";
 import { levelForRound } from "@/lib/game/solo-pick";
 import { soloPlayHref } from "@/lib/game/solo-params";
 import type { Level } from "@/lib/game/types";
-import { PUZZLES } from "@/lib/puzzles/generated";
+import { poolSize, type PoolSizes } from "@/lib/puzzles/pools";
 import { LANGUAGES } from "@/lib/runner/config";
 import { preloadRunner } from "@/lib/runner/preload";
 import type { LanguageId } from "@/lib/runner/types";
@@ -22,14 +22,6 @@ const LEVEL_OPTIONS: { id: Level; label: string; emoji: string }[] = [
   { id: "hard", ...LEVELS.hard },
   { id: "mixed", label: "Mixed", emoji: "🎲" },
 ];
-
-function countPuzzles(language: LanguageId, level: Level): number {
-  return PUZZLES.filter(
-    (puzzle) =>
-      puzzle.language === language &&
-      (level === "mixed" || puzzle.level === level),
-  ).length;
-}
 
 function OptionCard({
   name,
@@ -67,7 +59,8 @@ function OptionCard({
   );
 }
 
-export function SoloSetup() {
+/** `pools` comes from the server, so this screen never ships the puzzle pack. */
+export function SoloSetup({ pools }: { pools: PoolSizes }) {
   const [language, setLanguage] = useState<LanguageId>("javascript");
   const [level, setLevel] = useState<Level>("easy");
 
@@ -75,11 +68,11 @@ export function SoloSetup() {
     void preloadRunner(language);
   }, [language]);
 
-  const available = countPuzzles(language, level);
-  const start = levelForRound(level, 0, (candidate) =>
-    PUZZLES.some(
-      (puzzle) => puzzle.language === language && puzzle.level === candidate,
-    ),
+  const available = poolSize(pools, language, level);
+  const start = levelForRound(
+    level,
+    0,
+    (candidate) => pools[language][candidate] > 0,
   );
 
   return (
@@ -94,7 +87,7 @@ export function SoloSetup() {
 
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-2 font-bold">Language</legend>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {LANGUAGE_IDS.map((id) => (
             <OptionCard
               key={id}

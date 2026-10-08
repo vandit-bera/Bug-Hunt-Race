@@ -16,7 +16,7 @@ export default function Home() {
         Solo Practice
       </Link>
       <Card aria-disabled="true" className="w-full max-w-sm opacity-60">
-        <CardTitle>Race Room</CardTitle>
+        <CardTitle as="h2">Race Room</CardTitle>
         <p className="text-sm text-muted">Coming soon</p>
       </Card>
       <ThemeToggle />
