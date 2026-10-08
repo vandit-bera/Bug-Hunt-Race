@@ -9,7 +9,8 @@ the code-level design is in `docs/ARCHITECTURE.md`.
   Never commit to `main`.
 - Small, focused commits. One issue per PR. Link the issue in the PR.
 - Before pushing, run: `pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm build`.
-  Run `pnpm test:e2e` when you touch pages or flows.
+  Run `pnpm test:e2e` when you touch pages or flows, and `pnpm db:test` when
+  you touch `supabase/`.
 - CI must be green and the PR reviewed by Full Stack Dev – Senior before merge.
 - No new paid services, deploys or secrets without Vandit's approval.
 
@@ -18,7 +19,9 @@ the code-level design is in `docs/ARCHITECTURE.md`.
 - TypeScript strict. No `any` unless unavoidable, and then explain why in a comment.
 - Use the `@/` import alias for anything outside the current folder.
 - Keep `lib/game` pure (no React, no Supabase) and unit test it.
-- Supabase access goes through `lib/supabase` (added in Phase 1.4).
+- Supabase access goes through `lib/db`. Schema changes are new files in
+  `supabase/migrations/` with RLS, a pgTAP test and regenerated types
+  (`pnpm db:types`).
 - Server components by default; add `"use client"` only where needed.
 - Prettier owns formatting; do not hand-format against it.
 - No dead code, debug logs or commented-out code.
