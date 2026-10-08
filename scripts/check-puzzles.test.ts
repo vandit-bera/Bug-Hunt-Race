@@ -25,7 +25,8 @@ describe("pnpm puzzles:check", () => {
     const { code, stdout } = check("lib/puzzles/fixtures/python-valid");
     expect(stdout).toContain("✓ python/easy/add-two");
     expect(code).toBe(0);
-  });
+    // Boots Pyodide twice (buggy and fix), slow on a busy CI machine.
+  }, 60_000);
 
   it("exits non-zero and names each broken puzzle", () => {
     const { code, stdout } = check("lib/puzzles/fixtures/broken");
