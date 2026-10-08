@@ -74,3 +74,17 @@ test("locked badge cards fill their grid cell", async ({ page }) => {
   const cardBox = await card.boundingBox();
   expect(cardBox?.width).toBeCloseTo(cellBox?.width ?? 0, 0);
 });
+
+for (const width of [320, 340, 375]) {
+  test(`the stats page does not scroll sideways at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 740 });
+    await page.goto("/stats");
+    await expect(page.getByRole("table")).toBeVisible();
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - window.innerWidth,
+    );
+    expect(overflow).toBe(0);
+  });
+}

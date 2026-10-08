@@ -102,7 +102,7 @@ function Stats() {
         <h2 id="bests" className="font-display text-xl font-bold">
           Personal bests
         </h2>
-        <div className="overflow-x-auto rounded-xl border-2 border-border-subtle">
+        <div className="relative overflow-x-auto rounded-xl border-2 border-border-subtle">
           <table className="w-full min-w-96 text-left text-sm">
             <caption className="sr-only">
               Best score and time for each language and level
