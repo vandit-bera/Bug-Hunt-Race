@@ -23,6 +23,26 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   loading?: boolean;
 };
 
+/** Button styles for other elements, e.g. a link that looks like a button. */
+export function buttonClass({
+  variant = "primary",
+  size = "md",
+  className,
+}: {
+  variant?: keyof typeof variants;
+  size?: keyof typeof sizes;
+  className?: string;
+} = {}) {
+  return cn(
+    "inline-flex items-center justify-center gap-2 rounded-lg font-display font-bold tracking-wide transition-[transform,box-shadow,background-color,filter] duration-100",
+    "hover:-translate-y-px active:translate-y-[3px] active:shadow-none",
+    "disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none disabled:hover:translate-y-0",
+    variants[variant],
+    sizes[size],
+    className,
+  );
+}
+
 export function Button({
   variant = "primary",
   size = "md",
@@ -39,14 +59,7 @@ export function Button({
       type={type}
       disabled={isDisabled}
       aria-busy={loading || undefined}
-      className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-lg font-display font-bold tracking-wide transition-[transform,box-shadow,background-color,filter] duration-100",
-        "hover:-translate-y-px active:translate-y-[3px] active:shadow-none",
-        "disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none disabled:hover:translate-y-0",
-        variants[variant],
-        sizes[size],
-        className,
-      )}
+      className={buttonClass({ variant, size, className })}
       {...props}
     >
       {loading && <Spinner size="sm" label="Loading" />}
