@@ -243,8 +243,9 @@ select results_eq(
 -- Leaving --------------------------------------------------------------------------
 
 -- Give Ben a score to check it survives leaving and coming back.
-insert into public.rounds (id, room_id, puzzle_id, round_number)
-values ('00000000-0000-0000-0000-00000000ea01', (select id from ids where name = 'room'), 'js-easy-sum-array', 1);
+insert into public.rounds (id, room_id, puzzle_id, game_number, round_number)
+select '00000000-0000-0000-0000-00000000ea01', id, 'average-rating', game_number, 1
+from public.rooms where id = (select id from ids where name = 'room');
 insert into public.scores (round_id, player_id, passed, solve_time_ms, points)
 values ('00000000-0000-0000-0000-00000000ea01', (select id from ids where name = 'ben'), true, 30000, 150);
 
