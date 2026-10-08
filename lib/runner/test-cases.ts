@@ -352,6 +352,42 @@ export const RUNNER_CASES: RunnerCase[] = [
     },
   },
   {
+    name: "JS: failed boolean checks print true / false",
+    request: {
+      language: "javascript",
+      code: "const isEven = (n) => n % 2 === 0;",
+      tests: 'test("odd is even", () => expect(isEven(3)).toBe(true));',
+    },
+    expected: {
+      status: "failed",
+      tests: [
+        {
+          name: "odd is even",
+          passed: false,
+          message: "Expected true, received false",
+        },
+      ],
+    },
+  },
+  {
+    name: "Python: failed boolean checks print True / False",
+    request: {
+      language: "python",
+      code: "def is_even(n):\n    return n % 2 == 0",
+      tests: "def test_odd():\n    assert is_even(3) == True",
+    },
+    expected: {
+      status: "failed",
+      tests: [
+        {
+          name: "test_odd",
+          passed: false,
+          message: "assert is_even(3) == True (left: False, right: True)",
+        },
+      ],
+    },
+  },
+  {
     name: "Python: an exception inside a test fails only that test",
     request: {
       language: "python",

@@ -38,6 +38,7 @@ export async function runHarness(
 
   const describe = (value: unknown, seen: unknown[] = []): string => {
     if (typeof value === "string") return JSON.stringify(value);
+    if (typeof value === "boolean") return String(value);
     if (typeof value === "bigint") return `${value}n`;
     if (typeof value === "number") {
       return Object.is(value, -0) ? "-0" : String(value);

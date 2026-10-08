@@ -46,6 +46,15 @@ describe("runHarness", () => {
     );
   });
 
+  it("toBe prints booleans as true / false", async () => {
+    expect(await messageOf("expect(false).toBe(true)")).toBe(
+      "Expected true, received false",
+    );
+    expect(await messageOf("expect(true).toBe(false)")).toBe(
+      "Expected false, received true",
+    );
+  });
+
   it.each([
     ["nested objects", "{ a: [1, { b: 2 }] }", "{ a: [1, { b: 2 }] }"],
     ["NaN", "[NaN]", "[NaN]"],
