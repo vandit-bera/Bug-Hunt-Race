@@ -29,7 +29,7 @@ describe("checkEntries", () => {
         errors: [
           `"hint" is missing`,
           `"level" must be one of: easy, medium, hard`,
-          `"bugCount" must be a whole number from 1 to 5`,
+          `"bugCount" must be a whole number from 1 to 3`,
           `"tags" must be a non-empty list of kebab-case strings, e.g. ["off-by-one"]`,
         ],
       },

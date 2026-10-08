@@ -15,17 +15,41 @@ export interface LevelRules {
   /** Lines of code (blank lines not counted) in `buggy.*` and `fix.*`. */
   minLines: number;
   maxLines: number;
+  /** Allowed `bugCount`, inclusive. */
+  minBugs: number;
+  maxBugs: number;
 }
 
 export const LEVEL_RULES: Record<PuzzleLevel, LevelRules> = {
-  easy: { timeLimitSec: 180, basePoints: 100, minLines: 5, maxLines: 15 },
-  medium: { timeLimitSec: 300, basePoints: 200, minLines: 15, maxLines: 40 },
-  hard: { timeLimitSec: 480, basePoints: 300, minLines: 40, maxLines: 80 },
+  easy: {
+    timeLimitSec: 180,
+    basePoints: 100,
+    minLines: 5,
+    maxLines: 15,
+    minBugs: 1,
+    maxBugs: 1,
+  },
+  medium: {
+    timeLimitSec: 300,
+    basePoints: 200,
+    minLines: 15,
+    maxLines: 40,
+    minBugs: 1,
+    maxBugs: 2,
+  },
+  hard: {
+    timeLimitSec: 480,
+    basePoints: 300,
+    minLines: 40,
+    maxLines: 80,
+    minBugs: 2,
+    maxBugs: 3,
+  },
 };
 
 export const PUZZLE_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const PUZZLE_TAG_PATTERN = PUZZLE_ID_PATTERN;
-export const MAX_BUG_COUNT = 5;
+export const MAX_BUG_COUNT = 3;
 
 export interface PuzzleMeta {
   /** Kebab-case, unique across all puzzles, equal to the folder name. */
@@ -74,6 +98,10 @@ function isLevel(value: unknown): value is PuzzleLevel {
   return (PUZZLE_LEVELS as readonly unknown[]).includes(value);
 }
 
+function bugRange({ minBugs, maxBugs }: LevelRules): string {
+  return minBugs === maxBugs ? `${minBugs}` : `${minBugs} to ${maxBugs}`;
+}
+
 /** Validates parsed `puzzle.json` content. Reports every problem at once. */
 export function validatePuzzleMeta(value: unknown): ValidationResult {
   if (!isRecord(value)) {
@@ -112,18 +140,22 @@ export function validatePuzzleMeta(value: unknown): ValidationResult {
   if ("level" in value && !isLevel(level)) {
     errors.push(`"level" must be one of: ${PUZZLE_LEVELS.join(", ")}`);
   }
-  if (
-    "bugCount" in value &&
-    !(
-      Number.isInteger(bugCount) &&
-      (bugCount as number) >= 1 &&
-      (bugCount as number) <= MAX_BUG_COUNT
-    )
-  ) {
+  const isBugCount =
+    Number.isInteger(bugCount) &&
+    (bugCount as number) >= 1 &&
+    (bugCount as number) <= MAX_BUG_COUNT;
+  if ("bugCount" in value && !isBugCount) {
     errors.push(`"bugCount" must be a whole number from 1 to ${MAX_BUG_COUNT}`);
   }
   if (isLevel(level)) {
     const rules = LEVEL_RULES[level];
+    if (
+      isBugCount &&
+      ((bugCount as number) < rules.minBugs ||
+        (bugCount as number) > rules.maxBugs)
+    ) {
+      errors.push(`"bugCount" must be ${bugRange(rules)} for ${level}`);
+    }
     if ("timeLimitSec" in value && timeLimitSec !== rules.timeLimitSec) {
       errors.push(`"timeLimitSec" must be ${rules.timeLimitSec} for ${level}`);
     }

@@ -31,7 +31,7 @@
       "minLength": 1
     },
     "hint": { "type": "string", "minLength": 1 },
-    "bugCount": { "type": "integer", "minimum": 1, "maximum": 5 },
+    "bugCount": { "type": "integer", "minimum": 1, "maximum": 3 },
     "timeLimitSec": { "type": "integer" },
     "basePoints": { "type": "integer" },
     "tags": {
@@ -46,7 +46,8 @@
       "then": {
         "properties": {
           "timeLimitSec": { "const": 180 },
-          "basePoints": { "const": 100 }
+          "basePoints": { "const": 100 },
+          "bugCount": { "minimum": 1, "maximum": 1 }
         }
       }
     },
@@ -55,7 +56,8 @@
       "then": {
         "properties": {
           "timeLimitSec": { "const": 300 },
-          "basePoints": { "const": 200 }
+          "basePoints": { "const": 200 },
+          "bugCount": { "minimum": 1, "maximum": 2 }
         }
       }
     },
@@ -64,7 +66,8 @@
       "then": {
         "properties": {
           "timeLimitSec": { "const": 480 },
-          "basePoints": { "const": 300 }
+          "basePoints": { "const": 300 },
+          "bugCount": { "minimum": 2, "maximum": 3 }
         }
       }
     }

@@ -9,7 +9,7 @@ def month_name(month):
 
 def days_in_month(year, month):
     """Number of days in the given month (month is 1-12)."""
-    return calendar.monthrange(year, month)[0]
+    return calendar.monthrange(year, month)[1]
 
 
 def add_months(day, months):
@@ -60,4 +60,6 @@ def age_in_years(born, today):
     A birthday that has not been reached yet this year does not count.
     """
     years = today.year - born.year
+    if (today.month, today.day) < (born.month, born.day):
+        years -= 1
     return years

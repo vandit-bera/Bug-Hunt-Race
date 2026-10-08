@@ -5,7 +5,7 @@
   "level": "hard",
   "description": "add_months(day, months) moves a date by whole months; if the day does not exist in the new month it uses the last day of that month (Jan 31 plus 1 month is Feb 28, or Feb 29 in a leap year). billing_dates(start, count) lists monthly billing dates counted from the START date, so Jan 31 gives Jan 31, Feb 28, Mar 31. age_in_years only counts a birthday once it has been reached.",
   "hint": "Check the month number maths, the shortest months, and whether each billing date is computed from the start or from the previous date.",
-  "bugCount": 5,
+  "bugCount": 3,
   "timeLimitSec": 480,
   "basePoints": 300,
   "tags": ["dates", "calendar", "off-by-one", "edge-case"]

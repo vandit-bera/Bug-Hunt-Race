@@ -36,10 +36,16 @@ describe("validatePuzzleMeta", () => {
 
   it("accepts every level with its own time limit and points", () => {
     for (const level of PUZZLE_LEVELS) {
-      const { timeLimitSec, basePoints } = LEVEL_RULES[level];
-      expect(errorsFor({ ...VALID, level, timeLimitSec, basePoints })).toEqual(
-        [],
-      );
+      const { timeLimitSec, basePoints, minBugs } = LEVEL_RULES[level];
+      expect(
+        errorsFor({
+          ...VALID,
+          level,
+          timeLimitSec,
+          basePoints,
+          bugCount: minBugs,
+        }),
+      ).toEqual([]);
     }
   });
 
@@ -85,11 +91,39 @@ describe("validatePuzzleMeta", () => {
         level: "hard",
         timeLimitSec: 180,
         basePoints: 100,
+        bugCount: 2,
       }),
     ).toEqual([
       `"timeLimitSec" must be 480 for hard`,
       `"basePoints" must be 300 for hard`,
     ]);
+  });
+
+  it("requires the bug count of the level", () => {
+    const hard = {
+      ...VALID,
+      level: "hard",
+      timeLimitSec: 480,
+      basePoints: 300,
+    };
+    const medium = {
+      ...VALID,
+      level: "medium",
+      timeLimitSec: 300,
+      basePoints: 200,
+    };
+    expect(errorsFor({ ...VALID, bugCount: 2 })).toEqual([
+      `"bugCount" must be 1 for easy`,
+    ]);
+    expect(errorsFor({ ...medium, bugCount: 2 })).toEqual([]);
+    expect(errorsFor({ ...medium, bugCount: 3 })).toEqual([
+      `"bugCount" must be 1 to 2 for medium`,
+    ]);
+    expect(errorsFor({ ...hard, bugCount: 1 })).toEqual([
+      `"bugCount" must be 2 to 3 for hard`,
+    ]);
+    expect(errorsFor({ ...hard, bugCount: 2 })).toEqual([]);
+    expect(errorsFor({ ...hard, bugCount: 3 })).toEqual([]);
   });
 
   it("rejects bug counts out of range and empty tags", () => {
@@ -115,7 +149,13 @@ describe("puzzles/puzzle.schema.json", () => {
     properties: Record<string, Record<string, unknown>>;
     allOf: {
       if: { properties: { level: { const: string } } };
-      then: { properties: Record<string, { const: number }> };
+      then: {
+        properties: {
+          timeLimitSec: { const: number };
+          basePoints: { const: number };
+          bugCount: { minimum: number; maximum: number };
+        };
+      };
     }[];
   };
 
@@ -132,6 +172,8 @@ describe("puzzles/puzzle.schema.json", () => {
         {
           timeLimitSec: then.properties.timeLimitSec.const,
           basePoints: then.properties.basePoints.const,
+          minBugs: then.properties.bugCount.minimum,
+          maxBugs: then.properties.bugCount.maximum,
         },
       ]),
     );
@@ -142,6 +184,8 @@ describe("puzzles/puzzle.schema.json", () => {
           {
             timeLimitSec: LEVEL_RULES[level].timeLimitSec,
             basePoints: LEVEL_RULES[level].basePoints,
+            minBugs: LEVEL_RULES[level].minBugs,
+            maxBugs: LEVEL_RULES[level].maxBugs,
           },
         ]),
       ),
