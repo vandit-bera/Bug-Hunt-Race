@@ -166,3 +166,14 @@ body {
     transform: translateY(-0.75rem);
   }
 }
+
+@keyframes float-up {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(0.8);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-12rem) scale(1.4);
+  }
+}
