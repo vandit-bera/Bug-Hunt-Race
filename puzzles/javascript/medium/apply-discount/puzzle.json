@@ -1,0 +1,12 @@
+{
+  "id": "apply-discount",
+  "title": "Apply a discount",
+  "language": "javascript",
+  "level": "medium",
+  "description": "applyDiscount(items, category, percent) returns a NEW list where every item in the category is `percent` percent cheaper (price in cents, rounded to a whole cent). Other items are unchanged. The original items must not be modified.",
+  "hint": "Does the original list still look the same after the call?",
+  "bugCount": 1,
+  "timeLimitSec": 300,
+  "basePoints": 200,
+  "tags": ["mutation", "copy", "objects"]
+}

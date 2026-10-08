@@ -1,0 +1,12 @@
+{
+  "id": "user-loader",
+  "title": "User loader",
+  "language": "javascript",
+  "level": "hard",
+  "description": "loadUser adds the number of PUBLISHED posts (draft is false) to a user. loadUsers loads many users in parallel and keeps the order of the ids. A user that does not exist (the error code is \"NOT_FOUND\") is left out. Any other error must reject the whole call.",
+  "hint": "Think about what a try/catch really catches around a promise, and what the catch block lets through.",
+  "bugCount": 3,
+  "timeLimitSec": 480,
+  "basePoints": 300,
+  "tags": ["async", "await", "promises", "error-handling"]
+}

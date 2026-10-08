@@ -1,0 +1,12 @@
+{
+  "id": "remove-negatives",
+  "title": "Remove negatives",
+  "language": "python",
+  "level": "medium",
+  "description": "remove_negatives(numbers) removes every negative number from the list IN PLACE and returns how many were removed. average_without_negatives gives the mean of the non-negative numbers (0 if none) and must not change the list it is given.",
+  "hint": "What happens to the loop when you remove items from the list it is walking over?",
+  "bugCount": 1,
+  "timeLimitSec": 300,
+  "basePoints": 200,
+  "tags": ["mutation-during-iteration", "lists", "loops"]
+}

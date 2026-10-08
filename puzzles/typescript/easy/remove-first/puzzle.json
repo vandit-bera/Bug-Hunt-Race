@@ -1,0 +1,12 @@
+{
+  "id": "remove-first",
+  "title": "Remove first match",
+  "language": "typescript",
+  "level": "easy",
+  "description": "removeFirst(items, target) returns a copy of the list without the first occurrence of target. If target is not in the list, the copy is identical. The original list is never changed.",
+  "hint": "indexOf returns -1 when nothing matches. Is -1 truthy? Is 0 falsy?",
+  "bugCount": 1,
+  "timeLimitSec": 180,
+  "basePoints": 100,
+  "tags": ["indexof", "truthiness", "arrays"]
+}

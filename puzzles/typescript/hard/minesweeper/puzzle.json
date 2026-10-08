@@ -1,0 +1,12 @@
+{
+  "id": "minesweeper",
+  "title": "Minesweeper board",
+  "language": "typescript",
+  "level": "hard",
+  "description": "A board is a list of strings where \"*\" is a mine and \".\" is empty. annotate(board) replaces every empty cell with the number of mines in the (up to 8) cells around it, and keeps \".\" when that number is 0. hasWon checks that every cell without a mine has been revealed (revealed holds \"row,col\" strings, and the same cell may be listed twice).",
+  "hint": "Check the cells on the last row and column, the cell you are counting around, how zero is printed, and repeated reveals.",
+  "bugCount": 4,
+  "timeLimitSec": 480,
+  "basePoints": 300,
+  "tags": ["grid", "bounds", "off-by-one", "sets"]
+}

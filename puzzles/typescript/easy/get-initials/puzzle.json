@@ -1,0 +1,12 @@
+{
+  "id": "get-initials",
+  "title": "Initials",
+  "language": "typescript",
+  "level": "easy",
+  "description": "getInitials(fullName) returns the upper-case first letters of the names, e.g. \"ada lovelace\" gives \"AL\". Extra spaces at the start, at the end or between names are ignored.",
+  "hint": "What does split(\" \") return when two spaces are next to each other?",
+  "bugCount": 1,
+  "timeLimitSec": 180,
+  "basePoints": 100,
+  "tags": ["strings", "edge-case", "split"]
+}

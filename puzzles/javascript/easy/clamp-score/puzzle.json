@@ -1,0 +1,12 @@
+{
+  "id": "clamp-score",
+  "title": "Clamp a score",
+  "language": "javascript",
+  "level": "easy",
+  "description": "clampScore(score, min, max) keeps a score inside the range min to max (both included). A score below min becomes min, a score above max becomes max, anything else is returned unchanged.",
+  "hint": "Look at which limit each branch hands back.",
+  "bugCount": 1,
+  "timeLimitSec": 180,
+  "basePoints": 100,
+  "tags": ["wrong-return", "math"]
+}

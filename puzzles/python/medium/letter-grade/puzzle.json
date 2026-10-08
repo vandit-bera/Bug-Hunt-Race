@@ -1,0 +1,12 @@
+{
+  "id": "letter-grade",
+  "title": "Letter grades",
+  "language": "python",
+  "level": "medium",
+  "description": "letter_grade(score) turns a score from 0 to 100 into a letter - 90 and up is A, 80 and up is B, 70 and up is C, 60 and up is D, anything lower is F. A score outside 0 to 100 raises ValueError. class_summary counts how many of each letter there are.",
+  "hint": "What should a score of exactly 90 get? Check the comparison against each limit.",
+  "bugCount": 1,
+  "timeLimitSec": 300,
+  "basePoints": 200,
+  "tags": ["comparison", "boundary", "off-by-one"]
+}

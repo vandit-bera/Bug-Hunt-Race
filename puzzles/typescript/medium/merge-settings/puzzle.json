@@ -1,0 +1,12 @@
+{
+  "id": "merge-settings",
+  "title": "Merge settings",
+  "language": "typescript",
+  "level": "medium",
+  "description": "mergeSettings(overrides) returns the default settings with the user's choices on top. The notification flags are merged one by one, so choosing only `push` keeps the default for `email`. The DEFAULTS object must never change.",
+  "hint": "Both bugs are about how the defaults are combined with the overrides. Call it twice and look at what the second call returns.",
+  "bugCount": 2,
+  "timeLimitSec": 300,
+  "basePoints": 200,
+  "tags": ["mutation", "object-spread", "defaults"]
+}

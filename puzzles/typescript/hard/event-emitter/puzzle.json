@@ -1,0 +1,12 @@
+{
+  "id": "event-emitter",
+  "title": "Event emitter",
+  "language": "typescript",
+  "level": "hard",
+  "description": "Emitter lets code subscribe to named events. on() returns a function that unsubscribes, once() runs a handler at most one time, and emit() calls the handlers in the order they were added and returns how many ran. A handler may unsubscribe itself while emit is running without making other handlers get skipped.",
+  "hint": "Ask what each method does to the list of handlers while another loop is walking over it.",
+  "bugCount": 3,
+  "timeLimitSec": 480,
+  "basePoints": 300,
+  "tags": ["events", "mutation-during-iteration", "splice", "closures"]
+}

@@ -1,0 +1,12 @@
+{
+  "id": "format-date",
+  "title": "Format a date",
+  "language": "javascript",
+  "level": "medium",
+  "description": "formatDate(iso) turns an ISO timestamp into \"DD/MM/YYYY\" using UTC, so the result never depends on the machine's time zone. For example \"2024-03-05T23:30:00Z\" becomes \"05/03/2024\". formatTimeline(list) formats a list of timestamps, oldest first.",
+  "hint": "Check both the day and the month of \"2024-03-05\" by hand.",
+  "bugCount": 2,
+  "timeLimitSec": 300,
+  "basePoints": 200,
+  "tags": ["dates", "off-by-one", "strings"]
+}

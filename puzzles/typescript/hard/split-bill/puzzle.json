@@ -1,0 +1,12 @@
+{
+  "id": "split-bill",
+  "title": "Split the bill",
+  "language": "typescript",
+  "level": "hard",
+  "description": "splitBill(totalCents, people) splits a bill fairly without losing or inventing a cent. Everyone pays the same rounded-down share, and the leftover cents go one each to the first people: splitBill(1000, 3) is [334, 333, 333]. balances(totalCents, paid) tells how much each person still owes (negative means they get money back).",
+  "hint": "The shares must always add up to the total. Try 1000 split 3 ways, and 1000 split 6 ways. Then check the sign of balances.",
+  "bugCount": 3,
+  "timeLimitSec": 480,
+  "basePoints": 300,
+  "tags": ["rounding", "integer-division", "money", "off-by-one"]
+}

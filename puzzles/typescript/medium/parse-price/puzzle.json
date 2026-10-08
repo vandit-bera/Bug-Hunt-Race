@@ -1,0 +1,12 @@
+{
+  "id": "parse-price",
+  "title": "Parse a price",
+  "language": "typescript",
+  "level": "medium",
+  "description": "parsePriceToCents(text) turns a typed price into whole cents. It accepts an optional \"$\" and thousands commas, so \"$1,234.50\" is 123450. Anything that is not a valid price with at most 2 decimals gives null. sumPrices adds up several prices, or gives null if any of them is invalid.",
+  "hint": "Try \"19.99\" and \"1,000\" by hand. What is 19.99 * 100 in JavaScript?",
+  "bugCount": 2,
+  "timeLimitSec": 300,
+  "basePoints": 200,
+  "tags": ["floating-point", "parsing", "money"]
+}

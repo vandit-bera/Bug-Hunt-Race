@@ -1,0 +1,12 @@
+{
+  "id": "lru-cache",
+  "title": "LRU cache",
+  "language": "javascript",
+  "level": "hard",
+  "description": "LruCache(capacity) remembers at most `capacity` entries. get and set both count as \"using\" a key. When the cache is full, setting a NEW key throws out the least recently used one. Setting a key that already exists never evicts anything. keys() lists the keys from least to most recently used; has and peek do not count as use.",
+  "hint": "Follow the order of keys() after each call. Who moves to the back, and when is anything evicted?",
+  "bugCount": 3,
+  "timeLimitSec": 480,
+  "basePoints": 300,
+  "tags": ["cache", "map", "data-structure", "off-by-one"]
+}

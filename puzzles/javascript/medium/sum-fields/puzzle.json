@@ -1,0 +1,12 @@
+{
+  "id": "sum-fields",
+  "title": "Sum form fields",
+  "language": "javascript",
+  "level": "medium",
+  "description": "Form inputs arrive as strings. sumFields(values) adds up the filled-in fields (blank ones are skipped) and returns the total rounded to 2 decimal places. averageField(values) is the average of the filled-in fields, or 0 when all are blank.",
+  "hint": "What happens to \"2.5\" when it is read as a whole number?",
+  "bugCount": 1,
+  "timeLimitSec": 300,
+  "basePoints": 200,
+  "tags": ["type-coercion", "parsing", "numbers"]
+}

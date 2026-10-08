@@ -1,0 +1,12 @@
+{
+  "id": "is-leap-year",
+  "title": "Leap year",
+  "language": "typescript",
+  "level": "easy",
+  "description": "isLeapYear(year) is true for years divisible by 4, except century years (1900, 2100) which must also be divisible by 400. So 2000 and 2024 are leap years, 1900 and 2023 are not.",
+  "hint": "Read the century rule again. What should happen to 1900?",
+  "bugCount": 1,
+  "timeLimitSec": 180,
+  "basePoints": 100,
+  "tags": ["wrong-return", "logic", "dates"]
+}

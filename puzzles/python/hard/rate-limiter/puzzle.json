@@ -1,0 +1,12 @@
+{
+  "id": "rate-limiter",
+  "title": "Rate limiter",
+  "language": "python",
+  "level": "hard",
+  "description": "RateLimiter(limit, window) allows at most `limit` calls in any `window` seconds. Time is passed in as `now`, so nothing is random. A call made exactly `window` seconds after an earlier one no longer counts against it. Refused calls are not remembered. retry_after(now) says how many seconds to wait until the next call would be allowed.",
+  "hint": "Look at when a call leaves the window, the order of recording and checking, and the formula for the waiting time.",
+  "bugCount": 3,
+  "timeLimitSec": 480,
+  "basePoints": 300,
+  "tags": ["sliding-window", "deque", "boundary", "off-by-one"]
+}

@@ -1,0 +1,12 @@
+{
+  "id": "format-profiles",
+  "title": "Profile summaries",
+  "language": "typescript",
+  "level": "medium",
+  "description": "summarize(user) gives \"Name (age) from City\". The nickname replaces the name when it is not empty. A missing age is shown as \"unknown\" (but an age of 0 is a real age). A user without an address is \"from an unknown city\".",
+  "hint": "One bug crashes, the other quietly shows the wrong text. Try a user without an address and a newborn.",
+  "bugCount": 2,
+  "timeLimitSec": 300,
+  "basePoints": 200,
+  "tags": ["null-handling", "optional-chaining", "nullish"]
+}

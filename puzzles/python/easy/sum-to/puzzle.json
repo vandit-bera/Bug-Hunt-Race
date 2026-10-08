@@ -1,0 +1,12 @@
+{
+  "id": "sum-to",
+  "title": "Sum to n",
+  "language": "python",
+  "level": "easy",
+  "description": "sum_to(n) adds up the whole numbers from 1 to n, including n. sum_to(4) is 10. For n of 0 the sum is 0.",
+  "hint": "What is the last number range(1, n) gives you?",
+  "bugCount": 1,
+  "timeLimitSec": 180,
+  "basePoints": 100,
+  "tags": ["off-by-one", "range", "loops"]
+}

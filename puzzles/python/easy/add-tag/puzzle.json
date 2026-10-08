@@ -1,0 +1,12 @@
+{
+  "id": "add-tag",
+  "title": "Add a tag",
+  "language": "python",
+  "level": "easy",
+  "description": "add_tag(tag, tags=None) appends the tag to the given list and returns that list. When no list is given, it starts a new empty one, so separate calls never share tags.",
+  "hint": "When does Python create a default argument value?",
+  "bugCount": 1,
+  "timeLimitSec": 180,
+  "basePoints": 100,
+  "tags": ["mutable-default", "lists"]
+}
