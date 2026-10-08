@@ -47,6 +47,68 @@ export async function createRoom(
   return ((await heading.textContent()) ?? "").replace("Room ", "");
 }
 
+const LANGUAGE_LABELS = {
+  javascript: "JavaScript",
+  typescript: "TypeScript",
+  python: "Python",
+} as const;
+
+const LEVEL_LABELS = {
+  easy: "Easy",
+  medium: "Medium",
+  hard: "Hard",
+  mixed: "Mixed",
+} as const;
+
+/**
+ * Creates a room through the real Create Room screen (`/room/new`) and waits
+ * for the admin lobby. Returns the room code from the URL.
+ */
+export async function createRoomFromScreen(
+  page: Page,
+  name: string,
+  settings: RoomSettings = {},
+): Promise<string> {
+  await page.goto("/room/new");
+  await fillCreateRoomForm(page, name, settings);
+  await page.getByRole("button", { name: "Create room" }).click();
+  await page.waitForURL(/\/room\/[A-Z2-9]{6}$/);
+  await expect(page.getByRole("heading", { name: "Room ready" })).toBeVisible();
+  return new URL(page.url()).pathname.split("/").pop() ?? "";
+}
+
+/** Picks settings and fills in the admin's name, without submitting. */
+export async function fillCreateRoomForm(
+  page: Page,
+  name: string,
+  settings: RoomSettings = {},
+) {
+  if (settings.language) {
+    await page
+      .getByRole("group", { name: "Language" })
+      .getByLabel(LANGUAGE_LABELS[settings.language], { exact: true })
+      .check();
+  }
+  if (settings.level) {
+    await page
+      .getByRole("group", { name: "Level" })
+      .getByLabel(LEVEL_LABELS[settings.level], { exact: true })
+      .check();
+  }
+  if (settings.totalRounds !== undefined) {
+    await page
+      .getByRole("group", { name: "Rounds" })
+      .getByLabel(
+        settings.totalRounds === null
+          ? "Play until I stop"
+          : String(settings.totalRounds),
+        { exact: true },
+      )
+      .check();
+  }
+  await page.getByLabel("Your name").fill(name);
+}
+
 /**
  * Fills in the join form. Does not wait for success, so tests can also
  * check rejections (locked or full room); follow with `waitForPlayers`.

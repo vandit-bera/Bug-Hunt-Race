@@ -74,17 +74,18 @@ and reconnects, then the admin leaves and the role passes on.
 
 ### Fixture and helpers
 
-| Helper                                    | What it does                                                                                                                                 |
-| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `players(n)`                              | `n` players, each `{ name, page, context }` in its own browser context, so its own anonymous user. Names: Ana, Ben, Cleo, … Max 30 per test. |
-| `createRoom(page, name, settings?)`       | Opens the room lab, creates a **new** room and returns its code. `settings`: `language`, `level`, `totalRounds` (`null` = endless).          |
-| `joinRoom(page, code, name)`              | Fills in the join form. Does not wait, so you can also check rejections (locked or full room).                                               |
-| `waitForPlayers(page, n)`                 | Waits until that page lists exactly `n` players.                                                                                             |
-| `playerList(page)` / `playerRow(page, n)` | Locators for the player list and one player's row (with `admin`, `online` / `offline` badges).                                               |
-| `setOffline(page)`                        | Cuts the player's network: Realtime socket closed, HTTP blocked. Others see them offline at once; the database after 15 s.                   |
-| `reconnect(page)`                         | Network back on. The client reconnects on its own backoff: wait with `RECONNECT`.                                                            |
-| `expectTimerNear(locator, s, opts?)`      | Asserts a timer shows about `s` seconds (default ± 2 s). Pass a function, e.g. `() => secondsUntil(deadline)`, for a running timer.          |
-| `requireSupabase()`                       | Skips the file when no Supabase is configured. Call it at the top of every multi-player spec.                                                |
+| Helper                                        | What it does                                                                                                                                 |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `players(n)`                                  | `n` players, each `{ name, page, context }` in its own browser context, so its own anonymous user. Names: Ana, Ben, Cleo, … Max 30 per test. |
+| `createRoom(page, name, settings?)`           | Opens the room lab, creates a **new** room and returns its code. `settings`: `language`, `level`, `totalRounds` (`null` = endless).          |
+| `createRoomFromScreen(page, name, settings?)` | Creates a room through the real Create Room screen (`/room/new`) and returns its code from the admin lobby URL.                              |
+| `joinRoom(page, code, name)`                  | Fills in the join form. Does not wait, so you can also check rejections (locked or full room).                                               |
+| `waitForPlayers(page, n)`                     | Waits until that page lists exactly `n` players.                                                                                             |
+| `playerList(page)` / `playerRow(page, n)`     | Locators for the player list and one player's row (with `admin`, `online` / `offline` badges).                                               |
+| `setOffline(page)`                            | Cuts the player's network: Realtime socket closed, HTTP blocked. Others see them offline at once; the database after 15 s.                   |
+| `reconnect(page)`                             | Network back on. The client reconnects on its own backoff: wait with `RECONNECT`.                                                            |
+| `expectTimerNear(locator, s, opts?)`          | Asserts a timer shows about `s` seconds (default ± 2 s). Pass a function, e.g. `() => secondsUntil(deadline)`, for a running timer.          |
+| `requireSupabase()`                           | Skips the file when no Supabase is configured. Call it at the top of every multi-player spec.                                                |
 
 Timeouts to pass to `expect`: `LIVE` (3 s, a Realtime round trip),
 `RECONNECT` (20 s, after `reconnect`), `HAND_OVER` (30 s, admin hand-over
