@@ -112,13 +112,31 @@ test.describe("room UI building blocks on /styleguide", () => {
       // The theme panels must fit inside the page padding. Checking only
       // the viewport hides content that is a few px from overflowing, and
       // Linux text rendering adds those few px (CI failed by 2px).
-      const panelRights = await page
+      // On failure, the message names the panel's widest section.
+      const panels = await page
         .locator("main [data-theme]")
-        .evaluateAll((panels) =>
-          panels.map((p) => p.getBoundingClientRect().right),
+        .evaluateAll((elements) =>
+          elements.map((panel) => {
+            let widest = { title: "", minWidth: 0 };
+            for (const section of Array.from(panel.children)) {
+              const clone = section.cloneNode(true) as HTMLElement;
+              clone.style.cssText = "position:absolute;width:min-content";
+              panel.append(clone);
+              const minWidth = clone.getBoundingClientRect().width;
+              clone.remove();
+              if (minWidth > widest.minWidth) {
+                const title = section.querySelector("h2, h3")?.textContent;
+                widest = { title: title ?? section.tagName, minWidth };
+              }
+            }
+            return { right: panel.getBoundingClientRect().right, widest };
+          }),
         );
-      for (const right of panelRights) {
-        expect(right).toBeLessThanOrEqual(width - 24);
+      for (const { right, widest } of panels) {
+        expect(
+          right,
+          `widest section "${widest.title}" is ${widest.minWidth}px`,
+        ).toBeLessThanOrEqual(width - 24);
       }
 
       const panel = page.locator('main [data-theme="light"]');
