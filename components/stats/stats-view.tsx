@@ -50,6 +50,7 @@ function Stats() {
   const [today] = useState(() => toDay(new Date()));
   const earnedCount = BADGES.filter((b) => b.id in progress.earned).length;
   const isEmpty = progress.lastPlayedDay === null;
+  const dailyStreak = currentDailyStreak(progress, today);
 
   return (
     <>
@@ -80,8 +81,8 @@ function Stats() {
           <Figure label="Best win streak" value={progress.bestWinStreak} />
           <Figure
             label="Daily streak"
-            value={currentDailyStreak(progress, today)}
-            unit="days"
+            value={dailyStreak}
+            unit={pluralDays(dailyStreak)}
           />
         </dl>
       </section>
@@ -146,6 +147,10 @@ function Stats() {
   );
 }
 
+function pluralDays(count: number) {
+  return count === 1 ? "day" : "days";
+}
+
 function Figure({
   label,
   value,
@@ -197,7 +202,13 @@ function BadgeCard({
   );
   return (
     <li className="flex">
-      {earned ? card : <Tooltip content={badge.howTo}>{card}</Tooltip>}
+      {earned ? (
+        card
+      ) : (
+        <Tooltip content={badge.howTo} className="flex w-full">
+          {card}
+        </Tooltip>
+      )}
     </li>
   );
 }

@@ -66,7 +66,8 @@ function nextDailyStreak(progress: Progress, day: string): number {
   const { lastPlayedDay, dailyStreak } = progress;
   if (!lastPlayedDay) return 1;
   const gap = daysBetween(lastPlayedDay, day);
-  if (gap === 0) return Math.max(1, dailyStreak);
+  // Same day, or the clock went back: keep the streak.
+  if (gap <= 0) return Math.max(1, dailyStreak);
   return gap === 1 ? dailyStreak + 1 : 1;
 }
 

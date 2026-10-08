@@ -117,7 +117,10 @@ export function ResultScreen({
         )}
         <Stat label="Hint used" value={hintUsed ? "Yes" : "No"} />
         <Stat label="Win streak" value={`🔥 ${finish.winStreak}`} />
-        <Stat label="Daily streak" value={`${finish.dailyStreak} days`} />
+        <Stat
+          label="Daily streak"
+          value={`${finish.dailyStreak} ${finish.dailyStreak === 1 ? "day" : "days"}`}
+        />
         <Stat
           label="Personal best"
           value={

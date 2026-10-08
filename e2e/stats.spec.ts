@@ -65,3 +65,12 @@ test("corrupt stored progress does not crash the page", async ({ page }) => {
     page.getByRole("heading", { name: "Badges (0/6)" }),
   ).toBeVisible();
 });
+
+test("locked badge cards fill their grid cell", async ({ page }) => {
+  await page.goto("/stats");
+  const cell = page.getByRole("listitem").filter({ hasText: "Speed Demon" });
+  const card = cell.locator("[tabindex]");
+  const cellBox = await cell.boundingBox();
+  const cardBox = await card.boundingBox();
+  expect(cardBox?.width).toBeCloseTo(cellBox?.width ?? 0, 0);
+});

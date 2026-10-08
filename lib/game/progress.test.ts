@@ -66,6 +66,15 @@ describe("daily streak", () => {
     expect(p.lastPlayedDay).toBe("2026-03-10");
   });
 
+  it("keeps the streak if the clock goes back a day", () => {
+    let p = applyRound(EMPTY_PROGRESS, event({ day: "2026-03-10" }));
+    p = applyRound(p, event({ day: "2026-03-11" }));
+    p = applyRound(p, event({ day: "2026-03-10" }));
+    expect(p.dailyStreak).toBe(2);
+    p = applyRound(p, event({ day: "2026-03-12" }));
+    expect(p.dailyStreak).toBe(3);
+  });
+
   it("shows 0 once a day has been missed", () => {
     const p = applyRound(EMPTY_PROGRESS, event({ day: "2026-03-10" }));
     expect(currentDailyStreak(p, "2026-03-10")).toBe(1);

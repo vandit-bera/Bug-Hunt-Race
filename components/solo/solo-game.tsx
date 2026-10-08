@@ -283,7 +283,7 @@ function Round({
             <Badge>{LANGUAGES[language].label}</Badge>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           <StreakCounter winStreak={progress.winStreak} />
           <p
             role="timer"

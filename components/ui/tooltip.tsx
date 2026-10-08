@@ -11,9 +11,11 @@ import { cn } from "./cn";
 
 export function Tooltip({
   content,
+  className,
   children,
 }: {
   content: string;
+  className?: string;
   children: ReactElement<{ "aria-describedby"?: string }>;
 }) {
   const id = useId();
@@ -38,7 +40,7 @@ export function Tooltip({
 
   return (
     <span
-      className="group relative inline-flex"
+      className={cn("group relative inline-flex", className)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => {
         setHovered(false);
