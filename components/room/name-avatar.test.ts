@@ -28,6 +28,11 @@ describe("validateName", () => {
     expect(validateName("   ")).not.toBeNull();
     expect(validateName("x".repeat(21))).not.toBeNull();
   });
+
+  it("rejects < and >, which the database refuses", () => {
+    expect(validateName("<b>Mika</b>")).toBe("Names can't contain < or >.");
+    expect(validateName("a > b")).toBe("Names can't contain < or >.");
+  });
 });
 
 describe("profile storage", () => {
