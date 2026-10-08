@@ -68,6 +68,9 @@ function createFakeRealtime() {
     error: null,
   };
 
+  // While set, player-list queries wait here until the test releases them.
+  let heldPlayerQueries: (() => void)[] | null = null;
+
   const rpc = vi.fn(async () => heartbeatResult);
   const from = vi.fn((table: string) => {
     const result = () =>
@@ -75,7 +78,13 @@ function createFakeRealtime() {
         ? { data: roomRow, error: null }
         : { data: playerRows, error: null };
     const builder: Record<string, unknown> = {
-      then: (resolve: (value: unknown) => unknown) => resolve(result()),
+      then: (resolve: (value: unknown) => unknown) => {
+        if (table === "players" && heldPlayerQueries) {
+          heldPlayerQueries.push(() => resolve(result()));
+        } else {
+          resolve(result());
+        }
+      },
     };
     for (const method of ["select", "eq", "is", "order", "single"]) {
       builder[method] = () => builder;
@@ -98,8 +107,17 @@ function createFakeRealtime() {
     channel,
     channelFactory,
     rpc,
+    from,
     removeChannel,
     handlers,
+    /** Holds player-list queries; `release()` answers the oldest one. */
+    holdPlayerQueries: () => {
+      heldPlayerQueries = [];
+      return {
+        release: () => heldPlayerQueries?.shift()?.(),
+        pending: () => heldPlayerQueries?.length ?? 0,
+      };
+    },
     setRoom: (next: Room) => (roomRow = next),
     setPlayers: (next: Player[]) => (playerRows = next),
     setPresence: (next: Record<string, unknown[]>) => (presence = next),
@@ -215,6 +233,48 @@ describe("connectToRoom", () => {
       "Ana",
       "Ben",
     ]);
+  });
+
+  it("keeps the player list moving during a burst of changes, one query at a time", async () => {
+    const fake = createFakeRealtime();
+    const { views } = connect(fake);
+    fake.subscribe("SUBSCRIBED");
+    await vi.waitFor(() => expect(views).toHaveLength(1));
+    const queries = fake.holdPlayerQueries();
+    const playerQueries = () =>
+      fake.from.mock.calls.filter(([table]) => table === "players").length;
+    const before = playerQueries();
+
+    // Three joins land while the first reload is still running.
+    fake.setPlayers([player("p1", "Ana"), player("p2", "Ben")]);
+    fake.fire("postgres_changes", "players");
+    fake.setPlayers([
+      player("p1", "Ana"),
+      player("p2", "Ben"),
+      player("p3", "Cleo"),
+    ]);
+    fake.fire("postgres_changes", "players");
+    fake.fire("postgres_changes", "players");
+    expect(playerQueries() - before).toBe(1);
+
+    // The first answer is shown, not dropped as stale (TB-52: with 30
+    // players joining at once, every answer was dropped until the burst
+    // ended), and one more query covers the changes since it started.
+    await vi.waitFor(() => expect(queries.pending()).toBe(1));
+    queries.release();
+    await vi.waitFor(() => expect(views).toHaveLength(2));
+    expect(playerQueries() - before).toBe(2);
+
+    await vi.waitFor(() => expect(queries.pending()).toBe(1));
+    queries.release();
+    await vi.waitFor(() => expect(views).toHaveLength(3));
+    expect(views[2]!.players.map((p) => p.display_name)).toEqual([
+      "Ana",
+      "Ben",
+      "Cleo",
+    ]);
+    expect(playerQueries() - before).toBe(2);
+    expect(queries.pending()).toBe(0);
   });
 
   it("applies room updates from the change payload", async () => {

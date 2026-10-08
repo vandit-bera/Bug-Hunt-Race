@@ -64,9 +64,12 @@ export function connectToRoom(
   let players: Player[] = [];
   let online: ReadonlySet<string> = new Set();
   let stopped = false;
-  // Only the latest player-list request may write, so a slow response
-  // cannot overwrite a newer one.
-  let playersRequest = 0;
+  // One player-list query at a time. A change that arrives while one runs
+  // asks for one more query after it, so every change is followed by a read
+  // that started after it and answers apply in order. A burst of changes
+  // (30 players joining at once) costs two queries, not one per change.
+  let playersLoading = false;
+  let playersStale = false;
 
   function emit() {
     if (!stopped && room) options.onChange({ room, players, online });
@@ -97,31 +100,31 @@ export function connectToRoom(
     else emit();
   }
 
-  async function loadPlayers(): Promise<Player[] | null> {
-    const request = ++playersRequest;
-    const next = await listPlayers(client, roomId);
-    return request === playersRequest ? next : null;
-  }
-
   async function refreshPlayers() {
+    if (playersLoading) {
+      playersStale = true;
+      return;
+    }
+    playersLoading = true;
     try {
-      const next = await loadPlayers();
-      if (next) {
-        players = next;
+      do {
+        playersStale = false;
+        players = await listPlayers(client, roomId);
         emit();
-      }
+      } while (playersStale && !stopped);
     } catch (error) {
       fail(error);
+    } finally {
+      playersLoading = false;
     }
   }
 
   async function reload() {
     try {
-      const [nextRoom, nextPlayers] = await Promise.all([
+      const [nextRoom] = await Promise.all([
         getRoom(client, roomId),
-        loadPlayers(),
+        refreshPlayers(),
       ]);
-      if (nextPlayers) players = nextPlayers;
       setRoom(nextRoom);
     } catch (error) {
       fail(error);

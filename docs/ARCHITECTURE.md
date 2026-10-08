@@ -441,7 +441,10 @@ Room screens so far:
   - `postgres_changes` UPDATE on `rooms` (`id=eq.<id>`): the new row is
     applied as is.
   - `postgres_changes` on `players` (`room_id=eq.<id>`): the player list is
-    reloaded (simpler than merging partial rows, and still one query).
+    reloaded (simpler than merging partial rows, and still one query). One
+    reload runs at a time; changes that arrive meanwhile cause exactly one
+    more, so a burst of joins costs two queries per client, not one per
+    change.
   - **Presence**, keyed by player id: who has the page open right now. Fast
     (~1 s) but UI-only; anyone who knows the room id could join the channel,
     so nothing authoritative is decided from it.
@@ -474,6 +477,98 @@ Room screens so far:
 - **Limits:** 30 players per room (`room_full` for the 31st). Browsers slow
   timers in background tabs; after several minutes hidden, heartbeats can
   stall and the player counts as disconnected until the tab is visible again.
+
+### Capacity
+
+`pnpm load:room` (`scripts/load/room-30.ts`, TB-52) fills one room with 30
+headless players on the **local** Supabase: the real `lib/db` and `lib/rooms`
+code, one Supabase client and Realtime socket per player. It runs 3 rounds in
+which every player calls `record_score()` at the same moment, drops the admin
+before the last round, and checks that every client ends with the same player
+list and leaderboard. It counts every Realtime frame the clients receive. It
+refuses any Supabase that is not on this machine, and it inserts `rounds` rows
+with the local service-role key because no API creates rounds yet.
+
+Results on a MacBook with Docker Desktop (2026-10-08), 30 players, all joining
+in the same second (`--join-over 30` in brackets, where it differs):
+
+| Change reaching every client                      | p50             | p95             |
+| ------------------------------------------------- | --------------- | --------------- |
+| `join_room()` call                                | 193 ms (30 ms)  | 311 ms (44 ms)  |
+| Join → in every connected client's player list    | 181 ms (226 ms) | 270 ms (478 ms) |
+| Join → online (presence) for every client         | 30 ms (9 ms)    | 42 ms (13 ms)   |
+| Drop / return → presence for every client         | 4 / 8 ms        | 4 / 9 ms        |
+| Room status (countdown, live, …) → every client   | 498 ms          | 523 ms          |
+| `record_score()` call, 30 at once                 | 17 ms           | 20 ms           |
+| End of round → leaderboard loaded on every client | 533 ms          | 540 ms          |
+| Admin drops → hand-over seen by every client      | 11.8 s (13.5 s) | (one event)     |
+
+- Everything stays far under the 2 s goal. Database changes take ~0.5 s through
+  Realtime's Postgres Changes pipeline; presence never touches Postgres and
+  takes milliseconds. The hand-over takes 15 s by design (heartbeats). Over the
+  internet, add one round trip to each number.
+- Correct at 30: identical player lists and leaderboards on all clients; the
+  31st concurrent joiner and a later one get `room_full` ("Room is full");
+  repeated names become "Riya", "Riya (2)", "Riya (3)"; ranks follow points,
+  then the server-measured solve time, and exact ties share the place (every
+  run has some); the earliest-joined connected player takes over as admin and
+  the old admin does not get the role back.
+- **Engine bug found and fixed:** the player-list reload used to drop every
+  answer that a newer change had overtaken. With 30 joins in one second each
+  client kept starting new queries and dropping the answers, so the list froze
+  until the burst ended: p95 **7.6 s** from join to every list. Now one reload
+  runs at a time with at most one more queued (p95 270 ms), instead of one
+  query per change (29 per client, ~870 for the room).
+
+Realtime messages received by all 30 clients (each database change or
+presence update reaches every subscriber, and Supabase bills each delivery):
+
+| Moment                                 | Busiest second                  |
+| -------------------------------------- | ------------------------------- |
+| 30 players join in the same second     | ~1,400 messages                 |
+| 30 players join over 30 s              | ~60 messages                    |
+| One room status change                 | 30 (2 changes in 1 s: 60)       |
+| Admin hand-over (4 row changes)        | ~116                            |
+| One player drops or comes back         | ~30                             |
+| `record_score()` × 30                  | 0 (`scores` is not on Realtime) |
+| Whole run (3 rounds, churn, hand-over) | ~2,300 messages in total        |
+
+Against the Supabase **Free** plan Realtime quotas
+([limits](https://supabase.com/docs/guides/realtime/limits),
+[message billing](https://supabase.com/docs/guides/platform/manage-your-usage/realtime-messages)):
+
+| Quota                        | Free plan | One 30-player room                                                               |
+| ---------------------------- | --------- | -------------------------------------------------------------------------------- |
+| Concurrent connections       | 200       | 30 (one socket per player, one channel each)                                     |
+| Messages per second          | 100       | 30–60 per state change; ~116 at a hand-over; ~1,400 if all 30 join in one second |
+| Presence messages per second | 20        | 1 `track()` per player per (re)connect; 35/s if all join at once                 |
+| Channel joins per second     | 100       | 30 if all join at once                                                           |
+| Messages per month           | 2 million | ~2,300 per game → ~850 games a month                                             |
+
+**How many rooms of 30 at once:** connections cap it at **6** (180 of 200),
+so plan for **5** to leave room for reconnects and second tabs. The message
+rate is the tighter limit in practice: every room event costs about 30
+messages, so about three rooms changing state in the same second reach 100/s.
+Supabase disconnects clients of a project over its message rate
+(`tenant_events`; supabase-js reconnects when it drops), so on the Free plan:
+
+- **One room of 30** (the team game) fits, as long as players do not all join
+  in the same second. In practice joins are spread out (~60/s for 30 joins
+  over 30 s); a burst only costs a short reconnect.
+- **Two or three rooms** at once fit most of the time; their state changes
+  rarely land in the same second.
+- **Live leaderboard (race-round tasks):** do not push one message per solve
+  to all 30 players (30 solves × 30 players = 900 messages within seconds).
+  Load the leaderboard when the round ends (as today), or poll it every few
+  seconds during the round (database reads, not Realtime messages). If a
+  push is needed, send one throttled Broadcast at most once a second; it also
+  skips the per-subscriber RLS check that
+  [Postgres Changes](https://supabase.com/docs/guides/realtime/postgres-changes)
+  does for every event.
+
+Re-run `pnpm load:room` after changing `lib/rooms`, the room functions or the
+Realtime setup. It is not part of CI (too slow); run the "Load test" workflow
+by hand from the Actions tab.
 
 ## Data model
 

@@ -19,6 +19,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:multiplayer": "playwright test e2e/multiplayer",
+    "load:room": "tsx scripts/load/room-30.ts",
     "puzzles:check": "tsx scripts/check-puzzles.ts",
     "puzzles:build": "tsx scripts/build-puzzle-index.ts",
     "db:start": "supabase start",
