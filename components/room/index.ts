@@ -6,4 +6,6 @@ export { QrCode } from "./qr-code";
 export { RoomCodeInput } from "./room-code-input";
 export { RoomErrorCard, type RoomErrorKind } from "./room-error-card";
 export { RoomSettingsForm } from "./room-settings-form";
+export { RoomSettingsSummary } from "./room-settings-summary";
+export { RoomTopBar } from "./room-top-bar";
 export type { RoomSettings, RoundCount } from "./room-settings";
