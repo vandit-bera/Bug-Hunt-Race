@@ -138,7 +138,7 @@ export function SoloSetup({ pools }: { pools: PoolSizes }) {
             href={soloPlayHref({ language, level, round: 0 })}
             className={buttonClass({ size: "lg" })}
           >
-            Start
+            Start<span className="sr-only"> solo practice</span>
           </Link>
           <p className="text-sm text-muted">
             {available} {available === 1 ? "puzzle" : "puzzles"} in this pool.
