@@ -239,8 +239,13 @@ test("Python: preload reports progress, then a second run is fast", async ({
   const bar = page.getByRole("progressbar", {
     name: "Loading the python runner",
   });
-  while (await bar.isVisible().catch(() => false)) {
-    values.push(Number(await bar.getAttribute("value")));
+  // The bar can vanish between samples; a short timeout ends the loop instead of hanging.
+  for (;;) {
+    const value = await bar
+      .getAttribute("value", { timeout: 500 })
+      .catch(() => null);
+    if (value === null) break;
+    values.push(Number(value));
     await page.waitForTimeout(50);
   }
   await expect(page.getByTestId("preload-status")).toHaveText(
