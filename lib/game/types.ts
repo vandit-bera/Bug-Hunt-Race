@@ -1,6 +1,6 @@
 /**
- * Shared game types. Scoring and the room state machine are implemented in
- * later tasks; see docs/ARCHITECTURE.md for the agreed design.
+ * Shared game types. Scoring is in `scoring.ts`, the room state machine in
+ * `room-machine.ts`; see docs/ARCHITECTURE.md.
  */
 
 export type Level = "easy" | "medium" | "hard" | "mixed";

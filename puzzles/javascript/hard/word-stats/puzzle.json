@@ -4,8 +4,8 @@
   "language": "javascript",
   "level": "hard",
   "description": "tokenize splits text into lowercase words (letters and apostrophes, case does not matter). countWords counts them, topWords gives the n most common as [word, count] (equal counts in alphabetical order) and averageLength is the mean word length rounded to the nearest tenth.",
-  "hint": "Try the words \"The\" and \"constructor\", a tie in counts, and an average that ends in .x5.",
-  "bugCount": 4,
+  "hint": "Try the word \"The\", a tie in counts, and an average that ends in .x5.",
+  "bugCount": 3,
   "timeLimitSec": 480,
   "basePoints": 300,
   "tags": ["strings", "objects", "sorting", "rounding"]

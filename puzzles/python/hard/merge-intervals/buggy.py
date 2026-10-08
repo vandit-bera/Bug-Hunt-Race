@@ -7,7 +7,7 @@ def merge_intervals(intervals):
     if not intervals:
         return []
     ordered = list(intervals)
-    merged = [ordered[0]]
+    merged = [list(ordered[0])]
     for start, end in ordered[1:]:
         last = merged[-1]
         if start < last[1]:

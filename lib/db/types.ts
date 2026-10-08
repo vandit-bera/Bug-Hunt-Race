@@ -42,6 +42,7 @@ export type Database = {
           id: string;
           is_admin: boolean;
           joined_at: string;
+          left_at: string | null;
           room_id: string;
           user_id: string;
         };
@@ -53,6 +54,7 @@ export type Database = {
           id?: string;
           is_admin?: boolean;
           joined_at?: string;
+          left_at?: string | null;
           room_id: string;
           user_id: string;
         };
@@ -63,6 +65,7 @@ export type Database = {
           id?: string;
           is_admin?: boolean;
           joined_at?: string;
+          left_at?: string | null;
           room_id?: string;
           user_id?: string;
         };
@@ -310,6 +313,32 @@ export type Database = {
       };
     };
     Functions: {
+      advance_room: {
+        Args: {
+          room_event: Database["public"]["Enums"]["room_event"];
+          target_room_id: string;
+        };
+        Returns: {
+          admin_player_id: string | null;
+          closed_at: string | null;
+          code: string;
+          created_at: string;
+          current_round: number;
+          id: string;
+          language: Database["public"]["Enums"]["language_id"];
+          level: Database["public"]["Enums"]["room_level"];
+          locked: boolean;
+          status: Database["public"]["Enums"]["room_status"];
+          total_rounds: number | null;
+          updated_at: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "rooms";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       create_room: {
         Args: {
           avatar: string;
@@ -325,6 +354,7 @@ export type Database = {
           id: string;
           is_admin: boolean;
           joined_at: string;
+          left_at: string | null;
           room_id: string;
           user_id: string;
         };
@@ -356,6 +386,7 @@ export type Database = {
           id: string;
           is_admin: boolean;
           joined_at: string;
+          left_at: string | null;
           room_id: string;
           user_id: string;
         };
@@ -366,6 +397,7 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      leave_room: { Args: { target_room_id: string }; Returns: undefined };
       record_score: {
         Args: { hint_used: boolean; passed: boolean; round_id: string };
         Returns: {
@@ -385,10 +417,49 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      room_heartbeat: {
+        Args: { target_room_id: string };
+        Returns: Database["public"]["Enums"]["room_status"];
+      };
+      set_room_locked: {
+        Args: { room_locked: boolean; target_room_id: string };
+        Returns: {
+          admin_player_id: string | null;
+          closed_at: string | null;
+          code: string;
+          created_at: string;
+          current_round: number;
+          id: string;
+          language: Database["public"]["Enums"]["language_id"];
+          level: Database["public"]["Enums"]["room_level"];
+          locked: boolean;
+          status: Database["public"]["Enums"]["room_status"];
+          total_rounds: number | null;
+          updated_at: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "rooms";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
     };
     Enums: {
       language_id: "javascript" | "typescript" | "python";
       puzzle_level: "easy" | "medium" | "hard";
+      room_event:
+        | "start"
+        | "begin_round"
+        | "pause"
+        | "resume"
+        | "end_round"
+        | "next_round"
+        | "finish"
+        | "stop"
+        | "play_again"
+        | "close"
+        | "abandon";
       room_level: "easy" | "medium" | "hard" | "mixed";
       room_status:
         | "lobby"
@@ -530,6 +601,19 @@ export const Constants = {
     Enums: {
       language_id: ["javascript", "typescript", "python"],
       puzzle_level: ["easy", "medium", "hard"],
+      room_event: [
+        "start",
+        "begin_round",
+        "pause",
+        "resume",
+        "end_round",
+        "next_round",
+        "finish",
+        "stop",
+        "play_again",
+        "close",
+        "abandon",
+      ],
       room_level: ["easy", "medium", "hard", "mixed"],
       room_status: [
         "lobby",

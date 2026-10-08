@@ -1,6 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { AnimatedNumber } from "@/components/fx/animated-number";
+import { Confetti } from "@/components/fx/confetti";
+import { Countdown } from "@/components/fx/countdown";
+import { ScorePopup } from "@/components/fx/score-popup";
+import { SoundToggle } from "@/components/sound-toggle";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge, LevelBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -47,6 +52,8 @@ export function Showcase({ theme }: { theme: "light" | "dark" }) {
   const toast = useToast();
   const [modalOpen, setModalOpen] = useState(false);
   const modalTitle = `${theme} modal`;
+  const [fxRun, setFxRun] = useState(0);
+  const [confettiRun, setConfettiRun] = useState(0);
 
   return (
     <div
@@ -130,6 +137,28 @@ export function Showcase({ theme }: { theme: "light" | "dark" }) {
           <CardTitle>Round 1</CardTitle>
           <p className="text-muted">3 of 5 players have a passing fix.</p>
         </Card>
+      </Section>
+
+      <Section title="Fun FX">
+        <SoundToggle />
+        <Button size="sm" onClick={() => setFxRun((run) => run + 1)}>
+          Replay count-up and popup
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => setConfettiRun((run) => run + 1)}
+        >
+          Confetti
+        </Button>
+        {confettiRun > 0 && <Confetti key={confettiRun} />}
+        <p className="font-display text-2xl font-bold">
+          <AnimatedNumber key={fxRun} value={250} /> points
+        </p>
+        <ScorePopup key={`popup-${fxRun}`} points={250} />
+        <div className="w-full">
+          <Countdown key={`countdown-${fxRun}`} onDone={() => {}} />
+        </div>
       </Section>
 
       <Section title="Spinner, tooltip, toast, modal">

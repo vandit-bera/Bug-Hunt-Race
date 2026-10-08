@@ -15,7 +15,7 @@ function compareVersions(a: string, b: string): number {
   const left = parseVersion(a);
   const right = parseVersion(b);
   for (let i = 0; i < 3; i++) {
-    if (left[i] !== right[i]) return left[i] - right[i];
+    if (left[i] !== right[i]) return left[i] < right[i] ? -1 : 1;
   }
   return 0;
 }
