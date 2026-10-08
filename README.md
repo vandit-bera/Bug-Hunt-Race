@@ -40,7 +40,8 @@ your machine is out of file watchers: close other dev servers or run
 | `pnpm test`          | Unit tests (Vitest)                             |
 | `pnpm test:watch`    | Unit tests in watch mode                        |
 | `pnpm test:e2e`      | End-to-end tests (Playwright)                   |
-| `pnpm puzzles:check` | Puzzle auto-checker (placeholder until Phase 2) |
+| `pnpm puzzles:check` | Check every puzzle: buggy fails, fix passes     |
+| `pnpm puzzles:build` | Regenerate the puzzle index the app imports     |
 | `pnpm db:start`      | Start local Supabase (Docker)                   |
 | `pnpm db:stop`       | Stop local Supabase                             |
 | `pnpm db:reset`      | Rebuild the local database from migrations      |

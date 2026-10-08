@@ -25,7 +25,8 @@ components/           Reusable UI components.
 lib/runner/           Code-runner plug-in interface, language config, runners.
 lib/game/             Pure game logic: scoring, room state machine, room codes.
 lib/db/               Supabase client, generated types, typed data access.
-puzzles/              Puzzle files (format defined in Phase 2).
+lib/puzzles/          Puzzle format, loader, checker, generated puzzle index.
+puzzles/              Puzzle files: <language>/<level>/<id>/ (see puzzles/README.md).
 supabase/             Local Supabase config, SQL migrations, dev seed, pgTAP tests.
 scripts/              Repo scripts, e.g. the puzzle checker.
 e2e/                  Playwright tests.
@@ -188,6 +189,46 @@ test("async works too", async () => {
 If Turbopack renames its worker bootstrap (`turbopack-worker-*.js`), the CSP
 header stops matching; the E2E test `network APIs are blocked, including
 cross-origin import()` fails when that happens.
+
+## Puzzles
+
+Authoring rules and the file format are in `puzzles/README.md`. Each puzzle
+is a folder `puzzles/<language>/<level>/<id>/` with `puzzle.json`,
+`buggy.<ext>`, `fix.<ext>` and `tests.<ext>`.
+
+```mermaid
+flowchart LR
+  files["puzzles/*/*/*/"] --> load["lib/puzzles/load.ts<br/>validate format"]
+  load --> check["pnpm puzzles:check<br/>runInNode: buggy fails, fix passes"]
+  load --> build["pnpm puzzles:build"]
+  build --> index["lib/puzzles/generated/index.ts<br/>PUZZLES: PublicPuzzle[] (no fix)"]
+  index --> app["App"]
+```
+
+- **Format:** `PuzzleMeta` and `validatePuzzleMeta` in `lib/puzzles/schema.ts`
+  are the source of truth. `puzzles/puzzle.schema.json` mirrors them for
+  editors; a unit test keeps the two in sync. Per level:
+
+  | Level  | Time limit | Base points | Lines of code (buggy and fix) |
+  | ------ | ---------- | ----------- | ----------------------------- |
+  | easy   | 180 s      | 100         | 5–15                          |
+  | medium | 300 s      | 200         | 15–40                         |
+  | hard   | 480 s      | 300         | 40–80                         |
+
+- **Checker (`pnpm puzzles:check`, runs in CI):** validates every folder,
+  then runs each puzzle twice with `runInNode`, the same compiler, harness
+  and lockdown as the browser. The buggy code must end `failed` (a syntax
+  error, crash or timeout is not a fair bug); the fix must end `passed`. It
+  also fails when the generated index is out of date. `--dir <folder>` checks
+  another folder (the tests use `lib/puzzles/fixtures/`).
+- **Index (`pnpm puzzles:build`):** writes `lib/puzzles/generated/index.ts`,
+  committed like `lib/db/types.ts`. It holds `PublicPuzzle` objects: the
+  metadata, buggy code and tests. **The reference fix is never in it**, so it
+  can never reach the client bundle; a unit test checks this. The loader
+  (`load.ts`) and checker use `node:fs` and are for scripts and tests only.
+- `puzzles/` is excluded from `tsc` and ESLint: puzzle files are plain
+  scripts that use the harness globals, and buggy and fix declare the same
+  names.
 
 ## Room state machine
 
