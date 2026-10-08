@@ -115,3 +115,11 @@ for (const language of ["javascript", "typescript", "python"] as const) {
     expect(await violations()).toEqual([]);
   });
 }
+
+test("Home headings go h1 → h2 with no skipped level", async ({ page }) => {
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Race Room" }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { level: 3 })).toHaveCount(0);
+});
