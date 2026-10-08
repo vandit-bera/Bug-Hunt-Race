@@ -16,13 +16,17 @@ function notify() {
 
 export function subscribeTheme(listener: () => void): () => void {
   listeners.add(listener);
-  window.addEventListener("storage", listener);
+  const onExternalChange = () => {
+    applyTheme();
+    notify();
+  };
+  window.addEventListener("storage", onExternalChange);
   const media = window.matchMedia(DARK_QUERY);
-  media.addEventListener("change", listener);
+  media.addEventListener("change", onExternalChange);
   return () => {
     listeners.delete(listener);
-    window.removeEventListener("storage", listener);
-    media.removeEventListener("change", listener);
+    window.removeEventListener("storage", onExternalChange);
+    media.removeEventListener("change", onExternalChange);
   };
 }
 

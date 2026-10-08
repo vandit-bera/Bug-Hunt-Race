@@ -27,3 +27,26 @@ test("styleguide shows components in both themes", async ({ page }) => {
   await expect(page.locator('[data-theme="light"]').first()).toBeVisible();
   await expect(page.locator('[data-theme="dark"]').first()).toBeVisible();
 });
+
+test("system theme updates live when the OS preference changes", async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto("/");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+
+  await page.emulateMedia({ colorScheme: "dark" });
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+});
+
+test("theme change in another tab recolors this tab", async ({ context }) => {
+  const first = await context.newPage();
+  await first.emulateMedia({ colorScheme: "light" });
+  await first.goto("/");
+  const second = await context.newPage();
+  await second.emulateMedia({ colorScheme: "light" });
+  await second.goto("/");
+
+  await second.getByRole("radio", { name: /Dark/ }).click();
+  await expect(first.locator("html")).toHaveAttribute("data-theme", "dark");
+});
