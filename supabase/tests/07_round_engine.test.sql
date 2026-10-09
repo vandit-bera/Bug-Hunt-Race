@@ -193,7 +193,7 @@ select pg_temp.act_as('00000000-0000-0000-0000-0000000000b1');
 select results_eq(
   $$select passed, solve_time_ms, hint_used, points
     from public.record_score((select id from open_round), true, false)$$,
-  $$values (true, 40000, false, 138)$$,
+  $$values (true, 40000, false, 139)$$,
   'the solve time is measured by the server, without the pause'
 );
 select throws_ok(

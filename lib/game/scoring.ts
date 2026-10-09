@@ -46,3 +46,32 @@ export function computeScore(input: ScoreInput): ScoreBreakdown {
   const total = Math.max(0, basePoints + speedBonus - hintPenalty);
   return { base: basePoints, speedBonus, hintPenalty, total };
 }
+
+export interface RaceScoreInput {
+  passed: boolean;
+  basePoints: number;
+  timeLimitSec: number;
+  /** Server-measured, from the round start to the passing run; null unless passed. */
+  solveMs: number | null;
+  hintUsed: boolean;
+}
+
+/**
+ * The points of a race result, as the database stores them
+ * (`private.calculate_points`): the Solo formula, except that a pass in the
+ * 5 s grace after the deadline is timed at the limit and keeps the base
+ * points (no speed bonus) instead of scoring 0.
+ */
+export function computeRaceScore(input: RaceScoreInput): ScoreBreakdown {
+  const { passed, basePoints, timeLimitSec, solveMs, hintUsed } = input;
+  if (!passed || solveMs === null) return ZERO;
+  // 1 ms before the limit: still in time, and the speed bonus rounds to 0.
+  const elapsedMs = Math.min(solveMs, timeLimitSec * 1000 - 1);
+  return computeScore({
+    solved: true,
+    basePoints,
+    timeLimitSec,
+    elapsedSec: elapsedMs / 1000,
+    hintsUsed: hintUsed ? 1 : 0,
+  });
+}
