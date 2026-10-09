@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { readSupabaseConfig } from "./config";
 import type { Database } from "./types";
 
 export type DbClient = SupabaseClient<Database>;
@@ -26,14 +27,9 @@ export function createUserDbClient(accessToken: string): DbClient {
 }
 
 function publicConfig(): { url: string; key: string } {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) {
-    throw new Error(
-      "Supabase is not configured: set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY (see .env.example).",
-    );
-  }
-  return { url, key };
+  const config = readSupabaseConfig();
+  if (!config.ok) throw new Error(config.problem);
+  return config;
 }
 
 /**
