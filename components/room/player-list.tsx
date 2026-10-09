@@ -37,12 +37,16 @@ export function PlayerList({
             <Avatar emoji={player.avatar} name={player.name} size="sm" />
             <span
               title={player.name}
-              className="flex w-0 min-w-0 flex-1 items-baseline gap-1 font-bold"
+              className="flex w-0 min-w-0 flex-1 items-baseline font-bold"
             >
               <span className="min-w-[2ch] truncate">{base}</span>
-              {suffix && <span className="shrink-0">{suffix}</span>}
+              {suffix && (
+                <span className="shrink-0 whitespace-pre"> {suffix}</span>
+              )}
               {player.id === selfId && (
-                <span className="shrink-0 font-normal text-muted">(you)</span>
+                <span className="ml-1 shrink-0 font-normal text-muted">
+                  (you)
+                </span>
               )}
             </span>
             {player.isAdmin && (

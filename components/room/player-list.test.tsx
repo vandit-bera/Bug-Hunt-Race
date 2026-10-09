@@ -36,8 +36,11 @@ describe("PlayerList", () => {
     );
     expect(html).toContain('title="ABCDEFGHIJKLMNOPQRST (2)"');
     expect(html).toMatch(/class="[^"]*truncate[^"]*">ABCDEFGHIJKLMNOPQRST</);
-    expect(html).toContain('<span class="shrink-0">(2)</span>');
-    expect(html).toMatch(/class="shrink-0[^"]*">\(you\)</);
+    expect(html).toContain('<span class="shrink-0 whitespace-pre"> (2)</span>');
+    expect(html).toMatch(/class="ml-1 shrink-0[^"]*">\(you\)</);
+    expect(html.replace(/<[^>]+>/g, "")).toContain(
+      "ABCDEFGHIJKLMNOPQRST (2)(you)",
+    );
   });
 
   it("shows an empty state", () => {
