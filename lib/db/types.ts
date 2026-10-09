@@ -304,8 +304,11 @@ export type Database = {
           avatar: string | null;
           connected: boolean | null;
           display_name: string | null;
+          game_number: number | null;
           is_admin: boolean | null;
+          last_solved_at: string | null;
           player_id: string | null;
+          previous_rank: number | null;
           rank: number | null;
           room_id: string | null;
           rounds_solved: number | null;
