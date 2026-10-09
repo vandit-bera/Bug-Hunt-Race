@@ -2,10 +2,12 @@ import jsQR from "jsqr";
 import type { Page } from "@playwright/test";
 import {
   LIVE,
+  allowClipboard,
   createRoomFromScreen,
   expect,
   fillCreateRoomForm,
   joinRoom,
+  readClipboard,
   requireSupabase,
   test,
   waitForPlayers,
@@ -77,15 +79,16 @@ test("Play until I stop is saved as an endless room", async ({ players }) => {
 
 test("Copy puts the exact invite link on the clipboard", async ({
   players,
+  browserName,
 }) => {
   const [ana] = await players(1);
-  await ana.context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await allowClipboard(ana.context, browserName);
   const code = await createRoomFromScreen(ana.page, ana.name);
 
   await ana.page.getByRole("button", { name: "Copy" }).click();
 
   await expect(ana.page.getByText("Copied! ✅").first()).toBeVisible();
-  expect(await ana.page.evaluate(() => navigator.clipboard.readText())).toBe(
+  expect(await readClipboard(ana.page, browserName)).toBe(
     inviteLinkFor(ana.page, code),
   );
 });

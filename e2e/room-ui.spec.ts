@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { allowClipboard, readClipboard } from "./support";
 
 const LINK = "https://bughuntrace.example/join/K7M2QX";
 
@@ -6,16 +7,15 @@ test.describe("room UI building blocks on /styleguide", () => {
   test("Copy puts the link on the clipboard and confirms", async ({
     page,
     context,
+    browserName,
   }) => {
-    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await allowClipboard(context, browserName);
     await page.goto("/styleguide");
     const panel = page.locator('main [data-theme="light"]');
     await panel.getByRole("button", { name: "Copy" }).click();
 
     await expect(page.getByText("Copied! ✅").first()).toBeVisible();
-    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
-      LINK,
-    );
+    expect(await readClipboard(page, browserName)).toBe(LINK);
   });
 
   test("clipboard denied: shows the link pre-selected", async ({ page }) => {
