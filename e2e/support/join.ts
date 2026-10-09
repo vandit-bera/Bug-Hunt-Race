@@ -89,24 +89,33 @@ export async function scanInviteQr(page: Page): Promise<string> {
   return decoded.data;
 }
 
+/** A signed-in anonymous player with no room yet, straight on the API. */
+export async function apiClient() {
+  const client = createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  );
+  const { error } = await client.auth.signInAnonymously();
+  if (error) throw error;
+  return client;
+}
+
 /**
  * Seats `count` extra players in a room straight through the database API
- * (no browsers), e.g. to fill it to the 30-player limit.
+ * (no browsers), e.g. to fill it to the 30-player limit. Returns the players.
  */
 export async function seatPlayers(code: string, count: number) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const seated = [];
   for (let i = 0; i < count; i++) {
-    const client = createClient<Database>(url, key, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
-    const { error: authError } = await client.auth.signInAnonymously();
-    if (authError) throw authError;
-    const { error } = await client.rpc("join_room", {
+    const client = await apiClient();
+    const { data, error } = await client.rpc("join_room", {
       room_code: code,
       display_name: `Seat ${i + 1}`,
       avatar: "🐝",
     });
     if (error) throw new Error(error.message);
+    seated.push(data);
   }
+  return seated;
 }
