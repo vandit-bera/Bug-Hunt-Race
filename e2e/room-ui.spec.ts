@@ -100,6 +100,35 @@ test.describe("room UI building blocks on /styleguide", () => {
     expect(errors).toEqual([]);
   });
 
+  test("player list keeps name suffixes readable at 320px", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 812 });
+    await page.goto("/styleguide");
+    const row = page
+      .locator('main [data-theme="light"]')
+      .getByRole("list", { name: "Players" })
+      .getByRole("listitem")
+      .filter({ hasText: "(2)" });
+    await expect(row.getByTitle("ABCDEFGHIJKLMNOPQRST (2)")).toBeVisible();
+    for (const text of ["(2)", "(you)"]) {
+      const part = row.getByText(text, { exact: true });
+      await expect(part).toBeVisible();
+      // Cut if any overflow-hidden ancestor in the row ends before it does.
+      const clipped = await part.evaluate((el) => {
+        const right = el.getBoundingClientRect().right;
+        for (let node = el.parentElement; node; node = node.parentElement) {
+          if (getComputedStyle(node).overflow !== "visible") {
+            if (right > node.getBoundingClientRect().right + 0.5) return true;
+          }
+          if (node.tagName === "LI") break;
+        }
+        return false;
+      });
+      expect(clipped, `"${text}" is cut`).toBe(false);
+    }
+  });
+
   for (const width of [320, 375]) {
     test(`no sideways scroll at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 812 });

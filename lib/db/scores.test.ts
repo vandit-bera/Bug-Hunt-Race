@@ -84,6 +84,9 @@ describe("getLeaderboard", () => {
         rounds_solved: 1,
         total_solve_ms: 60_000,
         rank: 1,
+        game_number: 2,
+        last_solved_at: "2026-10-08T00:01:00Z",
+        previous_rank: null,
       },
     ];
     const fake = createFakeClient({ from: [{ data: entries, error: null }] });

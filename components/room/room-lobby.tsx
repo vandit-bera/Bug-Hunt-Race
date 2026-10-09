@@ -106,12 +106,13 @@ export function RoomLobby() {
   }
 }
 
+/** The room closed (admin Close, or abandoned) while the player was in it. */
 function RoomGone() {
   return (
     <RoomFrame>
       <RoomHeader title="Room" />
       <RoomErrorCard
-        kind="not-found"
+        kind="closed"
         action={
           <div className="flex flex-wrap justify-center gap-2">
             <Link href="/join" className={buttonClass()}>

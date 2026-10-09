@@ -50,8 +50,11 @@ export async function getScore(
 }
 
 /**
- * Room leaderboard, best first. Ties on points go to the lower total solve
- * time; exact ties share the same rank.
+ * Leaderboard of the room's current game, best first: a new game (Play
+ * again) starts everyone at 0. Ties on points go to the player whose last
+ * solve came first (server time); exact ties share the same rank.
+ * `previous_rank` is the rank before the latest round, for the up/down
+ * arrows (null until the game's second round).
  */
 export async function getLeaderboard(
   client: DbClient,
@@ -64,7 +67,7 @@ export async function getLeaderboard(
     .order("rank")
     .order("display_name");
   if (error) throw toDbError(error);
-  // See LeaderboardEntry: the view's columns are never null.
+  // See LeaderboardEntry for which view columns can be null.
   return data as LeaderboardEntry[];
 }
 

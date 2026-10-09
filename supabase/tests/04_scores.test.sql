@@ -188,15 +188,17 @@ select results_eq(
 );
 
 reset role;
-insert into public.scores (round_id, player_id, passed, solve_time_ms, points) values
-  ('00000000-0000-0000-0000-00000000ec02', '00000000-0000-0000-0000-0000000001c1', true, 20000, 120),
-  ('00000000-0000-0000-0000-00000000ec02', '00000000-0000-0000-0000-0000000001d2', true, 10000, 120);
+update public.scores set submitted_at = now() - interval '5 minutes'
+where round_id = '00000000-0000-0000-0000-00000000ec01';
+insert into public.scores (round_id, player_id, passed, solve_time_ms, points, submitted_at) values
+  ('00000000-0000-0000-0000-00000000ec02', '00000000-0000-0000-0000-0000000001c1', true, 10000, 120, now() - interval '1 second'),
+  ('00000000-0000-0000-0000-00000000ec02', '00000000-0000-0000-0000-0000000001d2', true, 20000, 120, now() - interval '2 seconds');
 set local role authenticated;
 select results_eq(
-  $$select display_name, total_points, total_solve_ms, rank
+  $$select display_name, total_points, rank
     from public.room_leaderboard order by rank, display_name$$,
-  $$values ('Dan'::text, 470, 100000, 1), ('Cleo'::text, 470, 110000, 2)$$,
-  'equal points: the faster total solve time wins'
+  $$values ('Dan'::text, 470, 1), ('Cleo'::text, 470, 2)$$,
+  'equal points: the earlier last solve (server time) wins'
 );
 select is_empty(
   $$select * from public.room_leaderboard where room_id = '00000000-0000-0000-0000-00000000aaaa'$$,

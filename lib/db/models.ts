@@ -17,13 +17,20 @@ export type RoomPreview =
   Database["public"]["Functions"]["find_open_room"]["Returns"][number];
 
 type LeaderboardRow = Tables<"room_leaderboard">;
+type NullableLeaderboardColumn = "last_solved_at" | "previous_rank";
 
 /**
- * Postgres reports every view column as nullable, but `room_leaderboard`
- * only selects non-null player columns and coalesced totals.
+ * One player's standing in the room's current game. Postgres reports every
+ * view column as nullable, but `room_leaderboard` only selects non-null
+ * player columns and coalesced totals. Truly nullable: `last_solved_at`
+ * (no solve yet) and `previous_rank` (no earlier round in this game).
  */
 export type LeaderboardEntry = {
-  [K in keyof LeaderboardRow]: NonNullable<LeaderboardRow[K]>;
+  [K in Exclude<keyof LeaderboardRow, NullableLeaderboardColumn>]: NonNullable<
+    LeaderboardRow[K]
+  >;
+} & {
+  [K in NullableLeaderboardColumn]: LeaderboardRow[K];
 };
 
 type CurrentRoundRow =

@@ -70,3 +70,16 @@ export function saveProfile(
     // Storage can be blocked or full; the form works without memory.
   }
 }
+
+/**
+ * Splits a seated name like "Riya (2)" into the base name and the duplicate
+ * suffix the database adds, so the UI can truncate only the base.
+ */
+export function splitDuplicateSuffix(name: string): {
+  base: string;
+  suffix: string;
+} {
+  const match = / \(\d+\)$/.exec(name);
+  if (!match || match.index === 0) return { base: name, suffix: "" };
+  return { base: name.slice(0, match.index), suffix: match[0].trimStart() };
+}
