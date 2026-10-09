@@ -24,7 +24,13 @@ export const DB_ERROR_CODES = [
   "round_not_over",
 ] as const;
 
-export type DbErrorCode = (typeof DB_ERROR_CODES)[number] | "unknown";
+/**
+ * `unavailable`: the request never got an answer from the database (network
+ * down, Supabase down, gateway error). Safe to retry; see `toDbError`.
+ * `unknown`: the database answered with an error that has no code above.
+ */
+export type DbErrorCode =
+  (typeof DB_ERROR_CODES)[number] | "unavailable" | "unknown";
 
 export class DbError extends Error {
   readonly code: DbErrorCode;
@@ -46,9 +52,18 @@ function isKnownCode(
   return (DB_ERROR_CODES as readonly string[]).includes(message);
 }
 
-/** Wraps a Supabase/PostgREST error in a typed `DbError`. */
-export function toDbError(error: { message: string }): DbError {
-  return isKnownCode(error.message)
-    ? new DbError(error.message, error.message, { cause: error })
-    : new DbError("unknown", error.message, { cause: error });
+/**
+ * Wraps a Supabase/PostgREST error in a typed `DbError`. Errors from Postgres
+ * and PostgREST always carry a `code` (`P0001`, `PGRST116`, …). Without one
+ * the database never answered: supabase-js reports a failed fetch with an
+ * empty code, and a gateway error page (502, 503, 504) has none at all. Those
+ * become `unavailable`.
+ */
+export function toDbError(error: { message: string; code?: string }): DbError {
+  if (isKnownCode(error.message)) {
+    return new DbError(error.message, error.message, { cause: error });
+  }
+  return new DbError(error.code ? "unknown" : "unavailable", error.message, {
+    cause: error,
+  });
 }

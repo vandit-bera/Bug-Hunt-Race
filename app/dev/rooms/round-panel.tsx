@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import {
   advanceRoom,
   getCurrentRound,
+  getLeaderboard,
   pauseRound,
-  recordScore,
   resumeRound,
   roundClock,
   skipRound,
@@ -14,20 +14,36 @@ import {
   stopGame,
   type CurrentRoundView,
   type DbClient,
+  type LeaderboardEntry,
   type Room,
 } from "@/lib/db";
 import { formatTimeLeft, timeLeftMs } from "@/lib/game/round-clock";
-import { fetchRoundFix, roomErrorMessage } from "@/lib/rooms";
+import {
+  fetchRoundFix,
+  roomErrorMessage,
+  submitRoundResult,
+} from "@/lib/rooms";
 
 interface RoundPanelProps {
   client: DbClient;
   room: Room;
+  playerId: string;
+  /** From the room view: reload after a reconnect. */
+  syncCount: number;
   isAdmin: boolean;
 }
 
 /** Bare round controls for the lab; the race screens (TB-35) replace them. */
-export function RoundPanel({ client, room, isAdmin }: RoundPanelProps) {
+export function RoundPanel({
+  client,
+  room,
+  playerId,
+  syncCount,
+  isAdmin,
+}: RoundPanelProps) {
   const [view, setView] = useState<CurrentRoundView | null>(null);
+  const [leaders, setLeaders] = useState<LeaderboardEntry[]>([]);
+  const [submitting, setSubmitting] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const [fix, setFix] = useState<{ roundId: string; text: string } | null>(
     null,
@@ -35,12 +51,18 @@ export function RoundPanel({ client, room, isAdmin }: RoundPanelProps) {
   const [error, setError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
 
-  // Every round change (start, pause, resume, end) changes the room status.
+  // Every round change (start, pause, resume, end) changes the room status;
+  // after a reconnect (syncCount) the round may have moved on unseen.
   useEffect(() => {
     let cancelled = false;
-    getCurrentRound(client, room.id).then(
-      (next) => {
-        if (!cancelled) setView(next);
+    Promise.all([
+      getCurrentRound(client, room.id),
+      getLeaderboard(client, room.id),
+    ]).then(
+      ([next, board]) => {
+        if (cancelled) return;
+        setView(next);
+        setLeaders(board);
       },
       (caught: unknown) => {
         if (!cancelled) setError(roomErrorMessage(caught));
@@ -49,7 +71,7 @@ export function RoundPanel({ client, room, isAdmin }: RoundPanelProps) {
     return () => {
       cancelled = true;
     };
-  }, [client, room.id, room.status, room.current_round, reload]);
+  }, [client, room.id, room.status, room.current_round, syncCount, reload]);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 250);
@@ -151,14 +173,21 @@ export function RoundPanel({ client, room, isAdmin }: RoundPanelProps) {
           <Button
             size="sm"
             variant="secondary"
+            loading={submitting}
             onClick={() =>
-              act(() =>
-                recordScore(client, {
-                  roundId: round.round_id,
-                  passed: true,
-                  hintUsed: false,
-                }),
-              )
+              act(async () => {
+                setSubmitting(true);
+                try {
+                  await submitRoundResult(client, {
+                    roundId: round.round_id,
+                    playerId,
+                    passed: true,
+                    hintUsed: false,
+                  });
+                } finally {
+                  setSubmitting(false);
+                }
+              })
             }
           >
             Submit solve
@@ -182,6 +211,23 @@ export function RoundPanel({ client, room, isAdmin }: RoundPanelProps) {
           </Button>
         )}
       </div>
+      {leaders.length > 0 && (
+        <ol aria-label="Leaderboard" className="flex flex-col gap-1">
+          {leaders.map((entry) => (
+            <li key={entry.player_id}>
+              {entry.rank}. {entry.display_name}:{" "}
+              <span data-testid={`points-${entry.display_name}`}>
+                {entry.total_points}
+              </span>{" "}
+              points,{" "}
+              <span data-testid={`solved-${entry.display_name}`}>
+                {entry.rounds_solved}
+              </span>{" "}
+              solved
+            </li>
+          ))}
+        </ol>
+      )}
       {fix && fix.roundId === round?.round_id && (
         <pre data-testid="round-fix" className="font-mono text-sm">
           {fix.text}

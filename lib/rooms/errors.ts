@@ -1,4 +1,5 @@
 import { DbError, type DbErrorCode } from "@/lib/db";
+import { isUnavailableError } from "./retry";
 
 const MESSAGES: Partial<Record<DbErrorCode, string>> = {
   room_not_found: "Room not found",
@@ -16,8 +17,12 @@ const MESSAGES: Partial<Record<DbErrorCode, string>> = {
   round_not_over: "The fix is shown when the round ends",
 };
 
+export const UNAVAILABLE_MESSAGE =
+  "Can't reach the game server. Check your connection and try again.";
+
 /** A short message for the player, e.g. "Room is full". */
 export function roomErrorMessage(error: unknown): string {
+  if (isUnavailableError(error)) return UNAVAILABLE_MESSAGE;
   return (
     (error instanceof DbError && MESSAGES[error.code]) ||
     "Something went wrong. Please try again."

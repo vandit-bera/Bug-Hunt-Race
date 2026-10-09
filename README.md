@@ -43,6 +43,7 @@ your machine is out of file watchers: close other dev servers or run
 | `pnpm test:watch`           | Unit tests in watch mode                      |
 | `pnpm test:e2e`             | End-to-end tests (Playwright)                 |
 | `pnpm test:e2e:multiplayer` | Multi-player E2E tests (needs local Supabase) |
+| `pnpm smoke:live`           | Smoke test a deployed site (`E2E_BASE_URL`)   |
 | `pnpm load:room`            | Load test: 30 players × 3 rounds, local only  |
 | `pnpm puzzles:check`        | Check every puzzle: buggy fails, fix passes   |
 | `pnpm puzzles:build`        | Regenerate the puzzle index, fixes and SQL    |
@@ -105,6 +106,11 @@ Supabase database from the migrations, runs the pgTAP tests and checks
 (database, auth, API, Realtime) and runs the two-browser room E2E tests. A PR
 cannot merge unless CI is green. The 30-player load test is too slow for every
 PR: run it by hand from the Actions tab ("Load test", `.github/workflows/load.yml`).
+
+## Launch
+
+Going live (env vars, migrations, Supabase Auth settings, Realtime limits,
+smoke test, rollback): [`docs/LAUNCH.md`](docs/LAUNCH.md).
 
 ## Environment variables
 

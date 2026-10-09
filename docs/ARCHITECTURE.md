@@ -474,6 +474,32 @@ Room screens so far:
 - **Reconnect:** identity is the anonymous Supabase session stored in the
   browser, so `join_room()` from the same browser returns the same player,
   name and score, even when the room is locked or full ("kick-free").
+- **Connection status and outages (TB-55):** `connectToRoom` reports
+  `connecting` → `live` → `reconnecting` (`onStatus`, and `status` from
+  `useRoomConnection`). It is `live` only while the channel is subscribed
+  _and_ the last database call got an answer, so a Supabase outage with the
+  socket still up also counts as reconnecting. supabase-js reconnects the
+  socket with backoff; a channel the server closed is reopened here, and a
+  reload that fails because the database is unreachable is retried, both
+  with `backoffDelayMs` (1 s, 2 s, 4 s, 8 s, then every 10 s). Every reload
+  bumps `RoomView.syncCount`: screens reload anything else they show (the
+  current round, the leaderboard) when it changes, since nothing missed
+  offline is replayed. Room screens show `ReconnectingBanner` while
+  reconnecting (the seat is the database's, so there is nothing to rejoin),
+  and `ConnectionError` (Retry + Home) when they cannot load at all.
+- **Errors:** `toDbError` maps an error with no Postgres/PostgREST code (a
+  failed fetch, a gateway error page) to `unavailable`;
+  `isUnavailableError` also covers Supabase Auth failing to reach its
+  server. `roomErrorMessage` turns it into "Can't reach the game server…".
+  The fix route answers `503 {"error":"unavailable"}` when it cannot reach
+  the database. Pages that crash get `app/error.tsx` (or
+  `app/global-error.tsx` if the root layout fails), unknown URLs
+  `app/not-found.tsx`: game-styled, with Retry/Home, never a stack trace.
+- **Results are counted once:** `submitRoundResult` (lib/rooms) wraps
+  `recordScore`: it retries while Supabase is unreachable, and if an earlier
+  attempt reached the database but its answer was lost, the retry gets
+  `already_submitted` and reads the stored result back instead. The database
+  keeps one result per player per round, so a retry can never add points.
 - **Leaving:** `leave_room()` sets `left_at`: the seat and the name are free
   again, scores stay. Coming back later returns the same player (same scores)
   but obeys the lock, the cap and the name rules like a new player.
@@ -709,6 +735,7 @@ await resumeRound(db, roomId); // admin
 await skipRound(db, roomId); // admin: → round_results
 await stopGame(db, roomId); // admin: live or paused → final_leaderboard
 await recordScore(db, { roundId, passed: true, hintUsed: false });
+await getScore(db, roundId, playerId); // one player's result, or null
 const { fix } = await fetchRoundFix(db, roundId); // after the round ends
 ```
 

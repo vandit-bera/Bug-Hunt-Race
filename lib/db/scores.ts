@@ -31,6 +31,25 @@ export async function recordScore(
 }
 
 /**
+ * One player's result for a round, or null if they have none yet. Room
+ * members can read every result in their room.
+ */
+export async function getScore(
+  client: DbClient,
+  roundId: string,
+  playerId: string,
+): Promise<Score | null> {
+  const { data, error } = await client
+    .from("scores")
+    .select()
+    .eq("round_id", roundId)
+    .eq("player_id", playerId)
+    .maybeSingle();
+  if (error) throw toDbError(error);
+  return data;
+}
+
+/**
  * Room leaderboard, best first. Ties on points go to the lower total solve
  * time; exact ties share the same rank.
  */

@@ -40,7 +40,7 @@ function useCountUp(target: number, disabled: boolean) {
   return disabled ? target : shown;
 }
 
-function ChangeMarker({ change }: { change: number }) {
+export function ChangeMarker({ change }: { change: number }) {
   if (change === 0) return <span className="w-8" />;
   const up = change > 0;
   return (
