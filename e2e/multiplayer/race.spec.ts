@@ -189,6 +189,15 @@ test("everyone done ends the round early; nobody solved shows the fix", async ({
       page.getByRole("heading", { name: "Nobody solved it. Here is the fix:" }),
     ).toBeVisible();
     await expect(page.getByTestId("round-fix")).toHaveText(puzzle.fix, LIVE);
+    // §18: nobody solved it, so everyone scores 0.
+    const rows = page
+      .getByRole("list", { name: "Round 1 results" })
+      .getByRole("listitem");
+    await expect(rows).toHaveCount(2);
+    for (const row of await rows.all()) {
+      await expect(row).toContainText("Not solved");
+      await expect(row).toContainText(/\D0 points$/);
+    }
   }
   await expect(
     ben.page.getByText("Waiting for the admin to start the next round…"),
