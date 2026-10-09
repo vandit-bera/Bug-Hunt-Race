@@ -1,0 +1,197 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardTitle } from "@/components/ui/card";
+import { Spinner } from "@/components/ui/spinner";
+import { useToast } from "@/components/ui/toast";
+import {
+  advanceRoom,
+  type CurrentRoundView,
+  type DbClient,
+  type Player,
+  type Room,
+  type RoomEvent,
+} from "@/lib/db";
+import { anyoneSolved } from "@/lib/game/race";
+import { availableEvents } from "@/lib/game/room-machine";
+import { fetchRoundFix, roomErrorMessage } from "@/lib/rooms";
+import { progressRows, RoundProgress } from "./round-progress";
+import { useRoundScores } from "./use-race-data";
+
+const NEXT_STEPS: { event: RoomEvent; label: string }[] = [
+  { event: "next_round", label: "Next round" },
+  { event: "finish", label: "Final results" },
+];
+
+/**
+ * After a round: everyone's result and, if nobody solved it, the reference
+ * fix (anyone can open it). The admin moves on to the next round or the
+ * final leaderboard.
+ */
+export function RoundResults({
+  client,
+  room,
+  view,
+  players,
+  me,
+}: {
+  client: DbClient;
+  room: Room;
+  view: CurrentRoundView;
+  players: Player[];
+  me: Player;
+}) {
+  const toast = useToast();
+  const { round } = view;
+  const scores = useRoundScores(client, round.round_id, false);
+  const [busy, setBusy] = useState<RoomEvent | null>(null);
+  if (!scores) {
+    return (
+      <Spinner size="lg" label="Loading the results" className="self-center" />
+    );
+  }
+
+  const rows = progressRows(players, scores, round.started_at);
+  const nobodySolved = !anyoneSolved(rows);
+  const steps = me.is_admin
+    ? availableEvents(
+        {
+          state: room.status,
+          currentRound: room.current_round,
+          totalRounds: room.total_rounds,
+        },
+        "admin",
+      )
+    : [];
+
+  async function advance(event: RoomEvent) {
+    setBusy(event);
+    try {
+      await advanceRoom(client, room.id, event);
+    } catch (caught) {
+      setBusy(null);
+      toast({ title: roomErrorMessage(caught), variant: "danger" });
+    }
+  }
+
+  return (
+    <>
+      <Card>
+        <CardTitle as="h2">{round.title}</CardTitle>
+        <RoundProgress rows={rows} label="Round results" selfId={me.id} ended />
+      </Card>
+      <FixReveal
+        client={client}
+        roundId={round.round_id}
+        autoShow={nobodySolved}
+      />
+      {me.is_admin ? (
+        <div className="flex flex-wrap gap-2">
+          {NEXT_STEPS.filter((step) => steps.includes(step.event)).map(
+            (step, index) => (
+              <Button
+                key={step.event}
+                variant={index === 0 ? "primary" : "secondary"}
+                loading={busy === step.event}
+                disabled={busy !== null}
+                onClick={() => void advance(step.event)}
+              >
+                {step.label}
+              </Button>
+            ),
+          )}
+        </div>
+      ) : (
+        <p role="status" className="text-muted">
+          Waiting for the admin to start the next round…
+        </p>
+      )}
+    </>
+  );
+}
+
+type FixState =
+  | { status: "hidden" }
+  | { status: "loading" }
+  | { status: "shown"; fix: string }
+  | { status: "error"; message: string };
+
+/**
+ * The reference fix of the ended round. It comes from the server only now
+ * (`/api/rounds/<id>/fix`); it is never in the page before the round ends.
+ */
+function FixReveal({
+  client,
+  roundId,
+  autoShow,
+}: {
+  client: DbClient;
+  roundId: string;
+  autoShow: boolean;
+}) {
+  const [state, setState] = useState<FixState>({
+    status: autoShow ? "loading" : "hidden",
+  });
+
+  async function load() {
+    setState({ status: "loading" });
+    try {
+      const { fix } = await fetchRoundFix(client, roundId);
+      setState({ status: "shown", fix });
+    } catch (caught) {
+      setState({ status: "error", message: roomErrorMessage(caught) });
+    }
+  }
+
+  useEffect(() => {
+    if (!autoShow) return;
+    let cancelled = false;
+    fetchRoundFix(client, roundId).then(
+      ({ fix }) => {
+        if (!cancelled) setState({ status: "shown", fix });
+      },
+      (caught: unknown) => {
+        if (!cancelled) {
+          setState({ status: "error", message: roomErrorMessage(caught) });
+        }
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [client, roundId, autoShow]);
+
+  return (
+    <Card className="flex flex-col items-start gap-3">
+      <CardTitle as="h3" className="mb-0">
+        {autoShow ? "Nobody solved it. Here is the fix:" : "The fix"}
+      </CardTitle>
+      {state.status === "shown" ? (
+        <pre
+          data-testid="round-fix"
+          className="w-full overflow-x-auto rounded-lg border-2 border-border-subtle bg-background p-3 font-mono text-sm"
+        >
+          {state.fix}
+        </pre>
+      ) : state.status === "error" ? (
+        <>
+          <p role="alert" className="text-danger">
+            {state.message}
+          </p>
+          <Button variant="secondary" onClick={() => void load()}>
+            Try again
+          </Button>
+        </>
+      ) : (
+        <Button
+          variant="secondary"
+          loading={state.status === "loading"}
+          onClick={() => void load()}
+        >
+          Show the fix
+        </Button>
+      )}
+    </Card>
+  );
+}

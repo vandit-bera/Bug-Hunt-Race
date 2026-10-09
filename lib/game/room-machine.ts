@@ -36,7 +36,7 @@ export interface RoomTransition {
 
 export const ROOM_TRANSITIONS: readonly RoomTransition[] = [
   { from: "lobby", event: "start", to: "countdown", by: "admin" },
-  // Countdown over. Admin-driven until task 3.4 adds server-side timers.
+  // Countdown over: the admin's client sends it when the 3-2-1 ends.
   { from: "countdown", event: "begin_round", to: "round_live", by: "admin" },
   { from: "round_live", event: "pause", to: "paused", by: "admin" },
   { from: "paused", event: "resume", to: "round_live", by: "admin" },

@@ -2,19 +2,27 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonClass } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
+import { cn } from "@/components/ui/cn";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast";
+import { FinalLeaderboard } from "@/components/race/final-leaderboard";
+import { RaceCountdown } from "@/components/race/race-countdown";
+import { RaceRound } from "@/components/race/race-round";
+import { RoundResults } from "@/components/race/round-results";
+import { useCurrentRound } from "@/components/race/use-race-data";
 import {
+  advanceRoom,
   findMyMembership,
   getSignedInUserId,
   type DbClient,
   type Player,
   type RoomMembership,
 } from "@/lib/db";
+import { racePhase, type RacePhase } from "@/lib/game/race";
 import { normalizeRoomCode } from "@/lib/game/room-code";
 import {
   MAX_PLAYERS_PER_ROOM,
@@ -69,14 +77,14 @@ export function RoomLobby() {
   switch (seat.status) {
     case "loading":
       return (
-        <>
+        <RoomFrame>
           <RoomHeader title="Room" />
           <Spinner size="lg" label="Loading the room" className="self-center" />
-        </>
+        </RoomFrame>
       );
     case "error":
       return (
-        <>
+        <RoomFrame>
           <RoomHeader title="Room" />
           <RoomErrorCard
             kind="disconnected"
@@ -91,7 +99,7 @@ export function RoomLobby() {
               </Button>
             }
           />
-        </>
+        </RoomFrame>
       );
     case "ready":
       return <Lobby client={seat.client} membership={seat.membership} />;
@@ -101,7 +109,7 @@ export function RoomLobby() {
 /** The room closed (admin Close, or abandoned) while the player was in it. */
 function RoomGone() {
   return (
-    <>
+    <RoomFrame>
       <RoomHeader title="Room" />
       <RoomErrorCard
         kind="closed"
@@ -119,8 +127,26 @@ function RoomGone() {
           </div>
         }
       />
-    </>
+    </RoomFrame>
   );
+}
+
+function phaseTitle(phase: RacePhase, isAdmin: boolean, round: number) {
+  switch (phase) {
+    case "lobby":
+      return isAdmin ? "Room ready" : "Lobby";
+    case "waiting":
+      return "Lobby";
+    case "countdown":
+      return "Get ready";
+    case "loading":
+    case "playing":
+      return `Round ${round}`;
+    case "results":
+      return `Round ${round} results`;
+    case "final":
+      return "Final leaderboard";
+  }
 }
 
 function Lobby({
@@ -137,14 +163,23 @@ function Lobby({
     membership.room.id,
     membership.player.id,
   );
+  const room = live.view?.room ?? membership.room;
+  const current = useCurrentRound(client, room);
   const [leaving, setLeaving] = useState(false);
+  const [starting, setStarting] = useState(false);
   if (live.closed && !leaving) return <RoomGone />;
 
-  const room = live.view?.room ?? membership.room;
   const players = live.view?.players ?? [membership.player];
   const me =
     players.find((player) => player.id === membership.player.id) ??
     membership.player;
+  const phase =
+    room.status === "closed"
+      ? "lobby"
+      : racePhase(
+          room.status,
+          current.view && { joinedLate: current.view.round.joined_late },
+        );
 
   // Presence notices a dropped player within a second; until it has
   // synced, fall back to the database's slower view.
@@ -170,10 +205,109 @@ function Lobby({
     }
   }
 
+  async function start() {
+    setStarting(true);
+    try {
+      await advanceRoom(client, room.id, "start");
+    } catch (caught) {
+      toast({ title: roomErrorMessage(caught), variant: "danger" });
+    } finally {
+      setStarting(false);
+    }
+  }
+
+  let body: ReactNode;
+  switch (phase) {
+    case "lobby":
+    case "waiting":
+      body = (
+        <>
+          {phase === "waiting" ? (
+            <Card role="status">
+              A round is in progress. You&apos;ll play from the next round.
+            </Card>
+          ) : me.is_admin ? (
+            <div className="flex flex-col items-start gap-2">
+              <Button size="lg" loading={starting} onClick={() => void start()}>
+                Start game
+              </Button>
+              <p className="text-sm text-muted">
+                Everyone in the lobby plays. Players who join later wait for the
+                next round.
+              </p>
+            </div>
+          ) : (
+            <Card role="status">Waiting for the admin to start…</Card>
+          )}
+          {me.is_admin && (
+            <RoomReadyPanel
+              client={client}
+              room={room}
+              playerCount={players.length}
+            />
+          )}
+          <Card>
+            <CardTitle as="h2">
+              Players ({players.length}/{MAX_PLAYERS_PER_ROOM})
+            </CardTitle>
+            <PlayerList players={listed} selfId={me.id} />
+          </Card>
+        </>
+      );
+      break;
+    case "countdown":
+      body = (
+        <RaceCountdown
+          key={`${room.game_number}-${room.current_round}`}
+          client={client}
+          room={room}
+          isAdmin={me.is_admin}
+        />
+      );
+      break;
+    case "loading":
+      body = current.error ? (
+        <Card role="alert" className="flex flex-col items-start gap-3">
+          <p>Could not load the round: {current.error}</p>
+          <Button onClick={current.retry}>Try again</Button>
+        </Card>
+      ) : (
+        <Spinner size="lg" label="Loading the round" className="self-center" />
+      );
+      break;
+    case "playing":
+      body = current.view && (
+        <RaceRound
+          key={current.view.round.round_id}
+          client={client}
+          room={room}
+          view={current.view}
+          players={players}
+          me={me}
+        />
+      );
+      break;
+    case "results":
+      body = current.view && (
+        <RoundResults
+          key={current.view.round.round_id}
+          client={client}
+          room={room}
+          view={current.view}
+          players={players}
+          me={me}
+        />
+      );
+      break;
+    case "final":
+      body = <FinalLeaderboard client={client} room={room} me={me} />;
+      break;
+  }
+
   return (
-    <>
+    <RoomFrame wide={phase === "playing"}>
       <RoomHeader
-        title={me.is_admin ? "Room ready" : "Lobby"}
+        title={phaseTitle(phase, me.is_admin, room.current_round)}
         actions={
           <>
             <ConnectionBadge
@@ -207,29 +341,28 @@ function Lobby({
           Connection lost. Reconnecting…
         </p>
       )}
-      {room.status !== "lobby" ? (
-        <Card role="status">
-          A round is in progress. Next round starts soon.
-        </Card>
-      ) : (
-        !me.is_admin && (
-          <Card role="status">Waiting for the admin to start…</Card>
-        )
+      {body}
+    </RoomFrame>
+  );
+}
+
+/** The race needs the full width for the editor; other screens stay narrow. */
+function RoomFrame({
+  wide = false,
+  children,
+}: {
+  wide?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        "mx-auto flex w-full flex-1 flex-col gap-6",
+        wide ? "max-w-6xl" : "max-w-2xl",
       )}
-      {me.is_admin && (
-        <RoomReadyPanel
-          client={client}
-          room={room}
-          playerCount={players.length}
-        />
-      )}
-      <Card>
-        <CardTitle as="h2">
-          Players ({players.length}/{MAX_PLAYERS_PER_ROOM})
-        </CardTitle>
-        <PlayerList players={listed} selfId={me.id} />
-      </Card>
-    </>
+    >
+      {children}
+    </div>
   );
 }
 

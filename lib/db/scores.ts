@@ -70,3 +70,20 @@ export async function getLeaderboard(
   // See LeaderboardEntry for which view columns can be null.
   return data as LeaderboardEntry[];
 }
+
+/**
+ * Every result in a round of a room the caller is in, earliest first. The
+ * admin's progress list and the round results read it.
+ */
+export async function listRoundScores(
+  client: DbClient,
+  roundId: string,
+): Promise<Score[]> {
+  const { data, error } = await client
+    .from("scores")
+    .select()
+    .eq("round_id", roundId)
+    .order("submitted_at");
+  if (error) throw toDbError(error);
+  return data;
+}

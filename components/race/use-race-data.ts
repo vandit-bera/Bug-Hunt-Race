@@ -1,0 +1,121 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import {
+  getCurrentRound,
+  listRoundScores,
+  type CurrentRoundView,
+  type DbClient,
+  type Room,
+  type Score,
+} from "@/lib/db";
+import { roomErrorMessage } from "@/lib/rooms";
+
+/** How often the admin's progress list re-reads the results. */
+export const SCORES_POLL_MS = 2_000;
+
+const ROUND_STATUSES: ReadonlySet<Room["status"]> = new Set([
+  "round_live",
+  "paused",
+  "round_results",
+  "final_leaderboard",
+]);
+
+export interface CurrentRoundState {
+  /** The room's current round; null in the lobby, a countdown or loading. */
+  view: CurrentRoundView | null;
+  error: string | null;
+  retry: () => void;
+}
+
+/**
+ * The room's current round, read again whenever the room status or round
+ * changes (start, pause, resume and end all change the status). A view of an
+ * earlier round is never returned, even while the new one loads.
+ */
+export function useCurrentRound(
+  client: DbClient,
+  room: Room,
+): CurrentRoundState {
+  const [view, setView] = useState<CurrentRoundView | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const hasRound = ROUND_STATUSES.has(room.status);
+
+  useEffect(() => {
+    if (!hasRound) return;
+    let cancelled = false;
+    getCurrentRound(client, room.id).then(
+      (next) => {
+        if (cancelled) return;
+        setView(next);
+        setError(null);
+      },
+      (caught: unknown) => {
+        if (!cancelled) setError(roomErrorMessage(caught));
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    client,
+    room.id,
+    room.status,
+    room.current_round,
+    room.game_number,
+    hasRound,
+    attempt,
+  ]);
+
+  const current =
+    hasRound &&
+    view &&
+    view.round.round_number === room.current_round &&
+    view.round.game_number === room.game_number
+      ? view
+      : null;
+  return { view: current, error, retry: () => setAttempt((n) => n + 1) };
+}
+
+/**
+ * Results of a round, read once, then every `SCORES_POLL_MS` while `poll`
+ * is on. Null until the first read.
+ */
+export function useRoundScores(
+  client: DbClient,
+  roundId: string,
+  poll: boolean,
+): Score[] | null {
+  const [scores, setScores] = useState<{ roundId: string; list: Score[] }>();
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = () =>
+      listRoundScores(client, roundId).then(
+        (list) => {
+          if (!cancelled) setScores({ roundId, list });
+        },
+        // A failed read keeps the last list; the next poll tries again.
+        () => {},
+      );
+    void load();
+    const timer = poll ? setInterval(() => void load(), SCORES_POLL_MS) : null;
+    return () => {
+      cancelled = true;
+      if (timer) clearInterval(timer);
+    };
+  }, [client, roundId, poll]);
+
+  return scores?.roundId === roundId ? scores.list : null;
+}
+
+/** `Date.now()`, refreshed every `intervalMs`. */
+export function useNow(intervalMs = 250): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), intervalMs);
+    return () => clearInterval(timer);
+  }, [intervalMs]);
+  return now;
+}
