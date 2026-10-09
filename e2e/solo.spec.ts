@@ -1,81 +1,11 @@
-import { expect, test, type Page } from "@playwright/test";
-import { loadPuzzles } from "@/lib/puzzles/load";
-
-const puzzles = loadPuzzles("puzzles").flatMap((entry) =>
-  entry.puzzle ? [entry.puzzle] : [],
-);
-
-/** The puzzle on screen: the game picks at random, so read its title. */
-async function currentPuzzle(page: Page) {
-  await expect(page.getByRole("timer")).toBeVisible(COUNTDOWN_WAIT);
-  const heading = page.getByRole("main").getByRole("heading", { level: 1 });
-  await expect(heading).toBeVisible();
-  const title = (await heading.textContent()) ?? "";
-  const puzzle = puzzles.find(({ meta }) => meta.title === title);
-  if (!puzzle) throw new Error(`No puzzle titled "${title}"`);
-  return puzzle;
-}
-
-const LABELS: Record<string, string> = {
-  javascript: "JavaScript",
-  typescript: "TypeScript",
-  python: "Python",
-};
-
-/** Time for the 3-2-1-Go countdown before the puzzle appears. */
-const COUNTDOWN_WAIT = { timeout: 10_000 };
-
-async function start(
-  page: Page,
-  language: string,
-  level: string,
-  { skipCountdown = true } = {},
-) {
-  await page.goto("/solo");
-  await page.getByLabel(LABELS[language], { exact: true }).check();
-  await page.getByLabel(level, { exact: false }).check();
-  await page.getByRole("link", { name: "Start" }).click();
-  if (skipCountdown) {
-    await expect(page.getByRole("timer")).toBeVisible(COUNTDOWN_WAIT);
-  }
-}
-
-/**
- * Replaces the editor content. Select-all does not work in headless
- * Chromium's Monaco, so select from the top to the bottom with the arrow and
- * page keys, then paste (typing would auto-indent Python).
- */
-async function setCode(page: Page, code: string) {
-  await page.locator(".monaco-editor .view-lines").click();
-  for (let i = 0; i < 4; i++) await page.keyboard.press("PageUp");
-  await page.keyboard.press("Home");
-  for (let i = 0; i < 4; i++) await page.keyboard.press("Shift+PageDown");
-  await page.keyboard.press("Shift+End");
-  await page.keyboard.press("Backspace");
-  await expect(page.locator(".monaco-editor .view-line")).toHaveCount(1);
-  await expect(page.locator(".monaco-editor .view-lines")).toHaveText(/^\s*$/);
-  await page.evaluate((text) => {
-    const data = new DataTransfer();
-    data.setData("text/plain", text);
-    document.activeElement?.dispatchEvent(
-      new ClipboardEvent("paste", {
-        clipboardData: data,
-        bubbles: true,
-        cancelable: true,
-      }),
-    );
-  }, code);
-  await expect(page.locator(".monaco-editor .view-lines")).not.toHaveText(
-    /^\s*$/,
-  );
-}
-
-async function solveWithFix(page: Page) {
-  const puzzle = await currentPuzzle(page);
-  await setCode(page, puzzle.fix);
-  await page.getByRole("button", { name: "Run Tests" }).click();
-  return puzzle;
-}
+import { expect, test } from "@playwright/test";
+import {
+  COUNTDOWN_WAIT,
+  currentPuzzle,
+  setCode,
+  solveWithFix,
+  startSolo,
+} from "./support/solo";
 
 test("home links to Solo Practice and shows Race Room as coming soon", async ({
   page,
@@ -95,7 +25,7 @@ for (const language of ["javascript", "typescript"] as const) {
     page.on("console", (message) => {
       if (message.type() === "error") errors.push(message.text());
     });
-    await start(page, language, "Easy");
+    await startSolo(page, language, "Easy");
     await solveWithFix(page);
     await expect(
       page.getByRole("heading", { name: "Bug squashed!" }),
@@ -114,7 +44,7 @@ for (const language of ["javascript", "typescript"] as const) {
 test("a failing fix lists the failed tests and keeps the game going", async ({
   page,
 }) => {
-  await start(page, "javascript", "Easy");
+  await startSolo(page, "javascript", "Easy");
   await expect(page.getByRole("timer")).toBeVisible();
   await page.getByRole("button", { name: "Run Tests" }).click();
   await expect(page.getByText("Failed: ").first()).toBeAttached({
@@ -124,7 +54,7 @@ test("a failing fix lists the failed tests and keeps the game going", async ({
 });
 
 test("Ctrl/Cmd+Enter runs the tests", async ({ page }) => {
-  await start(page, "javascript", "Easy");
+  await startSolo(page, "javascript", "Easy");
   await page.locator(".monaco-editor .view-lines").click();
   await page.keyboard.press("ControlOrMeta+Enter");
   await expect(page.getByText("Failed: ").first()).toBeAttached({
@@ -139,7 +69,7 @@ for (const [opener, title] of [
   test(`Ctrl/Cmd+Enter does nothing while "${title}" is open`, async ({
     page,
   }) => {
-    await start(page, "javascript", "Easy");
+    await startSolo(page, "javascript", "Easy");
     const puzzle = await currentPuzzle(page);
     await setCode(page, puzzle.fix);
     await page.getByRole("button", { name: opener }).click();
@@ -161,7 +91,7 @@ for (const [opener, title] of [
 }
 
 test("a hint costs points after a confirm", async ({ page }) => {
-  await start(page, "javascript", "Easy");
+  await startSolo(page, "javascript", "Easy");
   const puzzle = await currentPuzzle(page);
   await page.getByRole("button", { name: "Hint (costs points)" }).click();
   await expect(page.getByText(/costs 25 points/)).toBeVisible();
@@ -175,7 +105,7 @@ test("a hint costs points after a confirm", async ({ page }) => {
 });
 
 test("give up shows 0 points", async ({ page }) => {
-  await start(page, "javascript", "Easy");
+  await startSolo(page, "javascript", "Easy");
   await page.getByRole("button", { name: "Give up" }).click();
   await page.getByRole("button", { name: "Give up" }).last().click();
   await expect(
@@ -186,7 +116,7 @@ test("give up shows 0 points", async ({ page }) => {
 
 test("time running out ends the game with 0 points", async ({ page }) => {
   await page.clock.install();
-  await start(page, "javascript", "Easy", { skipCountdown: false });
+  await startSolo(page, "javascript", "Easy", { skipCountdown: false });
   await page.clock.runFor(4_000);
   await expect(page.getByRole("timer")).toHaveText("3:00");
   await page.clock.fastForward(181_000);
@@ -197,7 +127,7 @@ test("time running out ends the game with 0 points", async ({ page }) => {
 test("an infinite loop shows Time limit exceeded and the page stays usable", async ({
   page,
 }) => {
-  await start(page, "javascript", "Easy");
+  await startSolo(page, "javascript", "Easy");
   await setCode(page, "while (true) {}");
   await page.getByRole("button", { name: "Run Tests" }).click();
   await expect(page.getByText(/Time limit exceeded/)).toBeVisible({
@@ -209,7 +139,7 @@ test("an infinite loop shows Time limit exceeded and the page stays usable", asy
 });
 
 test("Mixed steps Easy, Medium, Hard on Play again", async ({ page }) => {
-  await start(page, "javascript", "Mixed");
+  await startSolo(page, "javascript", "Mixed");
   await expect(page.locator("header").getByText("Easy")).toBeVisible();
   await page.getByRole("button", { name: "Give up" }).click();
   await page.getByRole("button", { name: "Give up" }).last().click();
@@ -221,7 +151,7 @@ test("Mixed steps Easy, Medium, Hard on Play again", async ({ page }) => {
 
 test("Python: setup, fix the bug, see the result", async ({ page }) => {
   test.setTimeout(90_000);
-  await start(page, "python", "Easy");
+  await startSolo(page, "python", "Easy");
   await solveWithFix(page);
   await expect(
     page.getByRole("heading", { name: "Bug squashed!" }),
@@ -229,14 +159,14 @@ test("Python: setup, fix the bug, see the result", async ({ page }) => {
 });
 
 test("a countdown runs before the puzzle appears", async ({ page }) => {
-  await start(page, "javascript", "Easy", { skipCountdown: false });
+  await startSolo(page, "javascript", "Easy", { skipCountdown: false });
   await expect(page.getByText("Get ready…")).toBeVisible();
   await expect(page.getByRole("timer")).toBeHidden();
   await expect(page.getByRole("timer")).toBeVisible(COUNTDOWN_WAIT);
 });
 
 test("solving shows confetti and counts the score up", async ({ page }) => {
-  await start(page, "javascript", "Easy");
+  await startSolo(page, "javascript", "Easy");
   await solveWithFix(page);
   await expect(page.getByTestId("confetti")).toBeVisible({ timeout: 15_000 });
   await expect(page.getByTestId("score-popup")).toBeVisible();
@@ -247,7 +177,7 @@ test("reduced motion: no confetti or popup, score shown at once", async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await start(page, "javascript", "Easy");
+  await startSolo(page, "javascript", "Easy");
   await solveWithFix(page);
   await expect(
     page.getByRole("heading", { name: "Bug squashed!" }),
@@ -275,7 +205,7 @@ test("pass and fail sounds play on Run Tests once the player has interacted", as
       }
     } as unknown as typeof Audio;
   });
-  await start(page, "javascript", "Easy");
+  await startSolo(page, "javascript", "Easy");
   await page.getByRole("button", { name: "Run Tests" }).click();
   await expect(page.getByText("Failed: ").first()).toBeAttached({
     timeout: 15_000,
@@ -326,7 +256,7 @@ test("the first game's countdown ticks after the Start click", async ({
 
 test("the game header fits a 375 px screen", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 });
-  await start(page, "javascript", "Easy");
+  await startSolo(page, "javascript", "Easy");
   const width = await page.evaluate(() => document.documentElement.scrollWidth);
   expect(width).toBeLessThanOrEqual(375);
   await expect(page.getByRole("radio", { name: /System/ })).toBeInViewport();
@@ -335,7 +265,7 @@ test("the game header fits a 375 px screen", async ({ page }) => {
 test("the score popup sits beside the score, not over the heading", async ({
   page,
 }) => {
-  await start(page, "javascript", "Easy");
+  await startSolo(page, "javascript", "Easy");
   await solveWithFix(page);
   const heading = page.getByRole("heading", { name: "Bug squashed!" });
   await expect(heading).toBeVisible({ timeout: 15_000 });
@@ -385,7 +315,7 @@ for (const width of [360, 375]) {
         JSON.stringify({ totalSolves: 120, winStreak: 120 }),
       );
     });
-    await start(page, "javascript", "Easy");
+    await startSolo(page, "javascript", "Easy");
     await expect(page.getByLabel("Win streak: 120")).toBeVisible();
     await expect(page.getByRole("radiogroup").first()).toBeInViewport({
       ratio: 1,
