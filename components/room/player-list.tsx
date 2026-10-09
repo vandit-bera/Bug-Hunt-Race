@@ -1,5 +1,6 @@
 import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/components/ui/cn";
+import { splitDuplicateSuffix } from "./name-avatar";
 
 export interface RoomPlayer {
   id: string;
@@ -26,40 +27,59 @@ export function PlayerList({
 
   return (
     <ul aria-label="Players" className="flex flex-col gap-2">
-      {players.map((player) => (
-        <li
-          key={player.id}
-          className="flex items-center gap-3 rounded-lg border-2 border-border-subtle bg-surface p-2"
-        >
-          <Avatar emoji={player.avatar} name={player.name} size="sm" />
-          <span className="w-0 min-w-0 flex-1 truncate font-bold">
-            {player.name}
-            {player.id === selfId && (
-              <span className="ml-1 font-normal text-muted">(you)</span>
-            )}
-          </span>
-          {player.isAdmin && (
-            <span role="img" aria-label="Room admin" title="Room admin">
-              👑
-            </span>
-          )}
-          <span
-            className={cn(
-              "inline-flex items-center gap-1.5 text-sm",
-              player.connected ? "text-success" : "text-muted",
-            )}
+      {players.map((player) => {
+        const { base, suffix } = splitDuplicateSuffix(player.name);
+        return (
+          <li
+            key={player.id}
+            className="flex items-center gap-2 rounded-lg border-2 border-border-subtle bg-surface p-2 sm:gap-3"
           >
+            <Avatar emoji={player.avatar} name={player.name} size="sm" />
             <span
-              aria-hidden="true"
-              className={cn(
-                "size-2.5 rounded-full",
-                player.connected ? "bg-success" : "bg-muted",
+              title={player.name}
+              className="flex w-0 min-w-0 flex-1 items-baseline font-bold"
+            >
+              <span className="min-w-[2ch] truncate">{base}</span>
+              {suffix && (
+                <span className="shrink-0 whitespace-pre"> {suffix}</span>
               )}
-            />
-            {player.connected ? "Connected" : "Disconnected"}
-          </span>
-        </li>
-      ))}
+              {player.id === selfId && (
+                <span className="ml-1 shrink-0 font-normal text-muted">
+                  (you)
+                </span>
+              )}
+            </span>
+            {player.isAdmin && (
+              <span
+                role="img"
+                aria-label="Room admin"
+                title="Room admin"
+                className="shrink-0"
+              >
+                👑
+              </span>
+            )}
+            <span
+              title={player.connected ? "Connected" : "Disconnected"}
+              className={cn(
+                "inline-flex shrink-0 items-center gap-1.5 text-sm",
+                player.connected ? "text-success" : "text-muted",
+              )}
+            >
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "size-2.5 rounded-full",
+                  player.connected ? "bg-success" : "bg-muted",
+                )}
+              />
+              <span className="sr-only sm:not-sr-only">
+                {player.connected ? "Connected" : "Disconnected"}
+              </span>
+            </span>
+          </li>
+        );
+      })}
     </ul>
   );
 }
