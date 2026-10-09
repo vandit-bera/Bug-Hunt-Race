@@ -150,3 +150,46 @@ test.describe("room UI building blocks on /styleguide", () => {
     });
   }
 });
+
+test.describe("results building blocks on /styleguide", () => {
+  test("30-player leaderboard fits 320px and works by keyboard", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 812 });
+    await page.goto("/styleguide");
+    const panel = page.locator('main [data-theme="dark"]');
+    const thirty = panel.getByRole("button", { name: "30 players" });
+    await thirty.focus();
+    await page.keyboard.press("Enter");
+    await expect(thirty).toHaveAttribute("aria-pressed", "true");
+
+    const board = panel.getByRole("list", { name: "dark live leaderboard" });
+    await expect(board.getByRole("listitem")).toHaveCount(30);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth - window.innerWidth,
+      ),
+    ).toBeLessThanOrEqual(0);
+
+    const next = panel.getByRole("button", { name: "Play round 2" });
+    await next.focus();
+    await page.keyboard.press("Enter");
+    await expect(
+      panel.getByRole("list", { name: "Round 2 results" }),
+    ).toBeVisible();
+    await expect(panel.getByText("Not solved").first()).toBeVisible();
+  });
+
+  test("podium admin buttons and confetti respect reduced motion", async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto("/styleguide");
+    const panel = page.locator('main [data-theme="light"]');
+    await expect(panel.getByRole("list", { name: "Podium" })).toBeVisible();
+    await panel.getByRole("button", { name: "Replay confetti" }).click();
+    await expect(page.getByTestId("confetti")).toHaveCount(0);
+    await panel.getByRole("button", { name: "Play again" }).click();
+    await expect(panel.getByText("Play again clicked")).toBeVisible();
+  });
+});
