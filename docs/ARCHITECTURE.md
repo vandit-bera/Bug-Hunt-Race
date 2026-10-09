@@ -432,8 +432,7 @@ await connection.leave(); // leave for good
 
 React components can use `useRoomConnection(db, roomId, playerId)`, and
 `roomErrorMessage(error)` gives "Room not found", "Room is full", … for a
-`DbError`. `/dev/rooms` is a bare test page for all of this until the race
-screens (3.2–3.5) exist.
+`DbError`. `/dev/rooms` is a bare test page for all of this.
 
 Room screens so far:
 
@@ -443,6 +442,7 @@ Room screens so far:
   reload keeps it), then connects. The admin sees the ready panel: code,
   invite link `<site>/join/<code>` with Copy and Share, QR (made in the
   browser) with a full-screen view, the Lock switch and "n / 30".
+- `/join`, `/join/<code>`: the join flow (below).
 - All room screens share one Supabase client per tab
   (`getBrowserDbClient()`).
 
@@ -486,6 +486,39 @@ Room screens so far:
 - **Limits:** 30 players per room (`room_full` for the 31st). Browsers slow
   timers in background tabs; after several minutes hidden, heartbeats can
   stall and the player counts as disconnected until the tab is visible again.
+
+### Join flow and lobby (TB-34)
+
+```mermaid
+flowchart LR
+  code["/join<br/>type the code"] --> join
+  link["Invite link"] --> join
+  qr["QR scan"] --> join
+  join["/join/CODE<br/>check room, name + avatar"] -->|join_room| lobby["/room/CODE<br/>live lobby"]
+  lobby -->|reload| lobby
+  lobby -->|no seat| join
+```
+
+- **`/join`** cleans what is typed (uppercase, no spaces, no 0/O/1/I with a
+  hint) and only moves on with a full 6-character code.
+- **`/join/<code>`** checks the room with `find_open_room()` (works before
+  sign-in) and shows "Room not found", "This room is locked" or "Room is full
+  (30/30)" before asking for a name. A player who already has a seat goes
+  straight to the lobby. Join errors map the same way; `invalid_display_name`
+  shows on the name field and `rate_limited` as a "try again shortly" alert.
+  Name and avatar are remembered in localStorage (`bhr:room:profile`).
+- **`/room/<code>`** (the lobby) checks the session with
+  `getSignedInUserId()` (never creates a user) and the seat with
+  `findMyMembership()` (a read: it never takes a seat). No seat → back to
+  `/join/<code>`. The identity is the browser's anonymous session, so a
+  reload or a second tab is the same player. Everyone sees the live player
+  list, the settings, a connection badge and Leave room; players see
+  "Waiting for the admin to start…", or "Next round starts soon" when they
+  joined mid-round.
+- **Leave room** calls `leave_room()` and goes Home. A player who left can
+  still read the room (`is_room_member` ignores `left_at`); that is kept on
+  purpose so a later scoreboard can stay visible, and the lobby does not show
+  it to them because `findMyMembership()` requires `left_at is null`.
 
 ### Capacity
 
@@ -873,6 +906,8 @@ const { room, player } = await createRoom(db, {
 });
 const preview = await findRoomByCode(db, "bug-7kx"); // null if unknown/closed
 await joinRoom(db, { code, displayName, avatar });
+const userId = await getSignedInUserId(db); // null: never signed in here
+await findMyMembership(db, code, userId); // my seat, or null; never joins
 await listPlayers(db, room.id);
 await recordScore(db, { roundId, passed: true, hintUsed: false });
 await getLeaderboard(db, room.id);

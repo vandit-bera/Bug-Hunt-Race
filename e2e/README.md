@@ -88,6 +88,10 @@ and reconnects, then the admin leaves and the role passes on.
 | `setOffline(page)`                            | Cuts the player's network: Realtime socket closed, HTTP blocked. Others see them offline at once; the database after 15 s.                   |
 | `reconnect(page)`                             | Network back on. The client reconnects on its own backoff: wait with `RECONNECT`.                                                            |
 | `expectTimerNear(locator, s, opts?)`          | Asserts a timer shows about `s` seconds (default ± 2 s). Pass a function, e.g. `() => secondsUntil(deadline)`, for a running timer.          |
+| `openLobby(page, code)` / `expectLobby`       | Opens (or waits for) the lobby, `/room/<code>`, of a room the player is in.                                                                  |
+| `joinByCode` / `joinByLink(page, code, n)`    | Joins through `/join` (typed code) or `/join/<code>` (invite link, QR). `enterName(page, n)` fills just the name step. Do not wait.          |
+| `scanInviteQr(page)`                          | Decodes the invite QR on the admin's lobby and returns the link, like a phone would.                                                         |
+| `seatPlayers(code, n)`                        | Seats `n` extra players through the database API, no browsers (e.g. to fill a room to 30).                                                   |
 | `requireSupabase()`                           | Skips the file when no Supabase is configured. Call it at the top of every multi-player spec.                                                |
 
 Timeouts to pass to `expect`: `LIVE` (3 s, a Realtime round trip),

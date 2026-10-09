@@ -42,13 +42,23 @@ function publicConfig(): { url: string; key: string } {
  * a room. Reuses the stored session, so a player who reloads keeps their seat.
  */
 export async function ensureSignedIn(client: DbClient): Promise<string> {
-  const { data: sessionData, error: sessionError } =
-    await client.auth.getSession();
-  if (sessionError) throw sessionError;
-  if (sessionData.session) return sessionData.session.user.id;
+  const userId = await getSignedInUserId(client);
+  if (userId) return userId;
 
   const { data, error } = await client.auth.signInAnonymously();
   if (error) throw error;
   if (!data.user) throw new Error("Anonymous sign-in returned no user.");
   return data.user.id;
+}
+
+/**
+ * The stored anonymous user, or null if this browser never signed in. Unlike
+ * `ensureSignedIn`, never creates a user.
+ */
+export async function getSignedInUserId(
+  client: DbClient,
+): Promise<string | null> {
+  const { data, error } = await client.auth.getSession();
+  if (error) throw error;
+  return data.session?.user.id ?? null;
 }

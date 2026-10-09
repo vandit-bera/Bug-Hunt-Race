@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { ensureSignedIn, type DbClient } from "@/lib/db";
+import { ensureSignedIn, getSignedInUserId, type DbClient } from "@/lib/db";
 
 function fakeAuth(sessionUserId: string | null, anonymousUserId = "anon-user") {
   const auth = {
@@ -45,5 +45,20 @@ describe("ensureSignedIn", () => {
     } as never);
 
     await expect(ensureSignedIn(client)).rejects.toBe(failure);
+  });
+});
+
+describe("getSignedInUserId", () => {
+  it("returns the stored user", async () => {
+    const { client } = fakeAuth("user-1");
+
+    await expect(getSignedInUserId(client)).resolves.toBe("user-1");
+  });
+
+  it("returns null without signing in", async () => {
+    const { auth, client } = fakeAuth(null);
+
+    await expect(getSignedInUserId(client)).resolves.toBeNull();
+    expect(auth.signInAnonymously).not.toHaveBeenCalled();
   });
 });
