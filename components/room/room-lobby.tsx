@@ -13,7 +13,11 @@ import { FinalLeaderboard } from "@/components/race/final-leaderboard";
 import { RaceCountdown } from "@/components/race/race-countdown";
 import { RaceRound } from "@/components/race/race-round";
 import { RoundResults } from "@/components/race/round-results";
-import { useCurrentRound } from "@/components/race/use-race-data";
+import { useAwardToasts } from "@/components/race/use-award-toasts";
+import {
+  useCurrentRound,
+  useRoomAwards,
+} from "@/components/race/use-race-data";
 import {
   advanceRoom,
   findMyMembership,
@@ -167,12 +171,16 @@ function Lobby({
   const current = useCurrentRound(client, room);
   const [leaving, setLeaving] = useState(false);
   const [starting, setStarting] = useState(false);
-  if (live.closed && !leaving) return <RoomGone />;
-
   const players = live.view?.players ?? [membership.player];
   const me =
     players.find((player) => player.id === membership.player.id) ??
     membership.player;
+  const awards = useRoomAwards(client, room, players);
+  useAwardToasts(awards, me.id, {
+    gameNumber: room.game_number,
+    gameOver: room.status === "final_leaderboard",
+  });
+  if (live.closed && !leaving) return <RoomGone />;
   const phase =
     room.status === "closed"
       ? "lobby"
@@ -296,11 +304,14 @@ function Lobby({
           view={current.view}
           players={players}
           me={me}
+          awards={awards}
         />
       );
       break;
     case "final":
-      body = <FinalLeaderboard client={client} room={room} me={me} />;
+      body = (
+        <FinalLeaderboard client={client} room={room} me={me} awards={awards} />
+      );
       break;
   }
 

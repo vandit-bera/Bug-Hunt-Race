@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { RoomAwards } from "@/components/results/award-badges";
 import { RoundResults as RoundResultsList } from "@/components/results/round-results";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
@@ -26,7 +27,7 @@ const NEXT_STEPS: { event: RoomEvent; label: string }[] = [
 
 /**
  * After a round: who solved it, their times and points, the overall rank
- * changes and the standings; if nobody solved it, the reference fix (anyone
+ * changes, the room awards so far and the standings; if nobody solved it, the reference fix (anyone
  * can open it). The admin moves on to the next round or the final
  * leaderboard.
  */
@@ -36,12 +37,14 @@ export function RoundResults({
   view,
   players,
   me,
+  awards,
 }: {
   client: DbClient;
   room: Room;
   view: CurrentRoundView;
   players: Player[];
   me: Player;
+  awards: RoomAwards | null;
 }) {
   const toast = useToast();
   const { round } = view;
@@ -85,6 +88,7 @@ export function RoundResults({
           rows={rows}
           roundNumber={round.round_number}
           currentPlayerId={me.id}
+          awards={awards}
         />
       </Card>
       <LiveStandings leaderboard={leaderboard} selfId={me.id} />

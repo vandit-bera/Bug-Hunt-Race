@@ -5,22 +5,25 @@ import { ChangeMarker } from "@/components/room/live-rank-list";
 import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/components/ui/cn";
 import { isTied, type Standing } from "@/lib/game/standings";
+import { AwardBadges, type RoomAwards } from "./award-badges";
 
 const ROW_HEIGHT_REM = 3.75;
 
 /**
  * Overall standings. Rows slide to their new place when the order changes;
- * exact ties show the same place. `standings` must be ranked (see
- * `computeStandings`).
+ * exact ties show the same place; room awards sit next to the rounds solved.
+ * `standings` must be ranked (see `computeStandings`).
  */
 export function Leaderboard({
   standings,
   currentPlayerId,
   label = "Leaderboard",
+  awards,
 }: {
   standings: readonly Standing[];
   currentPlayerId?: string;
   label?: string;
+  awards?: RoomAwards | null;
 }) {
   const reducedMotion = useReducedMotion();
   if (standings.length === 0) {
@@ -68,8 +71,13 @@ export function Leaderboard({
                 {row.name}
                 {you && <span className="text-muted"> (you)</span>}
               </span>
-              <span className="truncate text-xs text-muted">
-                {row.roundsSolved} solved
+              <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted">
+                <span className="shrink-0">{row.roundsSolved} solved</span>
+                <AwardBadges
+                  awards={awards}
+                  playerId={row.id}
+                  className="min-w-0 flex-nowrap overflow-hidden"
+                />
               </span>
             </span>
             <ChangeMarker change={row.change} />

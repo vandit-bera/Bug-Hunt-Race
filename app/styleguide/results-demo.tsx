@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import type { RoomAwards } from "@/components/results/award-badges";
 import { Leaderboard } from "@/components/results/leaderboard";
 import { Podium } from "@/components/results/podium";
 import { RoundResults } from "@/components/results/round-results";
 import { Button } from "@/components/ui/button";
 import { AVATAR_EMOJIS } from "@/components/room/name-avatar";
+import type { PlayerAwards } from "@/lib/game/room-awards";
 import { computeScore } from "@/lib/game/scoring";
 import {
   computeStandings,
@@ -35,6 +37,22 @@ const NAMES = [
 function sample(index: number, salt: number): number {
   const x = Math.sin(index * 12.9898 + salt * 78.233) * 43758.5453;
   return x - Math.floor(x);
+}
+
+/** Sample room awards: the first players hold one of each kind. */
+const SAMPLE_AWARDS: PlayerAwards[] = [
+  { awards: ["first-blood", "speed-demon"], winStreak: 3 },
+  { awards: ["no-hints-needed"], winStreak: 0 },
+  { awards: [], winStreak: 2 },
+];
+
+function sampleAwards(players: readonly StandingsPlayer[]): RoomAwards {
+  return new Map(
+    SAMPLE_AWARDS.slice(0, players.length).map((awards, index) => [
+      players[index].id,
+      awards,
+    ]),
+  );
 }
 
 function makePlayers(count: number): StandingsPlayer[] {
@@ -89,7 +107,7 @@ function makeGame(count: number) {
   const rounds = Array.from({ length: ROUNDS }, (_, r) =>
     makeRound(players, r + 1),
   );
-  return { players, rounds };
+  return { players, rounds, awards: sampleAwards(players) };
 }
 
 export function ResultsDemo({ theme }: { theme: "light" | "dark" }) {
@@ -98,7 +116,7 @@ export function ResultsDemo({ theme }: { theme: "light" | "dark" }) {
   const [confettiRun, setConfettiRun] = useState(0);
   const [action, setAction] = useState("");
 
-  const { players, rounds } = makeGame(size);
+  const { players, rounds, awards } = makeGame(size);
   const soFar = rounds.slice(0, played);
   const standings = computeStandings(players, soFar);
   const currentPlayerId = players[1]?.id;
@@ -147,6 +165,7 @@ export function ResultsDemo({ theme }: { theme: "light" | "dark" }) {
           rows={roundResults(players, soFar)}
           roundNumber={played}
           currentPlayerId={currentPlayerId}
+          awards={awards}
         />
       </section>
 
@@ -169,6 +188,7 @@ export function ResultsDemo({ theme }: { theme: "light" | "dark" }) {
           confetti={confettiRun > 0}
           onPlayAgain={() => setAction("Play again clicked")}
           onCloseRoom={() => setAction("Close room clicked")}
+          awards={awards}
         />
         <p role="status" className="text-center text-sm text-muted">
           {action}
