@@ -18,15 +18,15 @@ before launch on 2026-10-09.
 ## Summary
 
 No High findings. One Medium finding needs a decision (the reference fixes are
-public on GitHub), three Low findings need a migration and have a follow-up,
-and two Low findings were fixed here.
+public on GitHub), and five Low findings are fixed: two here, three that
+needed a migration in TB-66.
 
 | ID  | Finding                                                             | Risk   | Status                         |
 | --- | ------------------------------------------------------------------- | ------ | ------------------------------ |
 | M1  | Reference fixes are readable in the public GitHub repo              | Medium | Open: TB-65 (decision)         |
-| L1  | Admin can change language, level and rounds in the middle of a game | Low    | Open: TB-66                    |
-| L2  | `room_heartbeat` locks the room before checking membership          | Low    | Open: TB-66                    |
-| L3  | Realtime presence can be spoofed by anyone who knows the room id    | Low    | Open: TB-66                    |
+| L1  | Admin can change language, level and rounds in the middle of a game | Low    | **Fixed** (TB-66)              |
+| L2  | `room_heartbeat` locks the room before checking membership          | Low    | **Fixed** (TB-66)              |
+| L3  | Realtime presence can be spoofed by anyone who knows the room id    | Low    | **Fixed** (TB-66)              |
 | L4  | `/dev` test pages on the live site (one-click "Submit solve")       | Low    | **Fixed** (TB-63)              |
 | L5  | `X-Powered-By: Next.js` header                                      | Low    | **Fixed** (TB-63)              |
 | A1  | Hint penalty is honour-based (client reports `hint_used`)           | Low    | Accepted (same as a fake pass) |
@@ -61,7 +61,7 @@ precondition, or the impact stays in the attacker's own room or browser.
 
 - RLS is on for every table. Tables are read-only for API roles; the only
   direct write is the admin's room settings (`language`, `level`,
-  `total_rounds`, see L1). `status`, `current_round`, `locked`, `is_admin`,
+  `total_rounds`), in the lobby only since TB-66 (L1). `status`, `current_round`, `locked`, `is_admin`,
   `connected`, names and scores can only change through the functions.
 - Signed out (anon): reads `puzzles` and calls `find_open_room` only, which
   returns a preview (code, status, lock, full flag, language, level, player
@@ -132,18 +132,28 @@ limits in `20261008000005_abuse_limits.sql` and the capacity work (TB-52).
   `passed` / `hint_used` are sent) and only runs on the player's own machine,
   under the 5 s timeout. A huge paste or a memory bomb only hurts the
   attacker's tab (I3, already documented in Sandbox limits).
-- **L1 (Low, TB-66):** the admin can update `language`, `level` and
-  `total_rounds` directly at any time. Verified during `round_live`. Impact
-  stays in their own room; the UI only offers settings in the lobby.
-- **L2 (Low, TB-66):** since TB-59, `room_heartbeat` takes the room row lock
-  before checking the caller is in the room, so any signed-in user who knows
-  a room id can add lock contention. Heartbeats are not throttled per player
-  (200 in parallel from one player: ~1.1 s, a few errors). Room ids are uuids
-  only shown to members.
-- **L3 (Low, TB-66):** online dots come from presence on the public Realtime
-  channel `room:<id>`. An outsider who knows the room id joined it and showed
-  another player as online. Database changes on the channel stay RLS-filtered
-  (the outsider got none). Cosmetic.
+- **L1 (Low, fixed in TB-66):** the admin could update `language`, `level`
+  and `total_rounds` directly at any time (verified during `round_live`).
+  Now a `before update` trigger on `rooms` refuses a settings change unless
+  the room is in the `lobby` (`room_settings_locked`). Tests:
+  `supabase/tests/10_db_hardening.test.sql`.
+- **L2 (Low, fixed in TB-66):** since TB-59, `room_heartbeat` took the room
+  row lock before checking the caller is in the room, so any signed-in user
+  who knew a room id could add lock contention. Now it checks membership
+  first, without a lock; an outsider gets `room_not_found` and never touches
+  the row (pgTAP checks the row's `xmax`). Not done: a per-player throttle
+  (200 parallel heartbeats from one player: ~1.1 s, a few errors). A player
+  can only slow their own room, as with any other function they may call.
+- **L3 (Low, fixed in TB-66):** online dots came from presence on the public
+  Realtime channel `room:<id>`; an outsider who knew the room id joined it and
+  showed another player as online. The channel is now private: Realtime
+  policies on `realtime.messages` let only players still in the room read it
+  and track presence, and nobody send broadcasts. The outsider's join is
+  refused (`Unauthorized`), and a public channel of the same name is a
+  different channel. Tests: pgTAP `10` and E2E `e2e/multiplayer/rooms.spec.ts`
+  ("someone outside the room cannot show a player as online"). Left: the
+  presence key is chosen by the client, so a player in the room can still
+  show a roommate as online. Cosmetic, and only inside their own room.
 - **A1 (accepted):** `record_score` trusts the client's `hint_used`, and the
   hint text comes with the puzzle. Skipping the −25% is the same kind of
   cheat as a fake pass.
