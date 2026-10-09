@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   computeStandings,
+  isTied,
   podiumSteps,
   roundResults,
   type RoundResult,
@@ -96,10 +97,9 @@ describe("computeStandings", () => {
   });
 
   it("shows no rank change after the first round", () => {
-    const rows = computeStandings(
-      ["a", "b"].map(player),
-      [[solved("a", 100, 1000), solved("b", 200, 1000)]],
-    );
+    const rows = computeStandings(["a", "b"].map(player), [
+      [solved("a", 100, 1000), solved("b", 200, 1000)],
+    ]);
     expect(rows.map((r) => r.change)).toEqual([0, 0]);
   });
 
@@ -117,13 +117,10 @@ describe("computeStandings", () => {
   });
 
   it("counts a player with no earlier results as last before the round", () => {
-    const rows = computeStandings(
-      ["a", "b", "new"].map(player),
-      [
-        [solved("a", 200, 1000), solved("b", 100, 1000)],
-        [solved("new", 300, 1000)],
-      ],
-    );
+    const rows = computeStandings(["a", "b", "new"].map(player), [
+      [solved("a", 200, 1000), solved("b", 100, 1000)],
+      [solved("new", 300, 1000)],
+    ]);
     expect(rows.map((r) => [r.id, r.change])).toEqual([
       ["new", 2],
       ["a", -1],
@@ -132,21 +129,16 @@ describe("computeStandings", () => {
   });
 
   it("gives no arrow when a tie keeps the same place", () => {
-    const rows = computeStandings(
-      ["a", "b"].map(player),
-      [
-        [solved("a", 100, 1000), solved("b", 100, 1000)],
-        [missed("a"), missed("b")],
-      ],
-    );
+    const rows = computeStandings(["a", "b"].map(player), [
+      [solved("a", 100, 1000), solved("b", 100, 1000)],
+      [missed("a"), missed("b")],
+    ]);
     expect(rows.map((r) => r.change)).toEqual([0, 0]);
   });
 
   it("handles no players and no rounds", () => {
     expect(computeStandings([], [])).toEqual([]);
-    expect(ranks(computeStandings(["a", "b"].map(player), []))).toEqual([
-      1, 1,
-    ]);
+    expect(ranks(computeStandings(["a", "b"].map(player), []))).toEqual([1, 1]);
   });
 });
 
@@ -167,10 +159,9 @@ describe("roundResults", () => {
   });
 
   it("counts a player with no result as not solved", () => {
-    const rows = roundResults(
-      ["a", "b"].map(player),
-      [[solved("a", 100, 1000)]],
-    );
+    const rows = roundResults(["a", "b"].map(player), [
+      [solved("a", 100, 1000)],
+    ]);
     expect(rows[1]).toMatchObject({ id: "b", solveMs: null, rank: 2 });
   });
 
@@ -219,5 +210,17 @@ describe("podiumSteps", () => {
   it("leaves out players with 0 points", () => {
     expect(podiumSteps(standings([100, 0, 0]))).toHaveLength(1);
     expect(podiumSteps(standings([0, 0]))).toEqual([]);
+  });
+});
+
+describe("isTied", () => {
+  it("flags rows that share a place", () => {
+    const rows = [1, 2, 2, 4].map((rank) => ({ rank }));
+    expect(rows.map((_, i) => isTied(rows, i))).toEqual([
+      false,
+      true,
+      true,
+      false,
+    ]);
   });
 });

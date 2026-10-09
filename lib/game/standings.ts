@@ -169,3 +169,9 @@ export function podiumSteps(standings: readonly Standing[]): PodiumStep[] {
   }
   return steps.sort((a, b) => a.rank - b.rank);
 }
+
+/** True when the row at `index` of a ranked list shares its place. */
+export function isTied(rows: readonly { rank: number }[], index: number) {
+  const rank = rows[index].rank;
+  return rows[index - 1]?.rank === rank || rows[index + 1]?.rank === rank;
+}
