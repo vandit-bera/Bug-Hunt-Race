@@ -111,6 +111,8 @@ PR: run it by hand from the Actions tab ("Load test", `.github/workflows/load.ym
 
 Going live (env vars, migrations, Supabase Auth settings, Realtime limits,
 smoke test, rollback): [`docs/LAUNCH.md`](docs/LAUNCH.md).
+Security review before launch (what was checked, results, open risks):
+[`docs/SECURITY_REVIEW.md`](docs/SECURITY_REVIEW.md).
 
 ## Environment variables
 

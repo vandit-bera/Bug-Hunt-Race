@@ -1055,6 +1055,11 @@ pages):
 strict-origin-when-cross-origin`, `X-Frame-Options: DENY` (old browsers).
 - `Permissions-Policy` turns off camera, microphone, geolocation, payment,
   USB and topics. Fullscreen (QR code) and clipboard (invite link) stay on.
+- No `X-Powered-By` (`poweredByHeader: false`).
+
+The `/dev` test pages answer 404 on the live site (`app/dev/layout.tsx`,
+`VERCEL_ENV=production`). The pre-launch review of all of this is in
+[SECURITY_REVIEW.md](SECURITY_REVIEW.md).
 
 ## Performance budget
 
