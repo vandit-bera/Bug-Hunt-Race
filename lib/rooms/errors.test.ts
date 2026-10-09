@@ -17,6 +17,14 @@ describe("roomErrorMessage", () => {
     expect(roomErrorMessage(new DbError(code))).toBe(message);
   });
 
+  it("tells the player when the server cannot be reached", () => {
+    expect(
+      roomErrorMessage(
+        new DbError("unavailable", "TypeError: Failed to fetch"),
+      ),
+    ).toBe("Can't reach the game server. Check your connection and try again.");
+  });
+
   it("falls back to a generic message", () => {
     expect(roomErrorMessage(new DbError("unknown", "socket hang up"))).toBe(
       "Something went wrong. Please try again.",

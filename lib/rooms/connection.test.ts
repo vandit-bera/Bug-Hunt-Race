@@ -4,6 +4,7 @@ import {
   HEARTBEAT_INTERVAL_MS,
   connectToRoom,
   type RoomConnectionOptions,
+  type RoomConnectionStatus,
   type RoomView,
 } from "./connection";
 
@@ -49,18 +50,32 @@ function createFakeRealtime() {
   let subscribeCallback: (status: string, error?: Error) => void = () => {};
   let presence: Record<string, unknown[]> = {};
 
-  const channel = {
-    on: vi.fn((type: string, filter: Record<string, string>, fn: Handler) => {
-      handlers.push({ type, filter, fn });
-      return channel;
-    }),
-    subscribe: vi.fn((callback: typeof subscribeCallback) => {
-      subscribeCallback = callback;
-      return channel;
-    }),
-    track: vi.fn(async () => "ok"),
-    presenceState: () => presence,
-  };
+  interface FakeChannel {
+    on: (type: string, filter: Record<string, string>, fn: Handler) => unknown;
+    subscribe: (callback: typeof subscribeCallback) => unknown;
+    track: () => Promise<string>;
+    presenceState: () => Record<string, unknown[]>;
+  }
+
+  // Every `client.channel()` call opens a new channel; `channel` is the
+  // first, `channels` all of them. `subscribe()` fires on the latest.
+  function makeChannel(): FakeChannel {
+    const opened: FakeChannel = {
+      on: vi.fn((type: string, filter: Record<string, string>, fn: Handler) => {
+        handlers.push({ type, filter, fn });
+        return opened;
+      }),
+      subscribe: vi.fn((callback: typeof subscribeCallback) => {
+        subscribeCallback = callback;
+        return opened;
+      }),
+      track: vi.fn(async () => "ok"),
+      presenceState: () => presence,
+    };
+    channels.push(opened);
+    return opened;
+  }
+  const channels: FakeChannel[] = [];
 
   let roomRow: Room = room;
   let playerRows: Player[] = [player("p1", "Ana")];
@@ -72,12 +87,17 @@ function createFakeRealtime() {
   // While set, player-list queries wait here until the test releases them.
   let heldPlayerQueries: (() => void)[] | null = null;
 
+  // Set to make room and player queries fail as if Supabase were down.
+  let queryError: { message: string; code?: string } | null = null;
+
   const rpc = vi.fn(async () => heartbeatResult);
   const from = vi.fn((table: string) => {
     const result = () =>
-      table === "rooms"
-        ? { data: roomRow, error: null }
-        : { data: playerRows, error: null };
+      queryError
+        ? { data: null, error: queryError }
+        : table === "rooms"
+          ? { data: roomRow, error: null }
+          : { data: playerRows, error: null };
     const builder: Record<string, unknown> = {
       then: (resolve: (value: unknown) => unknown) => {
         if (table === "players" && heldPlayerQueries) {
@@ -93,7 +113,7 @@ function createFakeRealtime() {
     return builder;
   });
   const removeChannel = vi.fn(async () => "ok");
-  const channelFactory = vi.fn(() => channel);
+  const channelFactory = vi.fn(makeChannel);
 
   // The fake implements only what connectToRoom uses.
   const client = {
@@ -105,7 +125,10 @@ function createFakeRealtime() {
 
   return {
     client,
-    channel,
+    get channel() {
+      return channels[0]!;
+    },
+    channels,
     channelFactory,
     rpc,
     from,
@@ -123,6 +146,7 @@ function createFakeRealtime() {
     setPlayers: (next: Player[]) => (playerRows = next),
     setPresence: (next: Record<string, unknown[]>) => (presence = next),
     setHeartbeat: (next: typeof heartbeatResult) => (heartbeatResult = next),
+    setQueryError: (next: typeof queryError) => (queryError = next),
     subscribe: (status: string, error?: Error) =>
       subscribeCallback(status, error),
     fire: (type: string, table: string | null, payload: unknown = {}) => {
@@ -137,16 +161,20 @@ function createFakeRealtime() {
 
 function connect(fake: ReturnType<typeof createFakeRealtime>) {
   const views: RoomView[] = [];
+  const statuses: RoomConnectionStatus[] = [];
   const options: RoomConnectionOptions = {
     roomId: "room-1",
     playerId: "p1",
     onChange: (view) => views.push(view),
     onClosed: vi.fn(),
     onError: vi.fn(),
+    onStatus: (status) => statuses.push(status),
   };
   const connection = connectToRoom(fake.client, options);
-  return { connection, views, options };
+  return { connection, views, options, statuses };
 }
+
+const offline = { message: "TypeError: Failed to fetch", code: "" };
 
 const heartbeatCalls = (rpc: ReturnType<typeof vi.fn>) =>
   rpc.mock.calls.filter(([name]) => name === "room_heartbeat").length;
@@ -383,5 +411,104 @@ describe("connectToRoom", () => {
     expect(fake.rpc).toHaveBeenCalledWith("leave_room", {
       target_room_id: "room-1",
     });
+  });
+});
+
+describe("connectToRoom reconnects", () => {
+  it("goes live once loaded, reconnecting on a drop, and reloads on return", async () => {
+    const fake = createFakeRealtime();
+    const { views, statuses } = connect(fake);
+    fake.subscribe("SUBSCRIBED");
+    await vi.waitFor(() => expect(statuses).toEqual(["live"]));
+    expect(views.at(-1)!.syncCount).toBe(1);
+
+    // The socket drops; Supabase rejoins the channel by itself.
+    fake.subscribe("CHANNEL_ERROR", new Error("socket closed"));
+    expect(statuses).toEqual(["live", "reconnecting"]);
+
+    // Missed while offline: the round started.
+    fake.setRoom({ ...room, status: "round_live", current_round: 1 });
+    fake.subscribe("SUBSCRIBED");
+    await vi.waitFor(() =>
+      expect(statuses).toEqual(["live", "reconnecting", "live"]),
+    );
+    expect(views.at(-1)).toMatchObject({
+      room: { status: "round_live" },
+      syncCount: 2,
+    });
+  });
+
+  it("is reconnecting while the database cannot be reached", async () => {
+    const fake = createFakeRealtime();
+    const { statuses } = connect(fake);
+    fake.subscribe("SUBSCRIBED");
+    await vi.waitFor(() => expect(statuses).toEqual(["live"]));
+
+    fake.setHeartbeat({ data: null, error: offline });
+    await vi.advanceTimersByTimeAsync(HEARTBEAT_INTERVAL_MS);
+    expect(statuses).toEqual(["live", "reconnecting"]);
+
+    fake.setHeartbeat({ data: "lobby", error: null });
+    await vi.advanceTimersByTimeAsync(HEARTBEAT_INTERVAL_MS);
+    expect(statuses).toEqual(["live", "reconnecting", "live"]);
+  });
+
+  it("stays connecting until the first load, whatever fails", async () => {
+    const fake = createFakeRealtime();
+    fake.setHeartbeat({ data: null, error: offline });
+    const { statuses, options } = connect(fake);
+
+    await vi.waitFor(() => expect(options.onError).toHaveBeenCalled());
+    fake.subscribe("CHANNEL_ERROR", new Error("socket closed"));
+    expect(statuses).toEqual([]);
+  });
+
+  it("retries the reload with backoff while the database is down", async () => {
+    const fake = createFakeRealtime();
+    fake.setQueryError(offline);
+    const { views, statuses } = connect(fake);
+    fake.subscribe("SUBSCRIBED");
+    await vi.advanceTimersByTimeAsync(0);
+    expect(views).toEqual([]);
+
+    fake.setQueryError(null);
+    await vi.advanceTimersByTimeAsync(1_000);
+    await vi.waitFor(() => expect(views).not.toEqual([]));
+    expect(views.at(-1)!.syncCount).toBe(1);
+    expect(statuses).toEqual(["live"]);
+  });
+
+  it("opens a new channel, with backoff, when the server closes it", async () => {
+    const fake = createFakeRealtime();
+    const { views, statuses } = connect(fake);
+    fake.subscribe("SUBSCRIBED");
+    await vi.waitFor(() => expect(statuses).toEqual(["live"]));
+
+    fake.subscribe("CLOSED");
+    expect(statuses).toEqual(["live", "reconnecting"]);
+    expect(fake.channels).toHaveLength(1);
+
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(fake.channels).toHaveLength(2);
+    expect(fake.removeChannel).toHaveBeenCalledWith(fake.channels[0]);
+
+    fake.subscribe("SUBSCRIBED");
+    await vi.waitFor(() =>
+      expect(statuses).toEqual(["live", "reconnecting", "live"]),
+    );
+    expect(fake.channels[1]!.track).toHaveBeenCalledWith({ player_id: "p1" });
+    expect(views.at(-1)!.syncCount).toBe(2);
+  });
+
+  it("does not reopen after disconnect", async () => {
+    const fake = createFakeRealtime();
+    const { connection } = connect(fake);
+    fake.subscribe("SUBSCRIBED");
+
+    connection.disconnect();
+    fake.subscribe("CLOSED");
+    await vi.advanceTimersByTimeAsync(30_000);
+
+    expect(fake.channels).toHaveLength(1);
   });
 });

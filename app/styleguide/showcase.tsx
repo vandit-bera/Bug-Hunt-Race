@@ -25,6 +25,7 @@ import {
   type RoomPlayer,
   type RoomSettings,
 } from "@/components/room";
+import { ResultsDemo } from "./results-demo";
 import { RoomFunDemo } from "./room-fun-demo";
 
 const COLOR_TOKENS = [
@@ -301,6 +302,10 @@ export function Showcase({ theme }: { theme: "light" | "dark" }) {
 
       <Section title="Room fun: reactions, solve toasts, live ranks">
         <RoomFunDemo />
+      </Section>
+
+      <Section title="Results: leaderboard, round results, podium">
+        <ResultsDemo theme={theme} />
       </Section>
     </div>
   );

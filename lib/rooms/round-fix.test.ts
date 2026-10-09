@@ -47,14 +47,40 @@ describe("fetchRoundFix", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it("reports a non-JSON failure as unknown", async () => {
+  it("reports a gateway error page as unavailable", async () => {
     const fetchImpl = vi.fn(
       async () => new Response("Bad gateway", { status: 502 }),
     );
 
     await expect(
       fetchRoundFix(client("token-1"), "round-1", fetchImpl),
-    ).rejects.toMatchObject({ code: "unknown", message: "HTTP 502" });
+    ).rejects.toMatchObject({ code: "unavailable", message: "HTTP 502" });
+  });
+
+  it("reports a failed fetch as unavailable", async () => {
+    const fetchImpl = vi.fn(async () => {
+      throw new TypeError("Failed to fetch");
+    });
+
+    await expect(
+      fetchRoundFix(client("token-1"), "round-1", fetchImpl),
+    ).rejects.toMatchObject({ code: "unavailable" });
+  });
+
+  it("reports the route's own unavailable answer as unavailable", async () => {
+    const fetchImpl = respond(503, { error: "unavailable" });
+
+    await expect(
+      fetchRoundFix(client("token-1"), "round-1", fetchImpl),
+    ).rejects.toMatchObject({ code: "unavailable" });
+  });
+
+  it("keeps an unexpected route error as unknown", async () => {
+    const fetchImpl = respond(500, { error: "fix_not_found" });
+
+    await expect(
+      fetchRoundFix(client("token-1"), "round-1", fetchImpl),
+    ).rejects.toMatchObject({ code: "unknown", message: "fix_not_found" });
   });
 });
 

@@ -3,7 +3,7 @@ import type { DbClient } from "./client";
 
 interface FakeResult {
   data: unknown;
-  error: { message: string } | null;
+  error: { message: string; code?: string } | null;
 }
 
 /**

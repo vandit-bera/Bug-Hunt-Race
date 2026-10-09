@@ -72,6 +72,15 @@ test("a dropped player comes back as themselves", async ({ players }) => {
 `e2e/multiplayer/round.spec.ts` plays a race round: same puzzle and timer
 on every screen, pause, a late joiner, and the fix reveal after the end.
 
+`e2e/multiplayer/resilience.spec.ts` covers outages: a player who drops for
+10 s mid-round keeps their seat and score, a result whose answer was lost is
+counted once, an unreachable Supabase shows Retry, and the lobby recovers
+after a drop. It blocks Supabase with `page.route()`.
+
+`e2e/live/smoke.spec.ts` is the launch smoke test (`docs/LAUNCH.md`): run it
+against a deployed site with `E2E_BASE_URL=https://… pnpm smoke:live` (no
+local server is started then). It also runs with the normal E2E suite.
+
 `e2e/multiplayer/harness.spec.ts` is a full example: three players, one drops
 and reconnects, then the admin leaves and the role passes on.
 

@@ -118,7 +118,10 @@ describe("GET /api/rounds/<id>/fix", () => {
 
   it.each([
     ["a non-database error", new Error("connection refused")],
-    ["an unknown database error", toDbError({ message: "boom" })],
+    [
+      "an unknown database error",
+      toDbError({ message: "boom", code: "XX000" }),
+    ],
   ])("hides %s behind a 500", async (_, thrown) => {
     const d = deps({
       revealPuzzle: vi.fn(async () => {
@@ -129,5 +132,17 @@ describe("GET /api/rounds/<id>/fix", () => {
 
     expect(response.status).toBe(500);
     expect(await response.json()).toEqual({ error: "unknown" });
+  });
+
+  it("answers 503 when the database cannot be reached", async () => {
+    const d = deps({
+      revealPuzzle: vi.fn(async () => {
+        throw toDbError({ message: "TypeError: fetch failed", code: "" });
+      }),
+    });
+    const response = await handleFixRequest(request("t"), ROUND_ID, d);
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: "unavailable" });
   });
 });
