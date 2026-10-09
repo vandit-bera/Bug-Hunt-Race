@@ -5,6 +5,7 @@ import type { DbClient } from "@/lib/db";
 import {
   connectToRoom,
   type RoomConnection,
+  type RoomConnectionStatus,
   type RoomView,
 } from "./connection";
 
@@ -13,6 +14,8 @@ export interface RoomConnectionState {
   /** The room closed or the player is no longer in it. */
   closed: boolean;
   error: unknown;
+  /** Show `ReconnectingBanner` (components/room) while `reconnecting`. */
+  status: RoomConnectionStatus;
   /** Leaves the room for good. */
   leave: () => Promise<void>;
 }
@@ -29,6 +32,7 @@ export function useRoomConnection(
   const [view, setView] = useState<RoomView | null>(null);
   const [closed, setClosed] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const [status, setStatus] = useState<RoomConnectionStatus>("connecting");
   const connection = useRef<RoomConnection | null>(null);
 
   useEffect(() => {
@@ -42,6 +46,7 @@ export function useRoomConnection(
       },
       onClosed: () => setClosed(true),
       onError: setError,
+      onStatus: setStatus,
     });
     connection.current = current;
     return () => {
@@ -50,6 +55,7 @@ export function useRoomConnection(
       setView(null);
       setClosed(false);
       setError(null);
+      setStatus("connecting");
     };
   }, [client, roomId, playerId]);
 
@@ -57,6 +63,7 @@ export function useRoomConnection(
     view,
     closed,
     error,
+    status,
     leave: async () => {
       await connection.current?.leave();
     },

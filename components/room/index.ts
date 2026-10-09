@@ -1,8 +1,10 @@
+export { ConnectionError } from "./connection-error";
 export { FullscreenQr } from "./fullscreen-qr";
 export { InvitePanel, type InvitePanelProps } from "./invite-panel";
 export { NameAvatarForm } from "./name-avatar-form";
 export { PlayerList, type RoomPlayer } from "./player-list";
 export { QrCode } from "./qr-code";
+export { ReconnectingBanner } from "./reconnecting-banner";
 export { RoomCodeInput } from "./room-code-input";
 export { RoomErrorCard, type RoomErrorKind } from "./room-error-card";
 export { RoomSettingsForm } from "./room-settings-form";

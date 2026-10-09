@@ -276,11 +276,13 @@ describe("findMyMembership", () => {
 
   it("throws typed errors on query failures", async () => {
     const fake = createFakeClient({
-      from: [{ data: null, error: { message: "socket hang up" } }],
+      from: [
+        { data: null, error: { message: "TypeError: fetch failed", code: "" } },
+      ],
     });
     await expect(
       findMyMembership(fake.client, "BUG7KX", "user-1"),
-    ).rejects.toMatchObject({ name: "DbError", code: "unknown" });
+    ).rejects.toMatchObject({ name: "DbError", code: "unavailable" });
   });
 });
 
@@ -306,7 +308,10 @@ describe("listPlayers", () => {
       from: [
         {
           data: null,
-          error: { message: "permission denied for table players" },
+          error: {
+            message: "permission denied for table players",
+            code: "42501",
+          },
         },
       ],
     });

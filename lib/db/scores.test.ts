@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getLeaderboard, recordScore } from "@/lib/db";
+import { getLeaderboard, getScore, recordScore } from "@/lib/db";
 import type { LeaderboardEntry, Score } from "@/lib/db";
 import { createFakeClient } from "./test-utils";
 
@@ -43,6 +43,25 @@ describe("recordScore", () => {
         hintUsed: false,
       }),
     ).rejects.toMatchObject({ name: "DbError", code: "round_not_live" });
+  });
+});
+
+describe("getScore", () => {
+  it("reads one player's result for a round", async () => {
+    const fake = createFakeClient({ from: [{ data: null, error: null }] });
+
+    await expect(
+      getScore(fake.client, "round-1", "player-1"),
+    ).resolves.toBeNull();
+    expect(fake.queries[0]).toEqual({
+      table: "scores",
+      calls: [
+        ["select", []],
+        ["eq", ["round_id", "round-1"]],
+        ["eq", ["player_id", "player-1"]],
+        ["maybeSingle", []],
+      ],
+    });
   });
 });
 
