@@ -81,6 +81,23 @@ async function openRoom(
   return code;
 }
 
+/**
+ * A player's name keeps a readable width in a results list on phones: the
+ * status and points wrap below it instead of squeezing it (QA, TB-35).
+ */
+async function expectNameFits(page: Page, list: string, name: string) {
+  const viewport = page.viewportSize();
+  for (const width of [320, 414]) {
+    await page.setViewportSize({ width, height: 800 });
+    const box = await page
+      .getByRole("list", { name: list })
+      .getByText(name, { exact: true })
+      .boundingBox();
+    expect(box?.width, `${name} at ${width} px`).toBeGreaterThanOrEqual(60);
+  }
+  if (viewport) await page.setViewportSize(viewport);
+}
+
 async function startGame(admin: Player, racers: Player[]) {
   await admin.page.getByRole("button", { name: "Start game" }).click();
   for (const { page } of racers) {
@@ -144,6 +161,7 @@ test("a race: same countdown, puzzle and clock; solve, pause, skip, late joiner,
   await expect(
     progress.getByRole("listitem").filter({ hasText: cleo.name }),
   ).toContainText("Still fixing");
+  await expectNameFits(ana.page, "Player progress", ben.name);
 
   // Pause freezes every clock on the same value; Resume runs them again.
   await ana.page.getByRole("button", { name: "Pause" }).click();
@@ -199,6 +217,7 @@ test("a race: same countdown, puzzle and clock; solve, pause, skip, late joiner,
   await expect(
     results.getByRole("listitem").filter({ hasText: cleo.name }),
   ).toContainText("Not solved");
+  await expectNameFits(cleo.page, "Round results", ben.name);
   await cleo.page.getByRole("button", { name: "Show the fix" }).click();
   await expect(cleo.page.getByTestId("round-fix")).toHaveText(puzzle.fix);
 
@@ -228,6 +247,7 @@ test("a race: same countdown, puzzle and clock; solve, pause, skip, late joiner,
   await expect(
     ben.page.getByRole("list", { name: "Leaderboard" }).getByRole("listitem"),
   ).toHaveCount(4);
+  await expectNameFits(cleo.page, "Leaderboard", ben.name);
   await expect(
     ben.page
       .getByRole("list", { name: "Leaderboard" })

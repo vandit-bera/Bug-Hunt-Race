@@ -84,7 +84,7 @@ export function FinalLeaderboard({
             {entries.map((entry) => (
               <li
                 key={entry.player_id}
-                className="flex items-center gap-3 rounded-lg border-2 border-border-subtle bg-surface p-2"
+                className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border-2 border-border-subtle bg-surface p-2"
               >
                 <span className="w-8 text-center font-display font-bold tabular-nums">
                   #{entry.rank}
@@ -94,7 +94,7 @@ export function FinalLeaderboard({
                   name={entry.display_name}
                   size="sm"
                 />
-                <span className="w-0 min-w-0 flex-1 truncate font-bold">
+                <span className="min-w-24 flex-1 basis-24 truncate font-bold">
                   {entry.display_name}
                   {entry.player_id === me.id && (
                     <span className="ml-1 font-normal text-muted">(you)</span>

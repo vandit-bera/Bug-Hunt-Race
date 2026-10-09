@@ -61,7 +61,7 @@ export function RoundProgress({
           className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border-2 border-border-subtle bg-surface p-2"
         >
           <Avatar emoji={player.avatar} name={player.name} size="sm" />
-          <span className="w-0 min-w-0 flex-1 truncate font-bold">
+          <span className="min-w-24 flex-1 basis-24 truncate font-bold">
             {player.name}
             {player.id === selfId && (
               <span className="ml-1 font-normal text-muted">(you)</span>
