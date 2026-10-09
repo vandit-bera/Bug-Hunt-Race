@@ -35,6 +35,8 @@ const nextConfig: NextConfig = {
   // serve built JS from the same paths locally and in CI as in production.
   supportsImmutableAssets: true,
   partialPrefetching: true,
+  // No `X-Powered-By: Next.js`: it only tells a scanner what to try.
+  poweredByHeader: false,
   async headers() {
     return [
       {

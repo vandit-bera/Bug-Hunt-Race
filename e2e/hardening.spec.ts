@@ -96,6 +96,7 @@ test("pages send the security headers", async ({ request }) => {
     );
     expect(headers["permissions-policy"], path).toContain("camera=()");
     expect(headers["x-frame-options"], path).toBe("DENY");
+    expect(headers["x-powered-by"], path).toBeUndefined();
   }
 });
 
