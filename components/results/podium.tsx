@@ -58,7 +58,7 @@ function Step({ step }: { step: PodiumStep }) {
 /**
  * Final results: the top 3 on a podium (tied players share a step), the full
  * list below and a confetti burst. Play again / Close room show only for the
- * admin.
+ * admin; `busy` names the one that is running and disables both.
  */
 export function Podium({
   standings,
@@ -67,6 +67,7 @@ export function Podium({
   confetti = true,
   onPlayAgain,
   onCloseRoom,
+  busy = null,
 }: {
   standings: readonly Standing[];
   currentPlayerId?: string;
@@ -74,6 +75,7 @@ export function Podium({
   confetti?: boolean;
   onPlayAgain?: () => void;
   onCloseRoom?: () => void;
+  busy?: "play_again" | "close" | null;
 }) {
   const steps = podiumSteps(standings);
   const ordered = DISPLAY_ORDER.flatMap((rank) =>
@@ -104,9 +106,22 @@ export function Podium({
       />
       {isAdmin && (onPlayAgain || onCloseRoom) && (
         <div className="flex flex-wrap justify-center gap-3">
-          {onPlayAgain && <Button onClick={onPlayAgain}>Play again</Button>}
+          {onPlayAgain && (
+            <Button
+              loading={busy === "play_again"}
+              disabled={busy !== null}
+              onClick={onPlayAgain}
+            >
+              Play again
+            </Button>
+          )}
           {onCloseRoom && (
-            <Button variant="secondary" onClick={onCloseRoom}>
+            <Button
+              variant="secondary"
+              loading={busy === "close"}
+              disabled={busy !== null}
+              onClick={onCloseRoom}
+            >
               Close room
             </Button>
           )}
