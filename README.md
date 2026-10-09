@@ -43,7 +43,7 @@ your machine is out of file watchers: close other dev servers or run
 | `pnpm test:watch`           | Unit tests in watch mode                      |
 | `pnpm test:e2e`             | End-to-end tests (Playwright)                 |
 | `pnpm test:e2e:multiplayer` | Multi-player E2E tests (needs local Supabase) |
-| `pnpm smoke:live`           | Smoke test a deployed site (`E2E_BASE_URL`)   |
+| `pnpm test:smoke`           | Smoke test a site: `--base-url <url>`         |
 | `pnpm load:room`            | Load test: 30 players × 3 rounds, local only  |
 | `pnpm puzzles:check`        | Check every puzzle: buggy fails, fix passes   |
 | `pnpm puzzles:build`        | Regenerate the puzzle index, fixes and SQL    |
