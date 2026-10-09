@@ -8,7 +8,8 @@ browsers against a **local** Supabase and are skipped without one.
 e2e/
   *.spec.ts            Single-player flows (no database).
   multiplayer/         Room features with 2+ players (local Supabase).
-  support/             The multi-player harness: fixtures and helpers.
+  smoke/               Smoke test of a deployed site (pnpm test:smoke).
+  support/             Fixtures and helpers (multi-player harness, Solo).
 ```
 
 ## Run the multi-player tests
@@ -77,9 +78,12 @@ on every screen, pause, a late joiner, and the fix reveal after the end.
 counted once, an unreachable Supabase shows Retry, and the lobby recovers
 after a drop. It blocks Supabase with `page.route()`.
 
-`e2e/live/smoke.spec.ts` is the launch smoke test (`docs/LAUNCH.md`): run it
-against a deployed site with `E2E_BASE_URL=https://… pnpm smoke:live` (no
-local server is started then). It also runs with the normal E2E suite.
+`e2e/smoke/` is the smoke test of a deployed site (`docs/LAUNCH.md` §6):
+`pnpm test:smoke --base-url https://…` runs it with its own config
+(`playwright.smoke.config.ts`, no local server). `smoke.spec.ts` is
+read-only and also runs with the normal E2E suite; `rooms.spec.ts` writes a
+room to the site's Supabase, so it only runs with `SMOKE_ROOMS=1`. The
+`Smoke test` workflow runs it on every Vercel preview deployment.
 
 `e2e/multiplayer/harness.spec.ts` is a full example: three players, one drops
 and reconnects, then the admin leaves and the role passes on.

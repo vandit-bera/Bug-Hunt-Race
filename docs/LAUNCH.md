@@ -105,18 +105,40 @@ The numbers and how they were measured are in
 ## 6. Deploy and smoke test
 
 - [ ] Deploy `main` to production in Vercel (or promote the green preview).
-- [ ] Run the smoke test against the live site from any machine with the repo:
+- [ ] Run the smoke test against the live site, either from GitHub (Actions →
+      **Smoke test** → Run workflow; the URL defaults to production) or from
+      any machine with the repo:
 
   ```bash
   pnpm install
   pnpm exec playwright install chromium
-  E2E_BASE_URL=https://<live site> pnpm smoke:live
+  pnpm test:smoke --base-url https://<live site>
   ```
 
-  It checks (`e2e/live/smoke.spec.ts`): Home loads with the security headers;
-  a Solo puzzle loads and the code runner runs it; the 404 page; the fix
-  route refuses anonymous requests; and two browsers create a room, join by
-  link, see each other and leave (this creates one room in the live database).
+  It checks (`e2e/smoke/smoke.spec.ts`, read-only): Home and `/solo` load
+  with no console errors and the security headers; the theme toggle; one
+  JavaScript and one Python Easy puzzle in Solo (the buggy code fails, the
+  fix from the repo's `puzzles/` passes); an invite link with a made-up code
+  shows "Room not found"; the 404 page; the fix route refuses anonymous
+  requests.
+
+- [ ] With Vandit's OK only (it writes one room, two players and one round to
+      the live database), the room flow: create a room, join from a second
+      browser, start and stop a round, close the room
+      (`e2e/smoke/rooms.spec.ts`):
+
+  ```bash
+  SMOKE_ROOMS=1 pnpm test:smoke --base-url https://<live site>
+  ```
+
+- [ ] The same read-only check runs on **every Vercel preview deployment**
+      (`.github/workflows/smoke.yml`, free GitHub Actions minutes). Previews
+      sit behind Vercel Authentication, so it needs one repo secret (Vandit):
+      Vercel → Project → Settings → Deployment Protection → **Protection
+      Bypass for Automation** → copy the secret into GitHub → Settings →
+      Secrets → Actions as `VERCEL_AUTOMATION_BYPASS_SECRET`. Without it the
+      check fails with "behind Vercel Deployment Protection". The room flow
+      never runs in CI.
 
 - [ ] By hand, with two phones on mobile data and one laptop on office Wi-Fi:
       create a room, join by QR, play one round, turn one phone's network off

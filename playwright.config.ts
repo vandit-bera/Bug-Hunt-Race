@@ -2,7 +2,8 @@ import { defineConfig, devices } from "@playwright/test";
 
 const PORT = Number(process.env.E2E_PORT ?? 3000);
 const isCI = Boolean(process.env.CI);
-// Set to test a deployed site (`pnpm smoke:live`); no local server then.
+// Set to test a deployed site; no local server then. The smoke test of a
+// deployed site has its own config (playwright.smoke.config.ts).
 const BASE_URL = process.env.E2E_BASE_URL;
 
 export default defineConfig({
