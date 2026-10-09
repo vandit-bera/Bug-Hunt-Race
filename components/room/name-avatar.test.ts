@@ -3,6 +3,7 @@ import {
   AVATAR_EMOJIS,
   loadProfile,
   saveProfile,
+  splitDuplicateSuffix,
   validateName,
 } from "./name-avatar";
 
@@ -60,5 +61,27 @@ describe("profile storage", () => {
     expect(() =>
       saveProfile({ name: "A", avatar: AVATAR_EMOJIS[0] }, null),
     ).not.toThrow();
+  });
+});
+
+describe("splitDuplicateSuffix", () => {
+  it("splits the duplicate suffix from the base name", () => {
+    expect(splitDuplicateSuffix("Riya (2)")).toEqual({
+      base: "Riya",
+      suffix: "(2)",
+    });
+    expect(splitDuplicateSuffix("ABCDEFGHIJKLMNOPQRST (12)")).toEqual({
+      base: "ABCDEFGHIJKLMNOPQRST",
+      suffix: "(12)",
+    });
+  });
+
+  it("leaves names without a suffix alone", () => {
+    expect(splitDuplicateSuffix("Ana")).toEqual({ base: "Ana", suffix: "" });
+    expect(splitDuplicateSuffix("Riya(2)")).toEqual({
+      base: "Riya(2)",
+      suffix: "",
+    });
+    expect(splitDuplicateSuffix(" (2)")).toEqual({ base: " (2)", suffix: "" });
   });
 });

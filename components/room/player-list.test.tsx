@@ -19,6 +19,27 @@ describe("PlayerList", () => {
     expect(html).toContain("Disconnected");
   });
 
+  it("keeps the duplicate suffix and (you) apart from the truncated name", () => {
+    const html = renderToStaticMarkup(
+      <PlayerList
+        players={[
+          {
+            id: "3",
+            name: "ABCDEFGHIJKLMNOPQRST (2)",
+            avatar: "🦊",
+            isAdmin: false,
+            connected: true,
+          },
+        ]}
+        selfId="3"
+      />,
+    );
+    expect(html).toContain('title="ABCDEFGHIJKLMNOPQRST (2)"');
+    expect(html).toMatch(/class="[^"]*truncate[^"]*">ABCDEFGHIJKLMNOPQRST</);
+    expect(html).toContain('<span class="shrink-0">(2)</span>');
+    expect(html).toMatch(/class="shrink-0[^"]*">\(you\)</);
+  });
+
   it("shows an empty state", () => {
     expect(renderToStaticMarkup(<PlayerList players={[]} />)).toContain(
       "No players yet",

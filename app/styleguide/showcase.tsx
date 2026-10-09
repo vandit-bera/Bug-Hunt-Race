@@ -48,6 +48,20 @@ const SAMPLE_PLAYERS: RoomPlayer[] = [
   { id: "1", name: "Mika", avatar: "🦊", isAdmin: true, connected: true },
   { id: "2", name: "Vandit", avatar: "🐙", isAdmin: false, connected: true },
   { id: "3", name: "Sam", avatar: "🐼", isAdmin: false, connected: false },
+  {
+    id: "4",
+    name: "ABCDEFGHIJKLMNOPQRST",
+    avatar: "🦉",
+    isAdmin: false,
+    connected: true,
+  },
+  {
+    id: "5",
+    name: "ABCDEFGHIJKLMNOPQRST (2)",
+    avatar: "🐧",
+    isAdmin: false,
+    connected: true,
+  },
 ];
 
 function Section({
@@ -250,7 +264,7 @@ export function Showcase({ theme }: { theme: "light" | "dark" }) {
 
       <Section title="Room: player list">
         <div className="w-full max-w-md">
-          <PlayerList players={SAMPLE_PLAYERS} selfId="2" />
+          <PlayerList players={SAMPLE_PLAYERS} selfId="5" />
         </div>
       </Section>
 
