@@ -1,14 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
-  DbError,
   advanceRoom,
+  closeRoom,
   createRoom,
+  DbError,
   findMyMembership,
   findRoomByCode,
   getRoom,
   joinRoom,
   leaveRoom,
   listPlayers,
+  playAgain,
   sendHeartbeat,
   setRoomLocked,
 } from "@/lib/db";
@@ -138,7 +140,16 @@ describe("findRoomByCode", () => {
     });
   });
 
-  it("returns null when no open room has the code", async () => {
+  it("returns a closed room's code with status closed", async () => {
+    const closed = { ...preview, status: "closed" as const, player_count: 0 };
+    const fake = createFakeClient({ rpc: [{ data: [closed], error: null }] });
+
+    await expect(findRoomByCode(fake.client, "BUG7KX")).resolves.toEqual(
+      closed,
+    );
+  });
+
+  it("returns null when no room ever had the code", async () => {
     const fake = createFakeClient({ rpc: [{ data: [], error: null }] });
 
     await expect(findRoomByCode(fake.client, "BUG7KX")).resolves.toBeNull();
@@ -180,22 +191,24 @@ describe("joinRoom", () => {
     });
   });
 
-  it.each(["room_not_found", "room_locked", "room_full"] as const)(
-    "maps %s to a typed error",
-    async (code) => {
-      const fake = createFakeClient({
-        rpc: [{ data: null, error: { message: code } }],
-      });
+  it.each([
+    "room_not_found",
+    "room_closed",
+    "room_locked",
+    "room_full",
+  ] as const)("maps %s to a typed error", async (code) => {
+    const fake = createFakeClient({
+      rpc: [{ data: null, error: { message: code } }],
+    });
 
-      await expect(
-        joinRoom(fake.client, {
-          code: "BUG7KX",
-          displayName: "Riya",
-          avatar: "🐼",
-        }),
-      ).rejects.toMatchObject({ name: "DbError", code });
-    },
-  );
+    await expect(
+      joinRoom(fake.client, {
+        code: "BUG7KX",
+        displayName: "Riya",
+        avatar: "🐼",
+      }),
+    ).rejects.toMatchObject({ name: "DbError", code });
+  });
 
   it("rejects malformed codes as room_not_found without calling the database", async () => {
     const fake = createFakeClient({});
@@ -385,6 +398,24 @@ describe("room actions", () => {
   });
 
   it.each([
+    ["playAgain", "play_again", "lobby"],
+    ["closeRoom", "close", "closed"],
+  ] as const)("%s sends %s", async (action, event, status) => {
+    const next = { ...room, status };
+    const fake = createFakeClient({ rpc: [{ data: next, error: null }] });
+    const calls = { playAgain, closeRoom };
+
+    await expect(calls[action](fake.client, "room-1")).resolves.toEqual(next);
+    expect(fake.rpc).toHaveBeenCalledWith("advance_room", {
+      target_room_id: "room-1",
+      room_event: event,
+    });
+  });
+
+  it.each([
+    ["playAgain", "not_room_admin"],
+    ["closeRoom", "not_room_admin"],
+    ["closeRoom", "invalid_transition"],
     ["advanceRoom", "not_room_admin"],
     ["advanceRoom", "invalid_transition"],
     ["setRoomLocked", "not_room_admin"],
@@ -399,6 +430,8 @@ describe("room actions", () => {
       setRoomLocked: () => setRoomLocked(fake.client, "room-1", true),
       sendHeartbeat: () => sendHeartbeat(fake.client, "room-1"),
       leaveRoom: () => leaveRoom(fake.client, "room-1"),
+      playAgain: () => playAgain(fake.client, "room-1"),
+      closeRoom: () => closeRoom(fake.client, "room-1"),
     };
 
     await expect(calls[action]()).rejects.toMatchObject({

@@ -507,8 +507,8 @@ Room screens so far:
   (an empty room counts from its creation) is closed by the next
   `find_open_room()`, `create_room()`, `join_room()` or heartbeat. There is no
   cron job: until someone touches it, an abandoned room just sits there, and
-  every lookup treats it as closed. Closed and unknown codes both give "Room
-  not found".
+  every lookup treats it as closed. A closed room's code gives "Room closed",
+  an unknown one "Room not found" (see [End of game](#end-of-game)).
 - **Limits:** 30 players per room (`room_full` for the 31st). Browsers slow
   timers in background tabs; after several minutes hidden, heartbeats can
   stall and the player counts as disconnected until the tab is visible again.
@@ -528,8 +528,8 @@ flowchart LR
 - **`/join`** cleans what is typed (uppercase, no spaces, no 0/O/1/I with a
   hint) and only moves on with a full 6-character code.
 - **`/join/<code>`** checks the room with `find_open_room()` (works before
-  sign-in) and shows "Room not found", "This room is locked" or "Room is full
-  (30/30)" before asking for a name. A player who already has a seat goes
+  sign-in) and shows "Room not found", "Room closed", "This room is locked"
+  or "Room is full (30/30)" before asking for a name. A player who already has a seat goes
   straight to the lobby. Join errors map the same way; `invalid_display_name`
   shows on the name field and `rate_limited` as a "try again shortly" alert.
   Name and avatar are remembered in localStorage (`bhr:room:profile`).
@@ -739,6 +739,56 @@ await getScore(db, roundId, playerId); // one player's result, or null
 const { fix } = await fetchRoundFix(db, roundId); // after the round ends
 ```
 
+## End of game
+
+From the final leaderboard the admin picks **Play again** or **Close room**
+(TB-59, migration `20261009000007_end_of_game.sql`). Both are room events
+behind `advance_room()`, so only the admin can do them (`not_room_admin`)
+and only from `final_leaderboard` (`invalid_transition`).
+
+- **Play again** (`playAgain`): back to `lobby` with the same players
+  (lock, admin and seats unchanged), `game_number + 1`, `current_round = 0`.
+  Older games' rounds and scores stay in the database but no longer count:
+  `room_leaderboard` reads only the room's current game, so everyone starts
+  at 0. Round numbers start again at 1. `pick_puzzle` looks only at the
+  current game, so puzzles never repeat within a game while the pool lasts
+  (5 per language and level). They can come back in a later game. A
+  fixed-level game longer than 5 rounds has to reuse puzzles (least played
+  first, never the one just played).
+- **Close room** (`closeRoom`): status `closed`, `closed_at` stamped. The
+  code and link stop working: `find_open_room` returns the room with
+  `status: "closed"` (nothing else about it), `join_room` raises
+  `room_closed`, and the join page shows "Room closed". Players still in the
+  room get the room update on Realtime, and their next heartbeat returns
+  `closed`, so the lobby shows "Room closed" too. Members can still read the
+  final standings. The code is free for a new room, and an open room with
+  the same code always wins the lookup. Auto-closed (abandoned) rooms behave
+  the same.
+
+**Ranking** (`room_leaderboard`, mirrored by `lib/game/standings.ts`):
+
+1. total points in the current game, highest first;
+2. ties: the earlier server timestamp of the player's last solve
+   (`scores.submitted_at` of their latest passing result) wins;
+3. same points and same timestamp: the players share the place (SQL `rank()`:
+   1, 1, 3). Everyone with 0 points shares the last place.
+
+The view also returns `rounds_solved`, `game_number`, `last_solved_at` and
+`previous_rank`: the rank before the game's latest round, null until round 2.
+`toStandings()` (`lib/rooms/leaderboard.ts`) maps rows to the results
+components' `Standing`, with `change = previous_rank − rank` (▲ positive,
+▼ negative). Players who left are listed only if they have a result in the
+current game. Nobody can write `scores` (no insert, update or delete grant;
+only `record_score()`), and `rooms.game_number` and `status` change only
+through `advance_room()`.
+
+```ts
+const board = await getLeaderboard(db, roomId); // current game, best first
+const standings = toStandings(board); // for <Leaderboard> / <Podium>
+await playAgain(db, roomId); // admin: final_leaderboard → lobby, new game
+await closeRoom(db, roomId); // admin: final_leaderboard → closed
+```
+
 ### Puzzle catalog
 
 Rounds reference `public.puzzles`, so the database needs the puzzles from
@@ -865,21 +915,21 @@ name and score.
 Everything else goes through `security definer` functions that check
 `auth.uid()` themselves:
 
-| Function                                                           | Who                  | Does                                                                                                 |
-| ------------------------------------------------------------------ | -------------------- | ---------------------------------------------------------------------------------------------------- |
-| `find_open_room(code)`                                             | Anyone               | Status, lock, full flag and settings of an open room. Nothing else.                                  |
-| `create_room(language, level, display_name, avatar, total_rounds)` | Signed in            | New room in `lobby` with a fresh code; caller becomes admin.                                         |
-| `join_room(code, display_name, avatar)`                            | Signed in            | Joins an open, unlocked, non-full room (max 30). "Riya" → "Riya (2)". Rejoin returns the old player. |
-| `room_heartbeat(room_id)`                                          | Players in the room  | "Still here". Marks silent players disconnected, hands over admin. Returns the room status.          |
-| `leave_room(room_id)`                                              | Players in the room  | Frees the seat and name, keeps scores; passes the admin role on.                                     |
-| `advance_room(room_id, event)`                                     | Room admin           | Moves the room through the state machine; starts, pauses, resumes and ends rounds.                   |
-| `set_room_locked(room_id, locked)`                                 | Room admin           | Locks or unlocks the room to new players.                                                            |
-| `record_score(round_id, passed, hint_used)`                        | Players in the round | One result per round. Server measures solve time and computes points. Refuses late joiners.          |
-| `get_current_round(room_id)`                                       | Players in the room  | The current round, its puzzle and `server_now`. Nothing in the lobby or countdown.                   |
-| `reveal_round_puzzle(round_id)`                                    | Players of the room  | The puzzle id of an **ended** round (for the fix reveal route), else `round_not_over`.               |
+| Function                                                           | Who                  | Does                                                                                              |
+| ------------------------------------------------------------------ | -------------------- | ------------------------------------------------------------------------------------------------- |
+| `find_open_room(code)`                                             | Anyone               | Status, lock, full flag and settings of an open room; `status: closed` for a closed room's code.  |
+| `create_room(language, level, display_name, avatar, total_rounds)` | Signed in            | New room in `lobby` with a fresh code; caller becomes admin.                                      |
+| `join_room(code, display_name, avatar)`                            | Signed in            | Joins an open, unlocked, non-full room (max 30). "Riya" → "Riya (2)". Closed room: `room_closed`. |
+| `room_heartbeat(room_id)`                                          | Players in the room  | "Still here". Marks silent players disconnected, hands over admin. Returns the room status.       |
+| `leave_room(room_id)`                                              | Players in the room  | Frees the seat and name, keeps scores; passes the admin role on.                                  |
+| `advance_room(room_id, event)`                                     | Room admin           | Moves the room through the state machine; starts, pauses, resumes and ends rounds.                |
+| `set_room_locked(room_id, locked)`                                 | Room admin           | Locks or unlocks the room to new players.                                                         |
+| `record_score(round_id, passed, hint_used)`                        | Players in the round | One result per round. Server measures solve time and computes points. Refuses late joiners.       |
+| `get_current_round(room_id)`                                       | Players in the room  | The current round, its puzzle and `server_now`. Nothing in the lobby or countdown.                |
+| `reveal_round_puzzle(round_id)`                                    | Players of the room  | The puzzle id of an **ended** round (for the fix reveal route), else `round_not_over`.            |
 
 Errors are raised with a stable code as the message (`room_not_found`,
-`room_locked`, `room_full`, `not_room_admin`, `invalid_transition`,
+`room_closed`, `room_locked`, `room_full`, `not_room_admin`, `invalid_transition`,
 `no_puzzles`, `joined_late`, `already_submitted`, `round_not_over`, ...);
 `lib/db` turns them into a
 typed `DbError`.
@@ -887,8 +937,9 @@ typed `DbError`.
 Scoring (TB-19 §3) lives in `private.calculate_points`: base points (Easy 100 /
 Medium 200 / Hard 300) + up to 50% speed bonus for time left − 25% if a hint
 was used; unsolved = 0. A 5 s grace after the deadline absorbs network lag.
-The leaderboard ranks by total points, then total solve time; exact ties share
-the place. Task 13 may tune the numbers in a new migration.
+The leaderboard covers the current game and ranks by total points, then the
+earlier last solve (server time); exact ties share the place (see
+[End of game](#end-of-game)). Task 13 may tune the numbers in a new migration.
 
 ### Abuse limits
 
@@ -931,7 +982,7 @@ const { room, player } = await createRoom(db, {
   displayName,
   avatar,
 });
-const preview = await findRoomByCode(db, "bug-7kx"); // null if unknown/closed
+const preview = await findRoomByCode(db, "bug-7kx"); // null if unknown; status "closed" once closed
 await joinRoom(db, { code, displayName, avatar });
 const userId = await getSignedInUserId(db); // null: never signed in here
 await findMyMembership(db, code, userId); // my seat, or null; never joins

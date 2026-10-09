@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   advanceRoom,
+  closeRoom,
   getCurrentRound,
   getLeaderboard,
   pauseRound,
+  playAgain,
   resumeRound,
   roundClock,
   skipRound,
@@ -169,6 +171,31 @@ export function RoundPanel({
             Next round
           </Button>
         )}
+        {isAdmin && room.status === "round_results" && (
+          <Button
+            size="sm"
+            onClick={() => act(() => advanceRoom(client, room.id, "finish"))}
+          >
+            Finish game
+          </Button>
+        )}
+        {isAdmin && room.status === "final_leaderboard" && (
+          <>
+            <Button
+              size="sm"
+              onClick={() => act(() => playAgain(client, room.id))}
+            >
+              Play again
+            </Button>
+            <Button
+              size="sm"
+              variant="danger"
+              onClick={() => act(() => closeRoom(client, room.id))}
+            >
+              Close room
+            </Button>
+          </>
+        )}
         {round && live && !round.submitted && (
           <Button
             size="sm"
@@ -215,7 +242,10 @@ export function RoundPanel({
         <ol aria-label="Leaderboard" className="flex flex-col gap-1">
           {leaders.map((entry) => (
             <li key={entry.player_id}>
-              {entry.rank}. {entry.display_name}:{" "}
+              <span data-testid={`rank-${entry.display_name}`}>
+                {entry.rank}
+              </span>
+              . {entry.display_name}:{" "}
               <span data-testid={`points-${entry.display_name}`}>
                 {entry.total_points}
               </span>{" "}

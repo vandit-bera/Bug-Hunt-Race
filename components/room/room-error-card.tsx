@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Card, CardTitle } from "@/components/ui/card";
 
 export type RoomErrorKind =
-  "not-found" | "locked" | "full" | "disconnected" | "offline";
+  "not-found" | "closed" | "locked" | "full" | "disconnected" | "offline";
 
 const COPY: Record<
   RoomErrorKind,
@@ -13,6 +13,12 @@ const COPY: Record<
     title: "Room not found",
     description:
       "Check the code and try again. It may have ended, or the link is old.",
+  },
+  closed: {
+    emoji: "🏁",
+    title: "Room closed",
+    description:
+      "This game is over and the room is closed. Join another room or create a new one.",
   },
   locked: {
     emoji: "🔒",

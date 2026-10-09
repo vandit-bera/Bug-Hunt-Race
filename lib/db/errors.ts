@@ -10,6 +10,7 @@ export const DB_ERROR_CODES = [
   "invalid_avatar",
   "invalid_total_rounds",
   "room_not_found",
+  "room_closed",
   "room_locked",
   "room_full",
   "room_code_exhausted",

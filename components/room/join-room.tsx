@@ -31,6 +31,7 @@ type State =
 
 const BLOCKING_ERRORS: Partial<Record<DbErrorCode, RoomErrorKind>> = {
   room_not_found: "not-found",
+  room_closed: "closed",
   room_locked: "locked",
   room_full: "full",
 };
@@ -39,6 +40,7 @@ const RATE_LIMITED = "Too many tries right now. Please try again shortly.";
 
 function previewBlock(preview: RoomPreview | null): RoomErrorKind | null {
   if (!preview) return "not-found";
+  if (preview.status === "closed") return "closed";
   if (preview.locked) return "locked";
   if (preview.is_full) return "full";
   return null;

@@ -49,6 +49,24 @@ describe("computeStandings", () => {
     expect(ranks(rows)).toEqual([1, 2]);
   });
 
+  it("breaks a points tie by the earlier last solve, not the total time", () => {
+    const players = ["early", "late"].map(player);
+    const rows = computeStandings(players, [
+      [solved("early", 150, 40_000), missed("late")],
+      [missed("early"), solved("late", 150, 5000)],
+    ]);
+    expect(ids(rows)).toEqual(["early", "late"]);
+    expect(ranks(rows)).toEqual([1, 2]);
+  });
+
+  it("puts every player without points in one shared last place", () => {
+    const players = ["a", "b", "c"].map(player);
+    const rows = computeStandings(players, [
+      [solved("a", 150, 9000), missed("b"), missed("c")],
+    ]);
+    expect(ranks(rows)).toEqual([1, 2, 2]);
+  });
+
   it("gives exact ties the same place and skips the next one", () => {
     const players = ["a", "b", "c", "d"].map(player);
     const rows = computeStandings(players, [

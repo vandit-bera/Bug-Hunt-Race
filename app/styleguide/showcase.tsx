@@ -272,6 +272,10 @@ export function Showcase({ theme }: { theme: "light" | "dark" }) {
             action={<Button size="sm">Try another code</Button>}
           />
           <RoomErrorCard
+            kind="closed"
+            action={<Button size="sm">Create a room</Button>}
+          />
+          <RoomErrorCard
             kind="locked"
             action={<Button size="sm">Back to home</Button>}
           />

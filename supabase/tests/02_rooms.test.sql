@@ -198,15 +198,16 @@ set local role authenticated;
 select throws_ok(
   $$select public.join_room((select code from room_code), 'Eve', '🦉')$$,
   'P0001',
-  'room_not_found',
-  'a closed room cannot be joined'
+  'room_closed',
+  'a closed room cannot be joined: room_closed, not room_not_found'
 );
 reset role;
 
 set local role anon;
-select is_empty(
-  $$select * from public.find_open_room((select code from room_code))$$,
-  'a closed room is not found by code'
+select results_eq(
+  $$select status::text, locked, is_full, player_count from public.find_open_room((select code from room_code))$$,
+  $$values ('closed', false, false, 0)$$,
+  'a closed room''s code reports status closed and nothing else about it'
 );
 reset role;
 

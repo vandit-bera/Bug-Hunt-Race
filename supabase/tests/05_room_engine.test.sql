@@ -352,16 +352,17 @@ select is(
 reset role;
 
 set local role anon;
-select is_empty(
-  $$select * from public.find_open_room((select code from room_code))$$,
-  'an auto-closed room is not found by code'
+select results_eq(
+  $$select status::text from public.find_open_room((select code from room_code))$$,
+  $$values ('closed')$$,
+  'an auto-closed room''s code reports closed'
 );
 reset role;
 
 set local role authenticated;
 select throws_ok(
   $$select public.join_room((select code from room_code), 'Cleo', '🐙')$$,
-  'P0001', 'room_not_found', 'an auto-closed room cannot be joined, not even by a member'
+  'P0001', 'room_closed', 'an auto-closed room cannot be joined, not even by a member'
 );
 reset role;
 
@@ -369,8 +370,9 @@ reset role;
 insert into public.rooms (id, code, language, level, created_at)
 values ('00000000-0000-0000-0000-00000000dddd', 'DDDDDD', 'python', 'easy', now() - interval '11 minutes');
 set local role anon;
-select is_empty(
-  $$select * from public.find_open_room('DDDDDD')$$,
+select results_eq(
+  $$select status::text from public.find_open_room('DDDDDD')$$,
+  $$values ('closed')$$,
   'an empty room older than 10 minutes is closed on lookup'
 );
 reset role;

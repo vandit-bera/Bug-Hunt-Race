@@ -2,8 +2,11 @@ import type { ScoreBreakdown } from "./scoring";
 
 /**
  * Ranking for the race results screens. Same order as the `room_leaderboard`
- * view: points (highest first), then server-measured solve time (fastest
- * first); exact ties share the place (1, 1, 3), like SQL `rank()`.
+ * view: points (highest first), then the earlier server time of the last
+ * solve; exact ties share the place (1, 1, 3), like SQL `rank()`. Rounds run
+ * one after another and every player's solve time counts from the same
+ * start, so "earlier last solve" is: solved last in an earlier round, or in
+ * the same round with a lower solve time.
  */
 
 export interface StandingsPlayer {
@@ -49,31 +52,29 @@ const NOT_SOLVED: ScoreBreakdown = {
 };
 
 /**
- * Sorts by `points` (desc), then `time` (asc), and gives exact ties the same
- * rank. Ties are listed by name, then id, so the order is stable.
+ * Sorts by `compare` and gives items it finds equal the same rank. Ties are
+ * listed by name, then id, so the order is stable.
  */
 function assignRanks<T extends StandingsPlayer>(
   items: readonly T[],
-  points: (item: T) => number,
-  time: (item: T) => number,
+  compare: (a: T, b: T) => number,
 ): (T & { rank: number })[] {
   const sorted = [...items].sort(
     (a, b) =>
-      points(b) - points(a) ||
-      time(a) - time(b) ||
-      a.name.localeCompare(b.name) ||
-      a.id.localeCompare(b.id),
+      compare(a, b) || a.name.localeCompare(b.name) || a.id.localeCompare(b.id),
   );
   let rank = 0;
   return sorted.map((item, index) => {
     const prev = sorted[index - 1];
-    const tied =
-      prev !== undefined &&
-      points(prev) === points(item) &&
-      time(prev) === time(item);
-    if (!tied) rank = index + 1;
+    if (prev === undefined || compare(prev, item) !== 0) rank = index + 1;
     return { ...item, rank };
   });
+}
+
+/** When a player's last solve happened: round index, then solve time. */
+interface LastSolve {
+  round: number;
+  solveMs: number;
 }
 
 function totals(
@@ -95,14 +96,46 @@ function totals(
   });
 }
 
+function lastSolve(
+  playerId: string,
+  rounds: readonly (readonly RoundResult[])[],
+): LastSolve | null {
+  for (let round = rounds.length - 1; round >= 0; round--) {
+    const solveMs = rounds[round].find((r) => r.playerId === playerId)?.solveMs;
+    if (solveMs != null) return { round, solveMs };
+  }
+  return null;
+}
+
+/** Ascending, with null (never solved) last and equal to another null. */
+function compareNullsLast<T>(
+  a: T | null,
+  b: T | null,
+  compare: (a: T, b: T) => number,
+): number {
+  if (a === null || b === null) return Number(a === null) - Number(b === null);
+  return compare(a, b);
+}
+
+const earlierSolve = (a: LastSolve, b: LastSolve) =>
+  a.round - b.round || a.solveMs - b.solveMs;
+
+const fasterMs = (a: number, b: number) => a - b;
+
 function rankTotals(
   players: readonly StandingsPlayer[],
   rounds: readonly (readonly RoundResult[])[],
 ) {
+  const last = new Map(players.map((p) => [p.id, lastSolve(p.id, rounds)]));
   return assignRanks(
     totals(players, rounds),
-    (row) => row.totalPoints,
-    (row) => row.totalSolveMs,
+    (a, b) =>
+      b.totalPoints - a.totalPoints ||
+      compareNullsLast(
+        last.get(a.id) ?? null,
+        last.get(b.id) ?? null,
+        earlierSolve,
+      ),
   );
 }
 
@@ -149,8 +182,9 @@ export function roundResults(
   });
   return assignRanks(
     rows,
-    (row) => row.score.total,
-    (row) => row.solveMs ?? Infinity,
+    (a, b) =>
+      b.score.total - a.score.total ||
+      compareNullsLast(a.solveMs, b.solveMs, fasterMs),
   );
 }
 
