@@ -11,19 +11,41 @@ import {
 } from "@/lib/game/standings";
 import { Leaderboard } from "./leaderboard";
 
-const MEDALS: Record<number, { emoji: string; label: string; step: string }> = {
-  1: { emoji: "🥇", label: "1st place", step: "h-28 border-warning" },
-  2: { emoji: "🥈", label: "2nd place", step: "h-20 border-border" },
-  3: { emoji: "🥉", label: "3rd place", step: "h-14 border-accent" },
-};
-
 // Classic podium order: 2nd on the left, 1st in the middle, 3rd on the right.
-const DISPLAY_ORDER = [2, 1, 3];
+// Only the look changes (`order`); the DOM stays 1st, 2nd, 3rd for screen readers.
+const MEDALS: Record<
+  number,
+  { emoji: string; label: string; step: string; order: string }
+> = {
+  1: {
+    emoji: "🥇",
+    label: "1st place",
+    step: "h-28 border-warning",
+    order: "order-2",
+  },
+  2: {
+    emoji: "🥈",
+    label: "2nd place",
+    step: "h-20 border-border",
+    order: "order-1",
+  },
+  3: {
+    emoji: "🥉",
+    label: "3rd place",
+    step: "h-14 border-accent",
+    order: "order-3",
+  },
+};
 
 function Step({ step }: { step: PodiumStep }) {
   const medal = MEDALS[step.rank];
   return (
-    <li className="flex min-w-0 flex-1 flex-col items-center gap-2">
+    <li
+      className={cn(
+        "flex min-w-0 flex-1 flex-col items-center gap-2",
+        medal.order,
+      )}
+    >
       <ul
         aria-label={medal.label}
         className="flex flex-wrap justify-center gap-1"
@@ -78,9 +100,6 @@ export function Podium({
   busy?: "play_again" | "close" | null;
 }) {
   const steps = podiumSteps(standings);
-  const ordered = DISPLAY_ORDER.flatMap((rank) =>
-    steps.filter((step) => step.rank === rank),
-  );
 
   return (
     <div className="flex w-full flex-col gap-6">
@@ -90,7 +109,7 @@ export function Podium({
           aria-label="Podium"
           className="mx-auto flex w-full max-w-md items-end gap-2"
         >
-          {ordered.map((step) => (
+          {steps.map((step) => (
             <Step key={step.rank} step={step} />
           ))}
         </ol>
