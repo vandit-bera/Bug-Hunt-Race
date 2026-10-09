@@ -18,6 +18,7 @@ import {
   type RoomMembership,
 } from "@/lib/db";
 import {
+  isDbConfigured,
   isUnavailableError,
   roomErrorMessage,
   useRoomConnection,
@@ -34,16 +35,9 @@ interface Saved {
   name: string;
 }
 
-function isConfigured() {
-  return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  );
-}
-
 export function RoomLab() {
   const [client] = useState(() =>
-    isConfigured() ? createBrowserDbClient() : null,
+    isDbConfigured() ? createBrowserDbClient() : null,
   );
   if (!client) {
     return (

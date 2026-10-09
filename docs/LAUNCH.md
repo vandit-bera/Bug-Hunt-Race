@@ -28,6 +28,16 @@ protects the data).
       `next.config.ts`), so **redeploy** after changing them.
 - [ ] No service-role or secret key anywhere in Vercel or the repo. The app
       never needs one.
+- [ ] Check the values (TB-62):
+  - `NEXT_PUBLIC_SUPABASE_URL` is exactly `https://<ref>.supabase.co`: no
+    `/rest/v1`, no trailing slash, no spaces or quotes. The app strips a
+    trailing `/rest/v1`, `/auth/v1` or `/realtime/v1` and slashes, but fix the
+    value anyway.
+  - `NEXT_PUBLIC_SUPABASE_ANON_KEY` is the publishable (or anon) key, not the
+    service-role or secret key.
+  - After the redeploy, search the Vercel build log for
+    `Supabase is misconfigured`. It names the wrong variable (never its
+    value) and means rooms are switched off ("Rooms are not available").
 
 ## 3. Database (Supabase SQL Editor)
 

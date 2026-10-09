@@ -1099,6 +1099,16 @@ are used by the app; see `.env.example`. Supabase now calls the anon key the
 Data is protected by Supabase row-level security, not by hiding the key.
 Service-role keys never go in this repo or in client code.
 
+Both are read and checked in one place, `lib/db/config.ts`
+(`readSupabaseConfig`), used by the client factory, `isDbConfigured` and the
+CSP. The URL is normalized first: spaces, trailing slashes and a trailing
+`/rest/v1`, `/auth/v1` or `/realtime/v1` are stripped, because supabase-js
+adds those paths itself (TB-62: a live URL ending in `/rest/v1/` made every
+request `…/rest/v1/rest/v1/…` and 404). If only one variable is set, or the
+URL is not a plain http(s) URL, rooms are switched off and the problem is
+logged (build log, server log, browser console) and shown on the rooms screen
+in `next dev`. Messages name the variable, never its value.
+
 The Supabase project must have **anonymous sign-ins** enabled
 (Authentication → Sign In / Providers). Locally, `supabase/config.toml`
 enables them.
