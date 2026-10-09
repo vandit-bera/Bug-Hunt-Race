@@ -45,8 +45,9 @@ export async function createRoom(
 
 /**
  * Looks up an open room by the code a player typed, scanned or opened.
- * Returns null when the code is malformed, unknown or the room is closed.
- * Works before sign-in.
+ * Returns null when the code is malformed or unknown. A code whose room has
+ * closed returns that room with `status: "closed"` (and nothing else about
+ * it), so the screen can say "Room closed". Works before sign-in.
  */
 export async function findRoomByCode(
   client: DbClient,
@@ -65,7 +66,8 @@ export async function findRoomByCode(
 /**
  * Joins the signed-in user to an open room. Duplicate names get a suffix
  * ("Riya" → "Riya (2)"). Rejoining returns the existing player, so a dropped
- * connection keeps its name and score.
+ * connection keeps its name and score. Raises `room_closed` once the room
+ * has closed, `room_not_found` for a code no room ever had.
  */
 export async function joinRoom(
   client: DbClient,
@@ -148,7 +150,8 @@ export async function getRoom(client: DbClient, roomId: string): Promise<Room> {
  * `HEARTBEAT_INTERVAL_MS` (lib/rooms does). The database marks players not
  * seen for 15 s as disconnected, hands the admin role over, and closes a room
  * nobody has been seen in for 10 minutes. Returns the room status, which is
- * `closed` if that just happened.
+ * `closed` once the room has closed (the admin closed it, or it was
+ * abandoned).
  */
 export async function sendHeartbeat(
   client: DbClient,
@@ -204,6 +207,25 @@ export async function setRoomLocked(
   });
   if (error) throw toDbError(error);
   return data;
+}
+
+/**
+ * Admin only, from the final leaderboard: back to the lobby with the same
+ * players for a new game. Everyone starts at 0 (the leaderboard counts only
+ * the current game; older games' scores are kept), round numbers start
+ * again at 1, and puzzles from earlier games can come back.
+ */
+export function playAgain(client: DbClient, roomId: string): Promise<Room> {
+  return advanceRoom(client, roomId, "play_again");
+}
+
+/**
+ * Admin only, from the final leaderboard: closes the room for good. Its code
+ * and link stop working (`room_closed`), and every player's connection
+ * reports the room closed.
+ */
+export function closeRoom(client: DbClient, roomId: string): Promise<Room> {
+  return advanceRoom(client, roomId, "close");
 }
 
 async function withRoom(

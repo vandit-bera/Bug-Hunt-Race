@@ -3,6 +3,7 @@ import { isUnavailableError } from "./retry";
 
 const MESSAGES: Partial<Record<DbErrorCode, string>> = {
   room_not_found: "Room not found",
+  room_closed: "Room closed",
   room_locked: "Room is locked",
   room_full: "Room is full",
   not_room_admin: "Only the room admin can do that",
