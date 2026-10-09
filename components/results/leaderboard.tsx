@@ -1,6 +1,7 @@
 "use client";
 
 import { useReducedMotion } from "@/components/fx/use-reduced-motion";
+import { useSlideRows } from "@/components/fx/use-slide-rows";
 import { ChangeMarker } from "@/components/room/live-rank-list";
 import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/components/ui/cn";
@@ -9,9 +10,9 @@ import { isTied, type Standing } from "@/lib/game/standings";
 const ROW_HEIGHT_REM = 3.75;
 
 /**
- * Overall standings. Rows slide to their new place when the order changes;
- * exact ties show the same place. `standings` must be ranked (see
- * `computeStandings`).
+ * Overall standings, in rank order in the DOM. Rows slide to their new place
+ * when the order changes; exact ties show the same place. `standings` must be
+ * ranked (see `computeStandings`).
  */
 export function Leaderboard({
   standings,
@@ -23,26 +24,27 @@ export function Leaderboard({
   label?: string;
 }) {
   const reducedMotion = useReducedMotion();
+  const rowRef = useSlideRows(
+    standings.map((row) => row.id),
+    ROW_HEIGHT_REM,
+    reducedMotion,
+  );
   if (standings.length === 0) {
     return <p className="text-muted">No players yet.</p>;
   }
 
-  const position = new Map(standings.map((row, index) => [row.id, index]));
-  // Render in a fixed order so React keeps each row's element and the CSS
-  // transition can slide it; the visual order comes from `translateY`.
-  const stable = [...standings].sort((a, b) => a.id.localeCompare(b.id));
   return (
     <ol
       aria-label={label}
       className="relative w-full"
       style={{ height: `${standings.length * ROW_HEIGHT_REM}rem` }}
     >
-      {stable.map((row) => {
-        const index = position.get(row.id) ?? 0;
+      {standings.map((row, index) => {
         const you = row.id === currentPlayerId;
         return (
           <li
             key={row.id}
+            ref={rowRef(row.id)}
             aria-posinset={index + 1}
             aria-setsize={standings.length}
             className={cn(
