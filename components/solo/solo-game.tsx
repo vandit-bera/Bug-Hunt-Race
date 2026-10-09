@@ -5,22 +5,19 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { LaptopBanner } from "@/components/solo/laptop-banner";
 import { Countdown } from "@/components/fx/countdown";
-import { CodeEditor } from "@/components/solo/editor-loader";
 import {
   formatTime,
   ResultScreen,
   type Finish,
   type Outcome,
 } from "@/components/solo/result-screen";
-import { TestResults } from "@/components/solo/test-results";
+import { PuzzleWorkspace } from "@/components/solo/puzzle-workspace";
 import { RunnerLoadingBar } from "@/components/runner-loading-bar";
 import { SoundToggle } from "@/components/sound-toggle";
 import { StreakCounter } from "@/components/streak-counter";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge, LevelBadge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/components/ui/cn";
-import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { recordRound } from "@/lib/game/badges";
 import { currentDailyStreak, toDay, type Progress } from "@/lib/game/progress";
@@ -150,7 +147,6 @@ function Round({
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<RunResult | null>(null);
   const [hintShown, setHintShown] = useState(false);
-  const [confirm, setConfirm] = useState<"hint" | "giveup" | null>(null);
   const [finish, setFinish] = useState<Finish | null>(null);
   const [progress, setProgress] = useState<Progress>(() => loadProgress());
   const toast = useToast();
@@ -196,7 +192,6 @@ function Round({
         variant: "success",
       });
     }
-    setConfirm(null);
     setFinish({
       outcome,
       score,
@@ -224,8 +219,7 @@ function Round({
   }, []);
 
   async function run() {
-    // The Ctrl/Cmd+Enter shortcut must not act behind an open confirm dialog.
-    if (busy.current || finished.current || confirm !== null) return;
+    if (busy.current || finished.current) return;
     busy.current = true;
     setRunning(true);
     const next = await getRunner(language).run({
@@ -241,25 +235,9 @@ function Round({
     else playSound("fail");
   }
 
-  const runRef = useRef(run);
-  useEffect(() => {
-    runRef.current = run;
-  });
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
-        event.preventDefault();
-        void runRef.current();
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
-
   function showHint() {
     hintUsed.current = true;
     setHintShown(true);
-    setConfirm(null);
   }
 
   function reset() {
@@ -271,7 +249,6 @@ function Round({
     return <ResultScreen finish={finish} params={params} lastResult={result} />;
   }
 
-  const hintCost = Math.round(puzzle.basePoints * HINT_PENALTY_RATIO);
   return (
     <>
       <LaptopBanner />
@@ -302,78 +279,20 @@ function Round({
       <p>{puzzle.description}</p>
       {language === "python" && <RunnerLoadingBar language={language} />}
 
-      <div className="grid flex-1 gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <div className="h-[55vh] min-h-72 overflow-hidden rounded-xl border-2 border-border-subtle">
-          <CodeEditor
-            value={code}
-            language={LANGUAGES[language].monacoLanguage}
-            onChange={setCode}
-            onRun={() => void runRef.current()}
-          />
-        </div>
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-wrap gap-2">
-            <Button onClick={() => void run()} loading={running}>
-              Run Tests
-            </Button>
-            <Button
-              variant="secondary"
-              disabled={hintShown}
-              onClick={() => setConfirm("hint")}
-            >
-              {hintShown ? "Hint used" : "Hint (costs points)"}
-            </Button>
-            <Button variant="ghost" onClick={reset}>
-              Reset code
-            </Button>
-            <Button variant="danger" onClick={() => setConfirm("giveup")}>
-              Give up
-            </Button>
-          </div>
-          <p className="text-xs text-muted">
-            Ctrl/Cmd+Enter runs the tests. In the editor, Ctrl+M switches Tab to
-            move focus.
-          </p>
-          {hintShown && (
-            <p className="rounded-lg border-2 border-accent p-3 text-sm">
-              <span className="font-bold">💡 Hint: </span>
-              {puzzle.hint}
-            </p>
-          )}
-          <TestResults result={result} running={running} />
-        </div>
-      </div>
-
-      <Modal
-        open={confirm === "hint"}
-        onClose={() => setConfirm(null)}
-        title="Show the hint?"
-      >
-        <p className="mb-4">
-          The hint costs {hintCost} points if you solve the puzzle.
-        </p>
-        <div className="flex gap-2">
-          <Button onClick={showHint}>Show hint</Button>
-          <Button variant="secondary" onClick={() => setConfirm(null)}>
-            Keep trying
-          </Button>
-        </div>
-      </Modal>
-      <Modal
-        open={confirm === "giveup"}
-        onClose={() => setConfirm(null)}
-        title="Give up?"
-      >
-        <p className="mb-4">You will score 0 points for this puzzle.</p>
-        <div className="flex gap-2">
-          <Button variant="danger" onClick={() => end("gaveup")}>
-            Give up
-          </Button>
-          <Button variant="secondary" onClick={() => setConfirm(null)}>
-            Keep trying
-          </Button>
-        </div>
-      </Modal>
+      <PuzzleWorkspace
+        language={language}
+        code={code}
+        onCodeChange={setCode}
+        onRun={() => void run()}
+        running={running}
+        result={result}
+        hint={puzzle.hint}
+        hintShown={hintShown}
+        hintCost={Math.round(puzzle.basePoints * HINT_PENALTY_RATIO)}
+        onShowHint={showHint}
+        onReset={reset}
+        onGiveUp={() => end("gaveup")}
+      />
     </>
   );
 }
