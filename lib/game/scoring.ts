@@ -36,9 +36,12 @@ export function computeScore(input: ScoreInput): ScoreBreakdown {
   const { solved, basePoints, timeLimitSec, elapsedSec, hintsUsed } = input;
   if (!solved || elapsedSec >= timeLimitSec) return ZERO;
 
-  const remaining = Math.max(0, timeLimitSec - Math.max(0, elapsedSec));
+  // Whole milliseconds and one division, so an exact .5 is not lost to
+  // float error (50 * 0.89 = 44.4999…) and the result matches the database.
+  const limitMs = timeLimitSec * 1000;
+  const remainingMs = limitMs - Math.round(Math.max(0, elapsedSec) * 1000);
   const speedBonus = Math.round(
-    basePoints * MAX_SPEED_BONUS_RATIO * (remaining / timeLimitSec),
+    (basePoints * Math.max(0, remainingMs)) / (limitMs / MAX_SPEED_BONUS_RATIO),
   );
   const hintPenalty = Math.round(
     basePoints * HINT_PENALTY_RATIO * Math.max(0, hintsUsed),

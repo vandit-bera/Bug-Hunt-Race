@@ -17,10 +17,13 @@ select results_eq(
       (9, 300, 480, 1000, true),
       (10, 100, 180, 179999, false),
       (11, 100, 180, 180000, false),
-      (12, 100, 180, 180000, true)
+      (12, 100, 180, 180000, true),
+      (13, 100, 180, 19800, false),
+      (14, 200, 300, 127500, false),
+      (15, 300, 480, 100800, false)
     ) as cases (n, base, time_limit, solve_ms, hint)
     order by n$$,
-  $$values (150), (142), (133), (138), (108), (267), (217), (375), (375), (100), (100), (75)$$,
+  $$values (150), (142), (133), (138), (108), (267), (217), (375), (375), (100), (100), (75), (145), (258), (419)$$,
   'race points match computeRaceScore: speed bonus and hint penalty round half up'
 );
 

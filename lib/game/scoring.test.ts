@@ -96,6 +96,10 @@ const RACE_CASES: [number, number, number, boolean, number][] = [
   [100, 180, 179_999, false, 100],
   [100, 180, 180_000, false, 100],
   [100, 180, 180_000, true, 75],
+  // Speed bonus exactly .5 (44.5, 58.5, 118.5): rounds up, not down.
+  [100, 180, 19_800, false, 145],
+  [200, 300, 127_500, false, 258],
+  [300, 480, 100_800, false, 419],
 ];
 
 describe("computeRaceScore", () => {
