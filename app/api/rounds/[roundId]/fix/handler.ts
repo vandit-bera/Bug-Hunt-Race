@@ -18,6 +18,7 @@ const STATUS: Record<string, number> = {
   not_authenticated: 401,
   round_not_found: 404,
   round_not_over: 403,
+  unavailable: 503,
 };
 
 // PostgREST refuses a malformed or unverifiable token (PGRST301-303), and the

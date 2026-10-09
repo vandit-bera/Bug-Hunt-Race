@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ConnectionError } from "@/components/room/connection-error";
+import { ReconnectingBanner } from "@/components/room/reconnecting-banner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
@@ -15,7 +17,11 @@ import {
   type DbClient,
   type RoomMembership,
 } from "@/lib/db";
-import { roomErrorMessage, useRoomConnection } from "@/lib/rooms";
+import {
+  isUnavailableError,
+  roomErrorMessage,
+  useRoomConnection,
+} from "@/lib/rooms";
 import { parseLabSettings } from "./lab-settings";
 import { RoundPanel } from "./round-panel";
 
@@ -56,6 +62,10 @@ function Lab({ client }: { client: DbClient }) {
   const [membership, setMembership] = useState<RoomMembership | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Rejoining the saved room failed because Supabase could not be reached.
+  const [offline, setOffline] = useState(false);
+  const [rejoinAttempt, setRejoinAttempt] = useState(0);
+  const [rejoining, setRejoining] = useState(false);
   const live = useRoomConnection(
     client,
     membership?.room.id ?? null,
@@ -99,15 +109,21 @@ function Lab({ client }: { client: DbClient }) {
           displayName: saved.name,
           avatar: AVATAR,
         });
-        if (!cancelled) setMembership(next);
+        if (cancelled) return;
+        setOffline(false);
+        setMembership(next);
       } catch (caught) {
-        if (!cancelled) setError(roomErrorMessage(caught));
+        if (cancelled) return;
+        if (isUnavailableError(caught)) setOffline(true);
+        else setError(roomErrorMessage(caught));
+      } finally {
+        if (!cancelled) setRejoining(false);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [client]);
+  }, [client, rejoinAttempt]);
 
   async function act(action: () => Promise<unknown>) {
     setError(null);
@@ -121,6 +137,18 @@ function Lab({ client }: { client: DbClient }) {
   function reset() {
     sessionStorage.removeItem(STORAGE_KEY);
     setMembership(null);
+  }
+
+  if (offline && !membership) {
+    return (
+      <ConnectionError
+        retrying={rejoining}
+        onRetry={() => {
+          setRejoining(true);
+          setRejoinAttempt((n) => n + 1);
+        }}
+      />
+    );
   }
 
   if (membership && live.closed) {
@@ -141,6 +169,7 @@ function Lab({ client }: { client: DbClient }) {
     return (
       <Card className="flex flex-col gap-4">
         <CardTitle>Room {membership.room.code}</CardTitle>
+        <ReconnectingBanner status={live.status} />
         <p>
           You are{" "}
           <strong data-testid="me">
@@ -174,6 +203,8 @@ function Lab({ client }: { client: DbClient }) {
           <RoundPanel
             client={client}
             room={view.room}
+            playerId={membership.player.id}
+            syncCount={view.syncCount}
             isAdmin={Boolean(me?.is_admin)}
           />
         )}

@@ -39,11 +39,18 @@ export async function fetchRoundFix(
   const response = await fetchImpl(roundFixPath(roundId), {
     headers: { Authorization: `Bearer ${token}` },
     cache: "no-store",
+  }).catch((error: unknown) => {
+    throw new DbError("unavailable", "fetch failed", { cause: error });
   });
   const body = (await response.json().catch(() => null)) as
     RoundFix | RoundFixError | null;
   if (response.ok && body && "fix" in body) return body;
-  throw toDbError({
-    message: body && "error" in body ? body.error : `HTTP ${response.status}`,
-  });
+  // The route answers with a JSON error (`unavailable` when it could not
+  // reach the database); anything else (a gateway error page) means it was
+  // not reached at all, which toDbError also calls `unavailable`.
+  if (!body || !("error" in body)) {
+    throw toDbError({ message: `HTTP ${response.status}` });
+  }
+  if (body.error === "unavailable") throw new DbError("unavailable");
+  throw toDbError({ message: body.error, code: String(response.status) });
 }

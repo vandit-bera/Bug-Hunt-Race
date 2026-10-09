@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import { Card, CardTitle } from "@/components/ui/card";
 
-export type RoomErrorKind = "not-found" | "locked" | "full" | "disconnected";
+export type RoomErrorKind =
+  "not-found" | "locked" | "full" | "disconnected" | "offline";
 
 const COPY: Record<
   RoomErrorKind,
@@ -27,6 +28,12 @@ const COPY: Record<
     emoji: "📡",
     title: "You got disconnected",
     description: "We lost the connection to the room. Try to reconnect.",
+  },
+  offline: {
+    emoji: "🔌",
+    title: "Can't reach the game",
+    description:
+      "The network or the game server is down. Your seat and saved scores are safe; retry in a moment.",
   },
 };
 
