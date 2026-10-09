@@ -1,3 +1,4 @@
+export * from "./editor";
 export * from "./fixtures";
 export * from "./join";
 export * from "./network";

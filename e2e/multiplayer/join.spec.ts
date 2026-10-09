@@ -133,8 +133,9 @@ test.describe("lobby", () => {
     const [ana, ben] = await players(2);
     const code = await createRoom(ana.page, ana.name);
     await ana.page.getByRole("button", { name: "Start game" }).click();
+    await ana.page.getByRole("button", { name: "Start round" }).click();
     await expect(ana.page.getByTestId("room-status")).toContainText(
-      "countdown",
+      "round_live",
       LIVE,
     );
 
@@ -143,8 +144,10 @@ test.describe("lobby", () => {
     await enterName(ben.page, ben.name);
     await expectLobby(ben.page, code);
     await expect(
-      ben.page.getByText("A round is in progress. Next round starts soon."),
-    ).toBeVisible();
+      ben.page.getByText(
+        "A round is in progress. You'll play from the next round.",
+      ),
+    ).toBeVisible(LIVE);
   });
 });
 

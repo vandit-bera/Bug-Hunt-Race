@@ -69,8 +69,13 @@ test("a dropped player comes back as themselves", async ({ players }) => {
 });
 ```
 
-`e2e/multiplayer/round.spec.ts` plays a race round: same puzzle and timer
-on every screen, pause, a late joiner, and the fix reveal after the end.
+`e2e/multiplayer/round.spec.ts` plays a race round in the room lab: same
+puzzle and timer on every screen, pause, a late joiner, and the fix reveal
+after the end. `e2e/multiplayer/race.spec.ts` plays it on the real room
+screens: countdown, same puzzle and clock, solving with the fix in the
+editor, Pause / Resume, Skip, a late joiner, Stop from live and paused, and
+that no response holds the fix while the round is on. `setCode` (in
+`support/editor.ts`) replaces the editor's code.
 
 `e2e/multiplayer/harness.spec.ts` is a full example: three players, one drops
 and reconnects, then the admin leaves and the role passes on.
