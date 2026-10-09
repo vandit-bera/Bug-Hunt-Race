@@ -10,6 +10,9 @@ describe("roomErrorMessage", () => {
     ["not_room_admin", "Only the room admin can do that"],
     ["invalid_display_name", "Names can't contain < or >"],
     ["rate_limited", "You're creating rooms too fast. Try again in a minute."],
+    ["joined_late", "You joined mid-round. You'll play from the next round."],
+    ["already_submitted", "Your result is already in"],
+    ["round_not_over", "The fix is shown when the round ends"],
   ] as const)("%s → %s", (code, message) => {
     expect(roomErrorMessage(new DbError(code))).toBe(message);
   });

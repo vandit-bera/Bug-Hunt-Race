@@ -17,6 +17,7 @@ import {
 } from "@/lib/db";
 import { roomErrorMessage, useRoomConnection } from "@/lib/rooms";
 import { parseLabSettings } from "./lab-settings";
+import { RoundPanel } from "./round-panel";
 
 // Survives a reload in this tab, so the lab can show a reconnect.
 const STORAGE_KEY = "bhr-room-lab";
@@ -169,6 +170,13 @@ function Lab({ client }: { client: DbClient }) {
             </li>
           ))}
         </ul>
+        {view && (
+          <RoundPanel
+            client={client}
+            room={view.room}
+            isAdmin={Boolean(me?.is_admin)}
+          />
+        )}
         <div className="flex flex-wrap gap-2">
           {me?.is_admin && (
             <>

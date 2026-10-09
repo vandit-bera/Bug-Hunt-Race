@@ -81,9 +81,11 @@ export type Database = {
       };
       puzzles: {
         Row: {
+          active: boolean;
           base_points: number;
           buggy_code: string;
           created_at: string;
+          description: string | null;
           hint: string | null;
           id: string;
           language: Database["public"]["Enums"]["language_id"];
@@ -94,9 +96,11 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
+          active?: boolean;
           base_points: number;
           buggy_code: string;
           created_at?: string;
+          description?: string | null;
           hint?: string | null;
           id: string;
           language: Database["public"]["Enums"]["language_id"];
@@ -106,9 +110,11 @@ export type Database = {
           title: string;
         };
         Update: {
+          active?: boolean;
           base_points?: number;
           buggy_code?: string;
           created_at?: string;
+          description?: string | null;
           hint?: string | null;
           id?: string;
           language?: Database["public"]["Enums"]["language_id"];
@@ -126,6 +132,7 @@ export type Database = {
           code: string;
           created_at: string;
           current_round: number;
+          game_number: number;
           id: string;
           language: Database["public"]["Enums"]["language_id"];
           level: Database["public"]["Enums"]["room_level"];
@@ -141,6 +148,7 @@ export type Database = {
           code: string;
           created_at?: string;
           current_round?: number;
+          game_number?: number;
           id?: string;
           language: Database["public"]["Enums"]["language_id"];
           level: Database["public"]["Enums"]["room_level"];
@@ -155,6 +163,7 @@ export type Database = {
           code?: string;
           created_at?: string;
           current_round?: number;
+          game_number?: number;
           id?: string;
           language?: Database["public"]["Enums"]["language_id"];
           level?: Database["public"]["Enums"]["room_level"];
@@ -183,6 +192,7 @@ export type Database = {
       rounds: {
         Row: {
           ended_at: string | null;
+          game_number: number;
           id: string;
           paused_at: string | null;
           paused_ms: number;
@@ -194,6 +204,7 @@ export type Database = {
         ComputedFields: never;
         Insert: {
           ended_at?: string | null;
+          game_number?: number;
           id?: string;
           paused_at?: string | null;
           paused_ms?: number;
@@ -204,6 +215,7 @@ export type Database = {
         };
         Update: {
           ended_at?: string | null;
+          game_number?: number;
           id?: string;
           paused_at?: string | null;
           paused_ms?: number;
@@ -324,6 +336,7 @@ export type Database = {
           code: string;
           created_at: string;
           current_round: number;
+          game_number: number;
           id: string;
           language: Database["public"]["Enums"]["language_id"];
           level: Database["public"]["Enums"]["room_level"];
@@ -377,6 +390,31 @@ export type Database = {
           status: Database["public"]["Enums"]["room_status"];
         }[];
       };
+      get_current_round: {
+        Args: { target_room_id: string };
+        Returns: {
+          base_points: number;
+          buggy_code: string;
+          description: string;
+          ended_at: string;
+          game_number: number;
+          hint: string;
+          joined_late: boolean;
+          language: Database["public"]["Enums"]["language_id"];
+          level: Database["public"]["Enums"]["puzzle_level"];
+          paused_at: string;
+          paused_ms: number;
+          puzzle_id: string;
+          round_id: string;
+          round_number: number;
+          server_now: string;
+          started_at: string;
+          submitted: boolean;
+          tests: string;
+          time_limit_seconds: number;
+          title: string;
+        }[];
+      };
       join_room: {
         Args: { avatar: string; display_name: string; room_code: string };
         Returns: {
@@ -417,6 +455,10 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      reveal_round_puzzle: {
+        Args: { target_round_id: string };
+        Returns: string;
+      };
       room_heartbeat: {
         Args: { target_room_id: string };
         Returns: Database["public"]["Enums"]["room_status"];
@@ -429,6 +471,7 @@ export type Database = {
           code: string;
           created_at: string;
           current_round: number;
+          game_number: number;
           id: string;
           language: Database["public"]["Enums"]["language_id"];
           level: Database["public"]["Enums"]["room_level"];

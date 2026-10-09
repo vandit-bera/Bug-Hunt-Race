@@ -25,6 +25,7 @@ const room: Room = {
   total_rounds: null,
   locked: false,
   current_round: 0,
+  game_number: 1,
   created_at: "2026-10-08T00:00:00Z",
   updated_at: "2026-10-08T00:00:00Z",
   closed_at: null,

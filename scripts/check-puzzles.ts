@@ -2,14 +2,14 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { checkEntries } from "@/lib/puzzles/check";
-import { PUZZLE_INDEX_FILE, renderPuzzleIndex } from "@/lib/puzzles/index-file";
+import { GENERATED_PUZZLE_FILES } from "@/lib/puzzles/generated-files";
 import { loadPuzzles, type PuzzleSource } from "@/lib/puzzles/load";
 import { runInNode } from "@/lib/runner/node";
 
 /**
  * `pnpm puzzles:check [--dir <folder>]`: validates every puzzle, proves its
  * buggy code fails and its fix passes, and (for the real `puzzles/` folder)
- * that the generated index is up to date. Exits 1 on any problem.
+ * that the generated files are up to date. Exits 1 on any problem.
  */
 
 const DEFAULT_DIR = "puzzles";
@@ -18,15 +18,20 @@ const { values } = parseArgs({
 });
 const root = path.resolve(values.dir);
 
-async function isIndexCurrent(puzzles: PuzzleSource[]): Promise<boolean> {
-  const file = path.resolve(PUZZLE_INDEX_FILE);
-  let current = "";
-  try {
-    current = readFileSync(file, "utf8");
-  } catch {
-    return false;
+/** Generated files that do not match puzzles/. */
+async function staleFiles(puzzles: PuzzleSource[]): Promise<string[]> {
+  const stale: string[] = [];
+  for (const { file, render } of GENERATED_PUZZLE_FILES) {
+    const filepath = path.resolve(file);
+    let current = "";
+    try {
+      current = readFileSync(filepath, "utf8");
+    } catch {
+      // Missing counts as stale.
+    }
+    if (current !== (await render(puzzles, filepath))) stale.push(file);
   }
-  return current === (await renderPuzzleIndex(puzzles, file));
+  return stale;
 }
 
 async function main(): Promise<number> {
@@ -42,17 +47,17 @@ async function main(): Promise<number> {
     `\n${results.length - failed} of ${results.length} puzzles OK${failed ? `, ${failed} failed` : ""}.`,
   );
 
-  let stale = false;
+  let stale: string[] = [];
   if (root === path.resolve(DEFAULT_DIR) && failed === 0) {
     const puzzles = entries.flatMap(({ puzzle }) => (puzzle ? [puzzle] : []));
-    stale = !(await isIndexCurrent(puzzles));
-    if (stale) {
+    stale = await staleFiles(puzzles);
+    for (const file of stale) {
       console.log(
-        `✗ ${PUZZLE_INDEX_FILE} is out of date. Run \`pnpm puzzles:build\` and commit it.`,
+        `✗ ${file} is out of date. Run \`pnpm puzzles:build\` and commit it.`,
       );
     }
   }
-  return failed > 0 || stale || results.length === 0 ? 1 : 0;
+  return failed > 0 || stale.length > 0 || results.length === 0 ? 1 : 0;
 }
 
 main().then(

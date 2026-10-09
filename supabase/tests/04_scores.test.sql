@@ -1,10 +1,12 @@
 -- record_score: server-side timing and points; leaderboard ranks and ties.
 begin;
-select plan(22);
+select plan(21);
 
--- Room A: Ana (admin), Ben, Dev. Room C: Cleo, Dan.
+-- Room A: Ana (admin), Ben, Dev, Eve (never submits, so the round stays
+-- open). Room C: Cleo, Dan. Everyone joined before the rounds started.
 insert into auth.users (id) values
   ('00000000-0000-0000-0000-0000000000a1'),
+  ('00000000-0000-0000-0000-0000000000e1'),
   ('00000000-0000-0000-0000-0000000000b1'),
   ('00000000-0000-0000-0000-0000000000c1'),
   ('00000000-0000-0000-0000-0000000000d1'),
@@ -14,20 +16,21 @@ insert into public.rooms (id, code, language, level, status, current_round) valu
   ('00000000-0000-0000-0000-00000000aaaa', 'AAAAAA', 'javascript', 'easy', 'round_live', 1),
   ('00000000-0000-0000-0000-00000000cccc', 'CCCCCC', 'python', 'hard', 'round_results', 1);
 
-insert into public.players (id, room_id, user_id, display_name, avatar) values
-  ('00000000-0000-0000-0000-0000000001a1', '00000000-0000-0000-0000-00000000aaaa', '00000000-0000-0000-0000-0000000000a1', 'Ana', '🦊'),
-  ('00000000-0000-0000-0000-0000000001b1', '00000000-0000-0000-0000-00000000aaaa', '00000000-0000-0000-0000-0000000000b1', 'Ben', '🐼'),
-  ('00000000-0000-0000-0000-0000000001d1', '00000000-0000-0000-0000-00000000aaaa', '00000000-0000-0000-0000-0000000000d1', 'Dev', '🐯'),
-  ('00000000-0000-0000-0000-0000000001c1', '00000000-0000-0000-0000-00000000cccc', '00000000-0000-0000-0000-0000000000c1', 'Cleo', '🐙'),
-  ('00000000-0000-0000-0000-0000000001d2', '00000000-0000-0000-0000-00000000cccc', '00000000-0000-0000-0000-0000000000d2', 'Dan', '🦉');
+insert into public.players (id, room_id, user_id, display_name, avatar, joined_at) values
+  ('00000000-0000-0000-0000-0000000001a1', '00000000-0000-0000-0000-00000000aaaa', '00000000-0000-0000-0000-0000000000a1', 'Ana', '🦊', now() - interval '1 hour'),
+  ('00000000-0000-0000-0000-0000000001b1', '00000000-0000-0000-0000-00000000aaaa', '00000000-0000-0000-0000-0000000000b1', 'Ben', '🐼', now() - interval '1 hour'),
+  ('00000000-0000-0000-0000-0000000001d1', '00000000-0000-0000-0000-00000000aaaa', '00000000-0000-0000-0000-0000000000d1', 'Dev', '🐯', now() - interval '1 hour'),
+  ('00000000-0000-0000-0000-0000000001e1', '00000000-0000-0000-0000-00000000aaaa', '00000000-0000-0000-0000-0000000000e1', 'Eve', '🐝', now() - interval '1 hour'),
+  ('00000000-0000-0000-0000-0000000001c1', '00000000-0000-0000-0000-00000000cccc', '00000000-0000-0000-0000-0000000000c1', 'Cleo', '🐙', now() - interval '1 hour'),
+  ('00000000-0000-0000-0000-0000000001d2', '00000000-0000-0000-0000-00000000cccc', '00000000-0000-0000-0000-0000000000d2', 'Dan', '🦉', now() - interval '1 hour');
 
 update public.rooms set admin_player_id = '00000000-0000-0000-0000-0000000001a1'
 where id = '00000000-0000-0000-0000-00000000aaaa';
 
--- js-easy-sum-array: 180 s limit, 100 base points. Started 60 s ago.
-insert into public.rounds (id, room_id, puzzle_id, round_number, started_at) values
-  ('00000000-0000-0000-0000-00000000ea01', '00000000-0000-0000-0000-00000000aaaa', 'js-easy-sum-array', 1, now() - interval '60 seconds'),
-  ('00000000-0000-0000-0000-00000000ec01', '00000000-0000-0000-0000-00000000cccc', 'py-hard-lru-cache', 1, now() - interval '10 minutes');
+-- average-rating: 180 s limit, 100 base points. Started 60 s ago.
+insert into public.rounds (id, room_id, puzzle_id, round_number, started_at, ended_at) values
+  ('00000000-0000-0000-0000-00000000ea01', '00000000-0000-0000-0000-00000000aaaa', 'average-rating', 1, now() - interval '60 seconds', null),
+  ('00000000-0000-0000-0000-00000000ec01', '00000000-0000-0000-0000-00000000cccc', 'merge-intervals', 1, now() - interval '10 minutes', now() - interval '5 minutes');
 
 -- Point formula ----------------------------------------------------------------
 
@@ -67,11 +70,9 @@ select results_eq(
   $$values (true, 60000, false, 133)$$,
   'solve time comes from the server clock and points are computed in the database'
 );
-select results_eq(
-  $$select passed, hint_used, points
-    from public.record_score('00000000-0000-0000-0000-00000000ea01', false, true)$$,
-  $$values (true, false, 133)$$,
-  'a passing result is final'
+select throws_ok(
+  $$select public.record_score('00000000-0000-0000-0000-00000000ea01', false, true)$$,
+  'P0001', 'already_submitted', 'a second result is refused'
 );
 select is(
   (select count(*) from public.scores where player_id = '00000000-0000-0000-0000-0000000001b1'),
@@ -79,20 +80,14 @@ select is(
   'one score row per player per round'
 );
 
--- Dev takes a hint, then solves --------------------------------------------------
+-- Dev solves with the hint ------------------------------------------------------
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000d1","role":"authenticated"}', true);
 select results_eq(
   $$select passed, solve_time_ms, hint_used, points
-    from public.record_score('00000000-0000-0000-0000-00000000ea01', false, true)$$,
-  $$values (false, null::integer, true, 0)$$,
-  'using a hint is recorded with 0 points until solved'
-);
-select results_eq(
-  $$select passed, hint_used, points
-    from public.record_score('00000000-0000-0000-0000-00000000ea01', true, false)$$,
-  $$values (true, true, 108)$$,
-  'the hint stays used and its penalty applies on the solve'
+    from public.record_score('00000000-0000-0000-0000-00000000ea01', true, true)$$,
+  $$values (true, 60000, true, 108)$$,
+  'the hint penalty applies on the solve'
 );
 
 -- Leaderboard ----------------------------------------------------------------------
@@ -100,7 +95,7 @@ select results_eq(
 select results_eq(
   $$select display_name, total_points, rounds_solved, rank
     from public.room_leaderboard order by rank, display_name$$,
-  $$values ('Ben'::text, 133, 1, 1), ('Dev'::text, 108, 1, 2), ('Ana'::text, 0, 0, 3)$$,
+  $$values ('Ben'::text, 133, 1, 1), ('Dev'::text, 108, 1, 2), ('Ana'::text, 0, 0, 3), ('Eve'::text, 0, 0, 3)$$,
   'leaderboard ranks by points and only shows the caller''s room'
 );
 select throws_ok(
@@ -182,7 +177,7 @@ insert into public.scores (round_id, player_id, passed, solve_time_ms, points) v
   ('00000000-0000-0000-0000-00000000ec01', '00000000-0000-0000-0000-0000000001c1', true, 90000, 350),
   ('00000000-0000-0000-0000-00000000ec01', '00000000-0000-0000-0000-0000000001d2', true, 90000, 350);
 insert into public.rounds (id, room_id, puzzle_id, round_number) values
-  ('00000000-0000-0000-0000-00000000ec02', '00000000-0000-0000-0000-00000000cccc', 'js-easy-sum-array', 2);
+  ('00000000-0000-0000-0000-00000000ec02', '00000000-0000-0000-0000-00000000cccc', 'average-rating', 2);
 
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000c1","role":"authenticated"}', true);
@@ -207,10 +202,9 @@ select is_empty(
   $$select * from public.room_leaderboard where room_id = '00000000-0000-0000-0000-00000000aaaa'$$,
   'Cleo cannot see room A''s leaderboard'
 );
-select results_eq(
-  $$select points from public.record_score('00000000-0000-0000-0000-00000000ec02', true, true)$$,
-  array[120],
-  'resubmitting after a pass returns the stored score unchanged'
+select throws_ok(
+  $$select public.record_score('00000000-0000-0000-0000-00000000ec02', true, true)$$,
+  'P0001', 'already_submitted', 'resubmitting after a result is refused'
 );
 reset role;
 

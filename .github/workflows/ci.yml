@@ -31,6 +31,7 @@ jobs:
       - run: pnpm puzzles:check
       - run: pnpm build
       - run: pnpm bundle:check
+      - run: pnpm fixes:check
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e
       - uses: actions/upload-artifact@v4
@@ -53,14 +54,14 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Fresh Postgres with every migration and the dev seed applied.
+      # Fresh Postgres with every migration and the puzzle catalog applied.
       - run: pnpm exec supabase db start
       - run: pnpm db:test
       - name: Generated types match the migrations
         run: pnpm db:types && git diff --exit-code lib/db/types.ts
 
   # Multi-player Realtime E2E (e2e/multiplayer/) against a local Supabase with
-  # migrations and seed applied: database, auth, API and Realtime only. The
+  # migrations and the puzzle catalog applied: database, auth, API and Realtime only. The
   # `ci` job skips these specs. No retries, so a flaky test fails the job.
   realtime:
     runs-on: ubuntu-latest

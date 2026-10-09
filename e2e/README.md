@@ -16,7 +16,7 @@ e2e/
 Needs Docker. Never point these tests at the live Supabase project.
 
 ```bash
-pnpm db:start                          # local Supabase with migrations + seed
+pnpm db:start                          # local Supabase with migrations + puzzle catalog
 pnpm exec supabase status              # prints API URL and anon key
 export NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
 export NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key from supabase status>
@@ -68,6 +68,9 @@ test("a dropped player comes back as themselves", async ({ players }) => {
   await expect(playerRow(ana.page, "Ben")).toContainText("online", RECONNECT);
 });
 ```
+
+`e2e/multiplayer/round.spec.ts` plays a race round: same puzzle and timer
+on every screen, pause, a late joiner, and the fix reveal after the end.
 
 `e2e/multiplayer/harness.spec.ts` is a full example: three players, one drops
 and reconnects, then the admin leaves and the role passes on.
@@ -121,3 +124,6 @@ and close a player's window to drop them (DevTools → Network → Offline may
 keep an open Realtime socket alive).
 `/dev/rooms?language=python&level=mixed&rounds=endless` creates a room with
 those settings.
+After **Start game**, the lab's round panel has the admin controls (Start
+round, Pause, Resume, Skip round, Stop game, Next round), **Submit solve**
+for players, and **Show fix**, which only works once the round has ended.

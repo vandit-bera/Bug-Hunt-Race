@@ -23,6 +23,9 @@ export interface Finish {
   hintUsed: boolean;
   isNewBest: boolean;
   best: PersonalBest | null;
+  winStreak: number;
+  dailyStreak: number;
+  newBadgeCount: number;
 }
 
 const HEADINGS: Record<Outcome, { emoji: string; text: string }> = {
@@ -87,6 +90,14 @@ export function ResultScreen({
           "0 points. No fix this time."
         )}
       </p>
+      {finish.newBadgeCount > 0 && (
+        <p className="font-bold text-success">
+          🏅 Badge unlocked!{" "}
+          <Link href="/stats" className="underline">
+            See your badges
+          </Link>
+        </p>
+      )}
       {finish.isNewBest && (
         <p role="status" className="font-bold text-success">
           🏆 New personal best!
@@ -105,6 +116,11 @@ export function ResultScreen({
           </>
         )}
         <Stat label="Hint used" value={hintUsed ? "Yes" : "No"} />
+        <Stat label="Win streak" value={`🔥 ${finish.winStreak}`} />
+        <Stat
+          label="Daily streak"
+          value={`${finish.dailyStreak} ${finish.dailyStreak === 1 ? "day" : "days"}`}
+        />
         <Stat
           label="Personal best"
           value={
@@ -131,6 +147,9 @@ export function ResultScreen({
         </Link>
         <Link href="/solo" className={buttonClass({ variant: "secondary" })}>
           Change settings
+        </Link>
+        <Link href="/stats" className={buttonClass({ variant: "ghost" })}>
+          My stats
         </Link>
       </div>
       <RulesButton className="self-start" />

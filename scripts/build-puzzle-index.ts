@@ -1,10 +1,11 @@
 import { writeFileSync } from "node:fs";
 import path from "node:path";
-import { PUZZLE_INDEX_FILE, renderPuzzleIndex } from "@/lib/puzzles/index-file";
+import { GENERATED_PUZZLE_FILES } from "@/lib/puzzles/generated-files";
 import { loadPuzzles } from "@/lib/puzzles/load";
 
 /**
- * `pnpm puzzles:build`: writes the typed puzzle index the app imports.
+ * `pnpm puzzles:build`: writes the files generated from puzzles/: the typed
+ * puzzle index the app imports, the server-only fixes and the SQL catalog.
  * Refuses to write while any puzzle folder is invalid.
  */
 
@@ -19,8 +20,10 @@ if (invalid.length > 0) {
 }
 
 const puzzles = entries.flatMap(({ puzzle }) => (puzzle ? [puzzle] : []));
-const file = path.resolve(PUZZLE_INDEX_FILE);
-renderPuzzleIndex(puzzles, file).then((source) => {
-  writeFileSync(file, source);
-  console.log(`Wrote ${puzzles.length} puzzles to ${PUZZLE_INDEX_FILE}.`);
-});
+Promise.all(
+  GENERATED_PUZZLE_FILES.map(async ({ file, render }) => {
+    const filepath = path.resolve(file);
+    writeFileSync(filepath, await render(puzzles, filepath));
+    console.log(`Wrote ${puzzles.length} puzzles to ${file}.`);
+  }),
+);

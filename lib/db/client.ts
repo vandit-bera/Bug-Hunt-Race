@@ -8,6 +8,24 @@ export type DbClient = SupabaseClient<Database>;
  * (anon) key. Row-level security protects the data, not the key.
  */
 export function createBrowserDbClient(): DbClient {
+  const { url, key } = publicConfig();
+  return createClient<Database>(url, key);
+}
+
+/**
+ * Supabase client for server code that acts as one player: requests carry
+ * that player's access token, so row-level security and `auth.uid()` apply
+ * exactly as in their browser. Nothing is stored between requests.
+ */
+export function createUserDbClient(accessToken: string): DbClient {
+  const { url, key } = publicConfig();
+  return createClient<Database>(url, key, {
+    global: { headers: { Authorization: `Bearer ${accessToken}` } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+function publicConfig(): { url: string; key: string } {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) {
@@ -15,7 +33,7 @@ export function createBrowserDbClient(): DbClient {
       "Supabase is not configured: set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY (see .env.example).",
     );
   }
-  return createClient<Database>(url, key);
+  return { url, key };
 }
 
 /**

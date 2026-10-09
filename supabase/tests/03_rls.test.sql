@@ -27,8 +27,8 @@ update public.rooms set admin_player_id = '00000000-0000-0000-0000-0000000001c1'
 where id = '00000000-0000-0000-0000-00000000cccc';
 
 insert into public.rounds (id, room_id, puzzle_id, round_number) values
-  ('00000000-0000-0000-0000-00000000ea01', '00000000-0000-0000-0000-00000000aaaa', 'js-easy-sum-array', 1),
-  ('00000000-0000-0000-0000-00000000ec01', '00000000-0000-0000-0000-00000000cccc', 'py-hard-lru-cache', 1);
+  ('00000000-0000-0000-0000-00000000ea01', '00000000-0000-0000-0000-00000000aaaa', 'average-rating', 1),
+  ('00000000-0000-0000-0000-00000000ec01', '00000000-0000-0000-0000-00000000cccc', 'merge-intervals', 1);
 
 insert into public.scores (round_id, player_id, passed, solve_time_ms, points) values
   ('00000000-0000-0000-0000-00000000ea01', '00000000-0000-0000-0000-0000000001b1', true, 30000, 150),
@@ -105,7 +105,7 @@ select throws_ok(
 );
 select throws_ok(
   $$insert into public.rounds (room_id, puzzle_id, round_number)
-    values ('00000000-0000-0000-0000-00000000aaaa', 'js-easy-sum-array', 2)$$,
+    values ('00000000-0000-0000-0000-00000000aaaa', 'average-rating', 2)$$,
   '42501', null, 'players cannot create rounds'
 );
 
@@ -157,7 +157,7 @@ select throws_ok(
 
 -- Puzzles and private helpers -------------------------------------------------------
 
-select is((select count(*) from public.puzzles), 3::bigint, 'signed-in players can read puzzles');
+select isnt((select count(*) from public.puzzles), 0::bigint, 'signed-in players can read puzzles');
 select throws_ok(
   $$update public.puzzles set base_points = 300$$,
   '42501', null, 'players cannot change puzzles'
@@ -170,7 +170,7 @@ select throws_ok(
 reset role;
 set local role anon;
 
-select is((select count(*) from public.puzzles), 3::bigint, 'signed-out visitors can read puzzles');
+select isnt((select count(*) from public.puzzles), 0::bigint, 'signed-out visitors can read puzzles');
 select throws_ok(
   $$insert into public.puzzles (id, language, level, title, buggy_code, tests, time_limit_seconds, base_points)
     values ('x-easy', 'javascript', 'easy', 'X', 'x', 'x', 180, 100)$$,
