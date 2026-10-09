@@ -182,6 +182,12 @@ test("async works too", async () => {
   loops hit the 5 s timeout first, but allocating fast enough (e.g.
   `while (true) a.push(new Array(1e6).fill(1))`) can crash the **whole tab**,
   not just the worker. Node threads are capped at 256 MB.
+- **Python recursion:** the harness sets the recursion limit to 250 before each
+  run. Freeing a traceback costs one native call per frame, and WebKit's JS
+  stack overflows at about 420 frames, so at the default 1000 infinite recursion
+  became a `Maximum call stack size exceeded` run error in Safari instead of a
+  failed `RecursionError` test. Code that raises the limit itself can still hit
+  that error in Safari.
 - **Node entry is for trusted code only.** The thread gets the same lockdown,
   but Node cannot apply the worker CSP, so dynamic `import()` (`node:fs`,
   `data:` URLs) still works there. It runs puzzle files from this repo in CI,
