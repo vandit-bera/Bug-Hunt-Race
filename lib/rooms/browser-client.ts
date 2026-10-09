@@ -1,13 +1,20 @@
-import { createBrowserDbClient, type DbClient } from "@/lib/db";
+import {
+  createBrowserDbClient,
+  readSupabaseConfig,
+  type DbClient,
+} from "@/lib/db";
 
 let client: DbClient | undefined;
 
-/** Whether the public Supabase variables are set (see .env.example). */
+/**
+ * Whether the public Supabase variables are set and valid (see
+ * .env.example). A wrong value is logged (build and server logs, the browser
+ * console) rather than surfacing later as 404s.
+ */
 export function isDbConfigured(): boolean {
-  return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  );
+  const config = readSupabaseConfig();
+  if (!config.ok && !config.missing) console.error(config.problem);
+  return config.ok;
 }
 
 /**

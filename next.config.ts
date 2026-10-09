@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { normalizeSupabaseUrl } from "./lib/db/config";
 import { securityHeaders } from "./lib/security/headers";
 
 /**
@@ -27,7 +28,9 @@ const nextConfig: NextConfig = {
         // page's policy, and the runner workers below need their own.
         source: "/((?!_next/static/).*)",
         headers: securityHeaders({
-          supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+          supabaseUrl:
+            normalizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL) ??
+            undefined,
           isDev: process.env.NODE_ENV === "development",
         }),
       },
