@@ -393,7 +393,7 @@ room admin may call `advance_room()` (`not_room_admin` otherwise).
 | Event         | From → to                               | By     | Notes                                         |
 | ------------- | --------------------------------------- | ------ | --------------------------------------------- |
 | `start`       | lobby → countdown                       | admin  | round 1                                       |
-| `begin_round` | countdown → round_live                  | admin  | countdown over (3.4 may move it to timer)     |
+| `begin_round` | countdown → round_live                  | admin  | countdown over (sent by the admin's client)   |
 | `pause`       | round_live → paused                     | admin  |                                               |
 | `resume`      | paused → round_live                     | admin  |                                               |
 | `end_round`   | round_live → round_results              | admin  | Skip; the database applies it too (see below) |
@@ -711,6 +711,25 @@ await stopGame(db, roomId); // admin: live or paused → final_leaderboard
 await recordScore(db, { roundId, passed: true, hintUsed: false });
 const { fix } = await fetchRoundFix(db, roundId); // after the round ends
 ```
+
+### Race screens
+
+`/room/<code>` (`components/room/room-lobby.tsx`) shows one screen per room
+status, picked by `racePhase` in `lib/game/race.ts`; the screens are in
+`components/race/`.
+
+| Room status         | Screen                                                                                                                                                                   |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `lobby`             | Lobby. The admin has **Start game** (`start`).                                                                                                                           |
+| `countdown`         | 3-2-1-Go on every screen. When it ends, the admin's client sends `begin_round` (a new admin's client does it if the role moved during the countdown).                    |
+| `round_live/paused` | The Solo editor with the shared clock. A passing run calls `record_score(passed)`; Give up sends `passed = false`. Then "Waiting for others".                            |
+|                     | Admin: Pause / Resume, Skip round, Stop game (with a confirm) and a progress list (✅ solved / ⏳ still fixing), which reads `scores` every 2 s.                         |
+|                     | Late joiners (`joined_late`) stay on the lobby screen until the next round.                                                                                              |
+| `round_results`     | Everyone's result for the round. If nobody solved it, the fix loads from `/api/rounds/<id>/fix`; otherwise a **Show the fix** button. Admin: Next round / Final results. |
+| `final_leaderboard` | A plain ranked list (`room_leaderboard`); 3.5 (TB-36) makes it a podium. Admin: Play again / Close room.                                                                 |
+
+The round is re-read on every room status change and ignored if it is not the
+room's current round, so a new round never shows the last one's puzzle.
 
 ### Puzzle catalog
 
