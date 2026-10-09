@@ -25,8 +25,9 @@ import { preloadRunner } from "@/lib/runner/preload";
 import { getRunner } from "@/lib/runner/registry";
 import type { RunResult } from "@/lib/runner/types";
 import { AdminControls } from "./admin-controls";
+import { LiveStandings } from "./live-standings";
 import { progressRows, RoundProgress } from "./round-progress";
-import { useNow, useRoundScores } from "./use-race-data";
+import { useLeaderboard, useNow, useRoundScores } from "./use-race-data";
 
 const LOW_TIME_MS = 30_000;
 
@@ -36,7 +37,8 @@ type Sent = "solved" | "gave_up" | "sent";
 /**
  * A live or paused race round: the Solo editor with the shared clock. A
  * passing run sends the result; the database times it. The admin also gets
- * Pause / Resume / Skip / Stop and everyone's progress.
+ * Pause / Resume / Skip / Stop and everyone's progress. Everyone sees the
+ * live leaderboard.
  */
 export function RaceRound({
   client,
@@ -72,6 +74,7 @@ export function RaceRound({
     error: string;
   } | null>(null);
   const busy = useRef(false);
+  const leaderboard = useLeaderboard(client, room, true);
 
   useEffect(() => {
     void preloadRunner(language);
@@ -198,6 +201,11 @@ export function RaceRound({
           </Button>
         </Card>
       )}
+      <LiveStandings
+        leaderboard={leaderboard}
+        selfId={me.id}
+        title="Live leaderboard"
+      />
       {me.is_admin && (
         <AdminProgress
           client={client}

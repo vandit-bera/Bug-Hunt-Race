@@ -1,45 +1,26 @@
-import path from "node:path";
-import type { Page } from "@playwright/test";
-import { loadPuzzles } from "@/lib/puzzles/load";
 import {
+  COUNTDOWN,
   LIVE,
-  createRoomFromScreen,
   expect,
+  expectNameFits,
+  giveUp,
+  heading,
   joinByLink,
+  openRoom,
   parseTimerSeconds,
+  puzzleOn,
   requireSupabase,
-  setCode,
+  solve,
+  startGame,
+  stopGame,
   test,
   type Player,
 } from "../support";
 
 requireSupabase();
 
-const PUZZLES = loadPuzzles(path.resolve("puzzles")).flatMap(({ puzzle }) =>
-  puzzle ? [puzzle] : [],
-);
-
-/** The 3-2-1-Go countdown, then the round loads. */
-const COUNTDOWN = { timeout: 10_000 };
-
-function heading(page: Page) {
-  return page.getByRole("heading", { level: 1 });
-}
-
 function timerOf(player: Player) {
   return player.page.getByTestId("round-time-left");
-}
-
-/** The puzzle on `page`, by its title (the database picks at random). */
-async function puzzleOn(page: Page) {
-  const title = page.getByRole("main").getByRole("heading", { level: 2 });
-  await expect(title).toBeVisible(COUNTDOWN);
-  const text = (await title.textContent()) ?? "";
-  const puzzle = PUZZLES.find(
-    ({ meta }) => meta.title === text && meta.language === "javascript",
-  );
-  if (!puzzle) throw new Error(`No JavaScript puzzle titled "${text}"`);
-  return puzzle;
 }
 
 async function readTimers(players: Player[]): Promise<(number | null)[]> {
@@ -60,68 +41,6 @@ async function expectTimersAgree(players: Player[], tolerance = 1) {
       { message: "every player's timer within 1 s", timeout: 5_000 },
     )
     .toBeLessThanOrEqual(tolerance);
-}
-
-/** Creates a JavaScript room and seats `guests` through invite links. */
-async function openRoom(
-  [admin, ...guests]: Player[],
-  totalRounds: number | null = 3,
-) {
-  const code = await createRoomFromScreen(admin.page, admin.name, {
-    language: "javascript",
-    level: "easy",
-    totalRounds,
-  });
-  for (const guest of guests) await joinByLink(guest.page, code, guest.name);
-  for (const { page } of [admin, ...guests]) {
-    await expect(
-      page.getByRole("list", { name: "Players" }).getByRole("listitem"),
-    ).toHaveCount(guests.length + 1, LIVE);
-  }
-  return code;
-}
-
-/**
- * A player's name keeps a readable width in a results list on phones: the
- * status and points wrap below it instead of squeezing it (QA, TB-35).
- */
-async function expectNameFits(page: Page, list: string, name: string) {
-  const viewport = page.viewportSize();
-  for (const width of [320, 414]) {
-    await page.setViewportSize({ width, height: 800 });
-    const box = await page
-      .getByRole("list", { name: list })
-      .getByText(name, { exact: true })
-      .boundingBox();
-    expect(box?.width, `${name} at ${width} px`).toBeGreaterThanOrEqual(60);
-  }
-  if (viewport) await page.setViewportSize(viewport);
-}
-
-async function startGame(admin: Player, racers: Player[]) {
-  await admin.page.getByRole("button", { name: "Start game" }).click();
-  for (const { page } of racers) {
-    await expect(heading(page)).toHaveText("Get ready", LIVE);
-  }
-  for (const { page } of racers) {
-    await expect(heading(page)).toHaveText(/^Round \d+$/, COUNTDOWN);
-    await expect(page.getByTestId("round-time-left")).toBeVisible();
-  }
-}
-
-async function solve(page: Page, fix: string) {
-  await setCode(page, fix);
-  await page.getByRole("button", { name: "Run Tests" }).click();
-  await expect(page.getByText("🎉 Solved!")).toBeVisible(COUNTDOWN);
-}
-
-async function giveUp(page: Page) {
-  await page.getByRole("button", { name: "Give up" }).click();
-  await page
-    .getByRole("dialog", { name: "Give up?" })
-    .getByRole("button", { name: "Give up" })
-    .click();
-  await expect(page.getByText("You gave up this one.")).toBeVisible(LIVE);
 }
 
 test("a race: same countdown, puzzle and clock; solve, pause, skip, late joiner, stop", async ({
@@ -212,12 +131,12 @@ test("a race: same countdown, puzzle and clock; solve, pause, skip, late joiner,
   for (const { page } of [...racers, dev]) {
     await expect(heading(page)).toHaveText("Round 1 results", LIVE);
   }
-  const results = cleo.page.getByRole("list", { name: "Round results" });
+  const results = cleo.page.getByRole("list", { name: "Round 1 results" });
   await expect(results.getByRole("listitem").first()).toContainText(ben.name);
   await expect(
     results.getByRole("listitem").filter({ hasText: cleo.name }),
   ).toContainText("Not solved");
-  await expectNameFits(cleo.page, "Round results", ben.name);
+  await expectNameFits(cleo.page, "Round 1 results", ben.name);
   await cleo.page.getByRole("button", { name: "Show the fix" }).click();
   await expect(cleo.page.getByTestId("round-fix")).toHaveText(puzzle.fix);
 
@@ -236,24 +155,19 @@ test("a race: same countdown, puzzle and clock; solve, pause, skip, late joiner,
   await expect(
     dev.page.getByRole("status").getByText("Paused", { exact: true }),
   ).toBeVisible(LIVE);
-  await ana.page.getByRole("button", { name: "Stop game" }).click();
-  await ana.page
-    .getByRole("dialog", { name: "Stop the game?" })
-    .getByRole("button", { name: "Stop game" })
-    .click();
+  await stopGame(ana);
   for (const { page } of [...racers, dev]) {
     await expect(heading(page)).toHaveText("Final leaderboard", LIVE);
   }
   await expect(
-    ben.page.getByRole("list", { name: "Leaderboard" }).getByRole("listitem"),
-  ).toHaveCount(4);
-  await expectNameFits(cleo.page, "Leaderboard", ben.name);
-  await expect(
     ben.page
-      .getByRole("list", { name: "Leaderboard" })
-      .getByRole("listitem")
-      .first(),
-  ).toContainText(ben.name);
+      .getByRole("list", { name: "Final leaderboard" })
+      .getByRole("listitem"),
+  ).toHaveCount(4);
+  await expectNameFits(cleo.page, "Final leaderboard", ben.name);
+  await expect(ben.page.getByRole("list", { name: "1st place" })).toContainText(
+    ben.name,
+  );
 });
 
 test("everyone done ends the round early; nobody solved shows the fix", async ({
@@ -298,20 +212,13 @@ test("the admin plays too, and Stop from a live round ends the game", async ({
       .filter({ hasText: ana.name }),
   ).toContainText("Solved in", LIVE);
 
-  await ana.page.getByRole("button", { name: "Stop game" }).click();
-  await ana.page
-    .getByRole("dialog", { name: "Stop the game?" })
-    .getByRole("button", { name: "Stop game" })
-    .click();
+  await stopGame(ana);
   for (const { page } of racers) {
     await expect(heading(page)).toHaveText("Final leaderboard", LIVE);
   }
-  await expect(
-    ben.page
-      .getByRole("list", { name: "Leaderboard" })
-      .getByRole("listitem")
-      .first(),
-  ).toContainText(ana.name);
+  await expect(ben.page.getByRole("list", { name: "1st place" })).toContainText(
+    ana.name,
+  );
 
   // Play again brings everyone back to the lobby.
   await ana.page.getByRole("button", { name: "Play again" }).click();

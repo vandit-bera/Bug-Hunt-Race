@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { RoundResults as RoundResultsList } from "@/components/results/round-results";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
@@ -13,11 +14,10 @@ import {
   type Room,
   type RoomEvent,
 } from "@/lib/db";
-import { anyoneSolved } from "@/lib/game/race";
 import { availableEvents } from "@/lib/game/room-machine";
-import { fetchRoundFix, roomErrorMessage } from "@/lib/rooms";
-import { progressRows, RoundProgress } from "./round-progress";
-import { useRoundScores } from "./use-race-data";
+import { fetchRoundFix, roomErrorMessage, toRoundRows } from "@/lib/rooms";
+import { LiveStandings } from "./live-standings";
+import { useLeaderboard, useRoundScores } from "./use-race-data";
 
 const NEXT_STEPS: { event: RoomEvent; label: string }[] = [
   { event: "next_round", label: "Next round" },
@@ -25,9 +25,10 @@ const NEXT_STEPS: { event: RoomEvent; label: string }[] = [
 ];
 
 /**
- * After a round: everyone's result and, if nobody solved it, the reference
- * fix (anyone can open it). The admin moves on to the next round or the
- * final leaderboard.
+ * After a round: who solved it, their times and points, the overall rank
+ * changes and the standings; if nobody solved it, the reference fix (anyone
+ * can open it). The admin moves on to the next round or the final
+ * leaderboard.
  */
 export function RoundResults({
   client,
@@ -45,15 +46,16 @@ export function RoundResults({
   const toast = useToast();
   const { round } = view;
   const scores = useRoundScores(client, round.round_id, false);
+  const leaderboard = useLeaderboard(client, room, false);
   const [busy, setBusy] = useState<RoomEvent | null>(null);
-  if (!scores) {
+  if (!scores || (!leaderboard.entries && !leaderboard.error)) {
     return (
       <Spinner size="lg" label="Loading the results" className="self-center" />
     );
   }
 
-  const rows = progressRows(players, scores, round.started_at);
-  const nobodySolved = !anyoneSolved(rows);
+  const rows = toRoundRows(round, players, scores, leaderboard.entries ?? []);
+  const nobodySolved = !rows.some((row) => row.solveMs !== null);
   const steps = me.is_admin
     ? availableEvents(
         {
@@ -79,8 +81,13 @@ export function RoundResults({
     <>
       <Card>
         <CardTitle as="h2">{round.title}</CardTitle>
-        <RoundProgress rows={rows} label="Round results" selfId={me.id} ended />
+        <RoundResultsList
+          rows={rows}
+          roundNumber={round.round_number}
+          currentPlayerId={me.id}
+        />
       </Card>
+      <LiveStandings leaderboard={leaderboard} selfId={me.id} />
       <FixReveal
         client={client}
         roundId={round.round_id}

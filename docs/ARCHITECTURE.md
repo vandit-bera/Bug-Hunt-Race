@@ -751,18 +751,26 @@ const { fix } = await fetchRoundFix(db, roundId); // after the round ends
 status, picked by `racePhase` in `lib/game/race.ts`; the screens are in
 `components/race/`.
 
-| Room status         | Screen                                                                                                                                                                   |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `lobby`             | Lobby. The admin has **Start game** (`start`).                                                                                                                           |
-| `countdown`         | 3-2-1-Go on every screen. When it ends, the admin's client sends `begin_round` (a new admin's client does it if the role moved during the countdown).                    |
-| `round_live/paused` | The Solo editor with the shared clock. A passing run calls `record_score(passed)`; Give up sends `passed = false`. Then "Waiting for others".                            |
-|                     | Admin: Pause / Resume, Skip round, Stop game (with a confirm) and a progress list (✅ solved / ⏳ still fixing), which reads `scores` every 2 s.                         |
-|                     | Late joiners (`joined_late`) stay on the lobby screen until the next round.                                                                                              |
-| `round_results`     | Everyone's result for the round. If nobody solved it, the fix loads from `/api/rounds/<id>/fix`; otherwise a **Show the fix** button. Admin: Next round / Final results. |
-| `final_leaderboard` | A plain ranked list (`room_leaderboard`, current game); 3.5 (TB-36) makes it a podium. Admin: Play again / Close room (see [End of game](#end-of-game)).                 |
+| Room status         | Screen                                                                                                                                                                                                                                           |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `lobby`             | Lobby. The admin has **Start game** (`start`).                                                                                                                                                                                                   |
+| `countdown`         | 3-2-1-Go on every screen. When it ends, the admin's client sends `begin_round` (a new admin's client does it if the role moved during the countdown).                                                                                            |
+| `round_live/paused` | The Solo editor with the shared clock. A passing run calls `record_score(passed)`; Give up sends `passed = false`. Then "Waiting for others".                                                                                                    |
+|                     | Admin: Pause / Resume, Skip round, Stop game (with a confirm) and a progress list (✅ solved / ⏳ still fixing), which reads `scores` every 2 s. Everyone: the live leaderboard.                                                                 |
+|                     | Late joiners (`joined_late`) stay on the lobby screen until the next round.                                                                                                                                                                      |
+| `round_results`     | Round results: who solved it, time, points (base + speed − hint) and ▲▼ rank change, then the standings. If nobody solved it, the fix loads from `/api/rounds/<id>/fix`; otherwise a **Show the fix** button. Admin: Next round / Final results. |
+| `final_leaderboard` | Podium (top 3, tied players share a step, confetti unless reduced motion) and the full list. Admin: Play again / Close room (see [End of game](#end-of-game)).                                                                                   |
 
 The round is re-read on every room status change and ignored if it is not the
 room's current round, so a new round never shows the last one's puzzle.
+
+The results screens use the TB-56 components (`components/results/`) with
+server data: `toStandings` and `toRoundRows` (`lib/rooms/leaderboard.ts`) map
+`room_leaderboard` and the round's `scores` to them. `scores` is not on
+Realtime, so the live leaderboard (`useLeaderboard`) re-reads
+`room_leaderboard` every 2 s during a round and on every room status change;
+a solve shows up for everyone within about 2 s. The points shown are the
+stored ones; the breakdown comes from `computeRaceScore`.
 
 ## End of game
 
@@ -961,7 +969,11 @@ typed `DbError`.
 
 Scoring (TB-19 §3) lives in `private.calculate_points`: base points (Easy 100 /
 Medium 200 / Hard 300) + up to 50% speed bonus for time left − 25% if a hint
-was used; unsolved = 0. A 5 s grace after the deadline absorbs network lag.
+was used; unsolved = 0. A 5 s grace after the deadline absorbs network lag: a
+pass in it is timed at the limit and keeps the base points. It gives the same
+points as `computeRaceScore` in `lib/game/scoring.ts` (the Solo formula, both
+round half up since `20261009000008_scoring_rounding.sql`); the shared case
+table is in `scoring.test.ts` and `supabase/tests/09_scoring.test.sql`.
 The leaderboard covers the current game and ranks by total points, then the
 earlier last solve (server time); exact ties share the place (see
 [End of game](#end-of-game)). Task 13 may tune the numbers in a new migration.

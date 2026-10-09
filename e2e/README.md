@@ -75,7 +75,13 @@ after the end. `e2e/multiplayer/race.spec.ts` plays it on the real room
 screens: countdown, same puzzle and clock, solving with the fix in the
 editor, Pause / Resume, Skip, a late joiner, Stop from live and paused, and
 that no response holds the fix while the round is on. `setCode` (in
-`support/editor.ts`) replaces the editor's code.
+`support/editor.ts`) replaces the editor's code; `support/race.ts` has the
+race helpers (open a room, start, solve, give up, stop).
+
+`e2e/multiplayer/scoring.spec.ts` is a full 2-player game on the real
+screens: the live leaderboard updating in the other browser, round results,
+points checked against `computeRaceScore` for the server's solve times, the
+final podium and totals, Play again (scores back to 0) and Close room.
 
 `e2e/multiplayer/resilience.spec.ts` covers outages: a player who drops for
 10 s mid-round keeps their seat and score, a result whose answer was lost is

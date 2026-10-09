@@ -1,24 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Avatar } from "@/components/ui/avatar";
+import { useState } from "react";
+import { Podium } from "@/components/results/podium";
 import { Button } from "@/components/ui/button";
-import { Card, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast";
-import {
-  advanceRoom,
-  getLeaderboard,
-  type DbClient,
-  type LeaderboardEntry,
-  type Player,
-  type Room,
-} from "@/lib/db";
-import { roomErrorMessage } from "@/lib/rooms";
+import { advanceRoom, type DbClient, type Player, type Room } from "@/lib/db";
+import { roomErrorMessage, toStandings } from "@/lib/rooms";
+import { useLeaderboard } from "./use-race-data";
 
 /**
- * The game is over: a plain ranked list of the raw results. Task 3.5
- * (TB-36) turns it into the podium. The admin can play again or close.
+ * The game is over: the top 3 on a podium, the full list below and a
+ * confetti burst. The admin can play again (same players, scores back to 0)
+ * or close the room.
  */
 export function FinalLeaderboard({
   client,
@@ -30,25 +25,8 @@ export function FinalLeaderboard({
   me: Player;
 }) {
   const toast = useToast();
-  const [entries, setEntries] = useState<LeaderboardEntry[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [attempt, setAttempt] = useState(0);
+  const { entries, error, retry } = useLeaderboard(client, room, false);
   const [busy, setBusy] = useState<"play_again" | "close" | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    getLeaderboard(client, room.id).then(
-      (next) => {
-        if (!cancelled) setEntries(next);
-      },
-      (caught: unknown) => {
-        if (!cancelled) setError(roomErrorMessage(caught));
-      },
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, [client, room.id, attempt]);
 
   async function advance(event: "play_again" | "close") {
     setBusy(event);
@@ -60,74 +38,37 @@ export function FinalLeaderboard({
     }
   }
 
+  if (error) {
+    return (
+      <Card role="alert" className="flex flex-col items-start gap-3">
+        <p className="text-danger">{error}</p>
+        <Button variant="secondary" onClick={retry}>
+          Try again
+        </Button>
+      </Card>
+    );
+  }
+  if (!entries) {
+    return (
+      <Spinner
+        size="lg"
+        label="Loading the leaderboard"
+        className="self-center"
+      />
+    );
+  }
   return (
     <>
-      <Card>
-        <CardTitle as="h2">Leaderboard</CardTitle>
-        {error ? (
-          <div role="alert" className="flex flex-col items-start gap-3">
-            <p className="text-danger">{error}</p>
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setError(null);
-                setAttempt((n) => n + 1);
-              }}
-            >
-              Try again
-            </Button>
-          </div>
-        ) : !entries ? (
-          <Spinner label="Loading the leaderboard" />
-        ) : (
-          <ol aria-label="Leaderboard" className="flex flex-col gap-2">
-            {entries.map((entry) => (
-              <li
-                key={entry.player_id}
-                className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border-2 border-border-subtle bg-surface p-2"
-              >
-                <span className="w-8 text-center font-display font-bold tabular-nums">
-                  #{entry.rank}
-                </span>
-                <Avatar
-                  emoji={entry.avatar}
-                  name={entry.display_name}
-                  size="sm"
-                />
-                <span className="min-w-24 flex-1 basis-24 truncate font-bold">
-                  {entry.display_name}
-                  {entry.player_id === me.id && (
-                    <span className="ml-1 font-normal text-muted">(you)</span>
-                  )}
-                </span>
-                <span className="font-display font-bold tabular-nums">
-                  {entry.total_points} pts
-                </span>
-              </li>
-            ))}
-          </ol>
-        )}
-      </Card>
-      {me.is_admin ? (
-        <div className="flex flex-wrap gap-2">
-          <Button
-            loading={busy === "play_again"}
-            disabled={busy !== null}
-            onClick={() => void advance("play_again")}
-          >
-            Play again
-          </Button>
-          <Button
-            variant="secondary"
-            loading={busy === "close"}
-            disabled={busy !== null}
-            onClick={() => void advance("close")}
-          >
-            Close room
-          </Button>
-        </div>
-      ) : (
-        <p role="status" className="text-muted">
+      <Podium
+        standings={toStandings(entries)}
+        currentPlayerId={me.id}
+        isAdmin={me.is_admin}
+        onPlayAgain={() => void advance("play_again")}
+        onCloseRoom={() => void advance("close")}
+        busy={busy}
+      />
+      {!me.is_admin && (
+        <p role="status" className="text-center text-muted">
           Thanks for playing! The admin can start a new game.
         </p>
       )}
