@@ -5,6 +5,7 @@ import {
   capNewest,
   MAX_FLOATING_REACTIONS,
   overflow,
+  REACTION_FLOAT_MS,
 } from "@/lib/game/room-fun";
 
 export type FloatingReaction = {
@@ -13,8 +14,6 @@ export type FloatingReaction = {
   /** Horizontal position, 0 to 100 (percent). */
   x: number;
 };
-
-const FLOAT_MS = 2500;
 
 function FloatingEmoji({
   reaction,
@@ -25,7 +24,7 @@ function FloatingEmoji({
 }) {
   const { id } = reaction;
   useEffect(() => {
-    const timer = window.setTimeout(() => onExpire(id), FLOAT_MS);
+    const timer = window.setTimeout(() => onExpire(id), REACTION_FLOAT_MS);
     return () => window.clearTimeout(timer);
   }, [id, onExpire]);
 
