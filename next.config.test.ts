@@ -53,6 +53,10 @@ describe("next.config headers", () => {
     },
   );
 
+  it("does not advertise the framework (no X-Powered-By)", () => {
+    expect(nextConfig.poweredByHeader).toBe(false);
+  });
+
   it("serves built JS from the immutable path, as Vercel does", () => {
     expect(nextConfig.supportsImmutableAssets).toBe(true);
   });
