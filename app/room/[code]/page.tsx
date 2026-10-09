@@ -9,7 +9,7 @@ export const metadata = { title: "Room · Bug Hunt Race" };
 
 export default function RoomPage() {
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 p-6">
+    <main className="flex w-full flex-1 flex-col p-4 sm:p-6">
       {isDbConfigured() ? (
         <Suspense
           fallback={
@@ -23,10 +23,10 @@ export default function RoomPage() {
           <RoomLobby />
         </Suspense>
       ) : (
-        <>
+        <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
           <RoomHeader title="Room" />
           <RoomsUnavailable />
-        </>
+        </div>
       )}
     </main>
   );
