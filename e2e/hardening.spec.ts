@@ -99,6 +99,23 @@ test("pages send the security headers", async ({ request }) => {
   }
 });
 
+test("the runner worker script is served with the worker CSP", async ({
+  page,
+}) => {
+  const worker = page.waitForResponse((r) =>
+    new URL(r.url()).pathname.includes("/turbopack-worker-"),
+  );
+  await page.goto("/solo/play?language=javascript&level=easy&round=0");
+  await expect(page.locator(".monaco-editor .view-lines")).toBeVisible({
+    timeout: 15_000,
+  });
+  // The runner worker starts on the first run.
+  await page.getByRole("button", { name: "Run Tests" }).click();
+  expect((await worker).headers()["content-security-policy"]).toBe(
+    "default-src 'none'; script-src 'self' 'unsafe-eval'; connect-src 'self'",
+  );
+});
+
 for (const language of ["javascript", "typescript", "python"] as const) {
   test(`${language}: the game runs under the CSP with no violations`, async ({
     page,
