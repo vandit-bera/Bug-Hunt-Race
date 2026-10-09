@@ -154,6 +154,6 @@ The numbers and how they were measured are in
 
 - [ ] Post the live URL and the results of §6 on the launch issue.
 - [ ] Watch Supabase → Reports → Realtime during the first team game.
-- [ ] `/dev/rooms`, `/dev/runner` and `/dev/crash` are test pages that ship
-      with the app (no index, no links to them); they are harmless but can be
-      removed in a follow-up once the E2E suite no longer needs them.
+- [ ] `/dev/rooms`, `/dev/runner` and `/dev/crash` answer 404 on the live
+      site (`VERCEL_ENV=production`); local runs, CI and previews keep them
+      for the E2E suite. Check that `/dev/rooms` is a 404 after deploying.
