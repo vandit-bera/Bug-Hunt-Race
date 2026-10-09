@@ -187,9 +187,15 @@ test("async works too", async () => {
   `data:` URLs) still works there. It runs puzzle files from this repo in CI,
   which are reviewed like any other code; never point it at player code.
 
-If Turbopack renames its worker bootstrap (`turbopack-worker-*.js`), the CSP
-header stops matching; the E2E test `network APIs are blocked, including
-cross-origin import()` fails when that happens.
+The rule matches the worker bootstrap (`turbopack-worker-*.js`) under both
+`/_next/static/chunks/` and `/_next/static/immutable/chunks/`. Vercel serves
+content-hashed chunks from the `immutable/` path (`supportsImmutableAssets`);
+`next.config.ts` turns that on too, so local and CI builds use the same paths
+as production. If Turbopack renames its worker bootstrap or moves its chunks,
+the CSP header stops matching; `next.config.test.ts` and the E2E tests `the
+runner worker script is served with the worker CSP` and `network APIs are
+blocked, including cross-origin import()` fail when that happens. Without this
+CSP, Pyodide also refuses to start ("Classic web workers are not supported").
 
 ### Python runner (`lib/runner/python/`)
 
