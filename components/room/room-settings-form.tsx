@@ -33,7 +33,7 @@ function Choice({
         name={name}
         checked={checked}
         onChange={onChange}
-        className="peer absolute inset-0 cursor-pointer opacity-0"
+        className="peer absolute inset-0 cursor-pointer appearance-none opacity-0"
       />
       <span
         className={cn(

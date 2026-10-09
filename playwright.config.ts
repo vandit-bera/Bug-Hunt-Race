@@ -17,7 +17,11 @@ export default defineConfig({
     baseURL: BASE_URL ?? `http://localhost:${PORT}`,
     trace: "on-first-retry",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    // Safari's engine. Run alone with `--project=webkit`.
+    { name: "webkit", use: { ...devices["Desktop Safari"] } },
+  ],
   webServer: BASE_URL
     ? undefined
     : {

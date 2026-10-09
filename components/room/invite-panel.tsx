@@ -98,7 +98,7 @@ export function InvitePanel({
             onFocus={(event) => event.currentTarget.select()}
             className="h-11 w-full min-w-0 flex-1 rounded-lg border-2 border-border bg-surface px-3 font-mono text-sm text-foreground focus:border-accent"
           />
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button onClick={copyLink}>Copy</Button>
             {canShare && (
               <Button variant="secondary" onClick={shareLink}>
