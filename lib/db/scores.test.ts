@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getLeaderboard, recordScore } from "@/lib/db";
+import { getLeaderboard, listRoundScores, recordScore } from "@/lib/db";
 import type { LeaderboardEntry, Score } from "@/lib/db";
 import { createFakeClient } from "./test-utils";
 
@@ -76,5 +76,45 @@ describe("getLeaderboard", () => {
         ["order", ["display_name"]],
       ],
     });
+  });
+});
+
+describe("listRoundScores", () => {
+  it("reads one round's results, earliest first", async () => {
+    const scores: Score[] = [
+      {
+        id: "score-1",
+        round_id: "round-1",
+        player_id: "player-1",
+        passed: true,
+        solve_time_ms: 42_000,
+        hint_used: false,
+        points: 138,
+        submitted_at: "2026-10-08T00:00:42Z",
+      },
+    ];
+    const fake = createFakeClient({ from: [{ data: scores, error: null }] });
+
+    await expect(listRoundScores(fake.client, "round-1")).resolves.toEqual(
+      scores,
+    );
+    expect(fake.queries[0]).toEqual({
+      table: "scores",
+      calls: [
+        ["select", []],
+        ["eq", ["round_id", "round-1"]],
+        ["order", ["submitted_at"]],
+      ],
+    });
+  });
+
+  it("maps errors to a typed error", async () => {
+    const fake = createFakeClient({
+      from: [{ data: null, error: { message: "room_not_found" } }],
+    });
+
+    await expect(listRoundScores(fake.client, "round-1")).rejects.toMatchObject(
+      { name: "DbError", code: "room_not_found" },
+    );
   });
 });
