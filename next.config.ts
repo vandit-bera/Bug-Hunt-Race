@@ -14,11 +14,25 @@ import { securityHeaders } from "./lib/security/headers";
 const RUNNER_WORKER_CSP =
   "default-src 'none'; script-src 'self' 'unsafe-eval'; connect-src 'self'";
 
+/**
+ * Where built JS is served. On Vercel (and here, see `supportsImmutableAssets`
+ * below) content-hashed chunks live under `/_next/static/immutable/`; files
+ * that are not content-hashed stay under `/_next/static/`. Header rules for
+ * built JS must cover both.
+ */
+const STATIC_CHUNK_DIRS = [
+  "/_next/static/chunks",
+  "/_next/static/immutable/chunks",
+];
+
 /** Pyodide lives under a versioned path, so it can be cached forever. */
 const IMMUTABLE_CACHE = "public, max-age=31536000, immutable";
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
+  // Vercel's adapter turns this on anyway. Setting it here makes `next build`
+  // serve built JS from the same paths locally and in CI as in production.
+  supportsImmutableAssets: true,
   partialPrefetching: true,
   async headers() {
     return [
@@ -35,10 +49,10 @@ const nextConfig: NextConfig = {
         source: "/_next/static/:path*",
         headers: [{ key: "X-Content-Type-Options", value: "nosniff" }],
       },
-      {
-        source: "/_next/static/chunks/:file(turbopack-worker-.*)",
+      ...STATIC_CHUNK_DIRS.map((dir) => ({
+        source: `${dir}/:file(turbopack-worker-.*)`,
         headers: [{ key: "Content-Security-Policy", value: RUNNER_WORKER_CSP }],
-      },
+      })),
       {
         source: "/pyodide/:path*",
         headers: [{ key: "Cache-Control", value: IMMUTABLE_CACHE }],
