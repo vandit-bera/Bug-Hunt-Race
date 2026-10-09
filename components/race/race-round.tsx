@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ScorePopup } from "@/components/fx/score-popup";
 import { LaptopBanner } from "@/components/solo/laptop-banner";
 import { PuzzleWorkspace } from "@/components/solo/puzzle-workspace";
 import { RunnerLoadingBar } from "@/components/runner-loading-bar";
@@ -16,6 +17,7 @@ import {
   type DbClient,
   type Player,
   type Room,
+  type Score,
 } from "@/lib/db";
 import { formatTimeLeft, timeLeftMs } from "@/lib/game/round-clock";
 import { HINT_PENALTY_RATIO } from "@/lib/game/scoring";
@@ -24,8 +26,10 @@ import { LANGUAGES } from "@/lib/runner/config";
 import { preloadRunner } from "@/lib/runner/preload";
 import { getRunner } from "@/lib/runner/registry";
 import type { RunResult } from "@/lib/runner/types";
+import { playSound } from "@/lib/sound/sounds";
 import { AdminControls } from "./admin-controls";
 import { LiveStandings } from "./live-standings";
+import { RaceSolveToasts } from "./race-solve-toasts";
 import { progressRows, RoundProgress } from "./round-progress";
 import { useLeaderboard, useNow, useRoundScores } from "./use-race-data";
 
@@ -38,7 +42,8 @@ type Sent = "solved" | "gave_up" | "sent";
  * A live or paused race round: the Solo editor with the shared clock. A
  * passing run sends the result; the database times it. The admin also gets
  * Pause / Resume / Skip / Stop and everyone's progress. Everyone sees the
- * live leaderboard.
+ * live leaderboard and a toast when another player solves it; the solver
+ * gets a sound and a "+points" pop-up.
  */
 export function RaceRound({
   client,
@@ -73,8 +78,11 @@ export function RaceRound({
     passed: boolean;
     error: string;
   } | null>(null);
+  // Points of this player's own solve, for the pop-up.
+  const [points, setPoints] = useState<number | null>(null);
   const busy = useRef(false);
   const leaderboard = useLeaderboard(client, room, true);
+  const scores = useRoundScores(client, round.round_id, true);
 
   useEffect(() => {
     void preloadRunner(language);
@@ -83,12 +91,16 @@ export function RaceRound({
   async function submit(passed: boolean) {
     setUnsent(null);
     try {
-      await recordScore(client, {
+      const score = await recordScore(client, {
         roundId: round.round_id,
         passed,
         hintUsed: hintShown,
       });
       setSent(passed ? "solved" : "gave_up");
+      if (passed) {
+        setPoints(score.points);
+        playSound("solved");
+      }
     } catch (caught) {
       if (caught instanceof DbError && caught.code === "already_submitted") {
         setSent("sent");
@@ -162,12 +174,13 @@ export function RaceRound({
 
       {done ? (
         <Card role="status" className="flex flex-col gap-2">
-          <CardTitle as="h3">
+          <CardTitle as="h3" className="flex flex-wrap items-center gap-3">
             {sent === "solved"
               ? "🎉 Solved!"
               : sent === "gave_up"
                 ? "You gave up this one."
                 : "Your result is in."}
+            {points !== null && <ScorePopup points={points} />}
           </CardTitle>
           <p>Waiting for others… The round ends when everyone is done.</p>
         </Card>
@@ -208,28 +221,33 @@ export function RaceRound({
       />
       {me.is_admin && (
         <AdminProgress
-          client={client}
           view={view}
+          scores={scores}
           players={players}
           selfId={me.id}
         />
       )}
+      <RaceSolveToasts
+        roundId={round.round_id}
+        scores={scores}
+        players={players}
+        selfId={me.id}
+      />
     </>
   );
 }
 
 function AdminProgress({
-  client,
   view,
+  scores,
   players,
   selfId,
 }: {
-  client: DbClient;
   view: CurrentRoundView;
+  scores: Score[] | null;
   players: Player[];
   selfId: string;
 }) {
-  const scores = useRoundScores(client, view.round.round_id, true);
   const rows = progressRows(players, scores ?? [], view.round.started_at);
   const solved = rows.filter((row) => row.progress === "solved").length;
   return (

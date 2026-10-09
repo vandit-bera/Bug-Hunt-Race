@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useReducedMotion } from "@/components/fx/use-reduced-motion";
 import { ChangeMarker } from "@/components/room/live-rank-list";
 import { Avatar } from "@/components/ui/avatar";
@@ -7,27 +8,51 @@ import { cn } from "@/components/ui/cn";
 import { isTied, type Standing } from "@/lib/game/standings";
 
 const ROW_HEIGHT_REM = 3.75;
+/** How long `replayChanges` shows the previous order before sliding. */
+const REPLAY_DELAY_MS = 400;
 
 /**
  * Overall standings. Rows slide to their new place when the order changes;
  * exact ties show the same place. `standings` must be ranked (see
- * `computeStandings`).
+ * `computeStandings`). `replayChanges` first shows the order before the
+ * last round (from `change`), then slides rows to their new place.
  */
 export function Leaderboard({
   standings,
   currentPlayerId,
   label = "Leaderboard",
+  replayChanges = false,
 }: {
   standings: readonly Standing[];
   currentPlayerId?: string;
   label?: string;
+  replayChanges?: boolean;
 }) {
   const reducedMotion = useReducedMotion();
+  const [replaying, setReplaying] = useState(replayChanges);
+  const showPrevious = replaying && !reducedMotion;
+  useEffect(() => {
+    if (!replaying) return;
+    const timer = setTimeout(() => setReplaying(false), REPLAY_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [replaying]);
   if (standings.length === 0) {
     return <p className="text-muted">No players yet.</p>;
   }
 
   const position = new Map(standings.map((row, index) => [row.id, index]));
+  const shown = showPrevious
+    ? new Map(
+        [...standings]
+          .map((row, index) => ({
+            id: row.id,
+            index,
+            before: row.rank + row.change,
+          }))
+          .sort((a, b) => a.before - b.before || a.index - b.index)
+          .map((row, index) => [row.id, index]),
+      )
+    : position;
   // Render in a fixed order so React keeps each row's element and the CSS
   // transition can slide it; the visual order comes from `translateY`.
   const stable = [...standings].sort((a, b) => a.id.localeCompare(b.id));
@@ -52,7 +77,7 @@ export function Leaderboard({
             )}
             style={{
               height: `${ROW_HEIGHT_REM - 0.5}rem`,
-              transform: `translateY(${index * ROW_HEIGHT_REM}rem)`,
+              transform: `translateY(${(shown.get(row.id) ?? index) * ROW_HEIGHT_REM}rem)`,
             }}
           >
             <span className="w-6 shrink-0 text-center font-display font-bold">

@@ -73,6 +73,16 @@ const SOUNDS = {
     { freq: 330, start: 0.2, length: 0.2, shape: "square", gain: 0.3 },
     { freq: [262, 130], start: 0.4, length: 0.3, shape: "square", gain: 0.3 },
   ]),
+  fanfare: render(1.6, [
+    { freq: 523, start: 0, length: 0.14 },
+    { freq: 523, start: 0.15, length: 0.14 },
+    { freq: 523, start: 0.3, length: 0.14 },
+    { freq: 659, start: 0.45, length: 0.4 },
+    { freq: 587, start: 0.85, length: 0.14 },
+    { freq: 659, start: 1.0, length: 0.14 },
+    { freq: 784, start: 1.15, length: 0.45 },
+    { freq: 392, start: 1.15, length: 0.45, shape: "square", gain: 0.2 },
+  ]),
 };
 
 mkdirSync(OUT, { recursive: true });
