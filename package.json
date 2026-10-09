@@ -20,7 +20,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:multiplayer": "playwright test e2e/multiplayer",
-    "smoke:live": "playwright test e2e/live --retries=0",
+    "test:smoke": "tsx scripts/smoke.ts",
     "load:room": "tsx scripts/load/room-30.ts",
     "puzzles:check": "tsx scripts/check-puzzles.ts",
     "puzzles:build": "tsx scripts/build-puzzle-index.ts",

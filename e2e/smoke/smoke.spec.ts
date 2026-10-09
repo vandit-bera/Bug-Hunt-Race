@@ -1,40 +1,113 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+import {
+  currentPuzzle,
+  setCode,
+  startSolo,
+  type SoloLanguage,
+} from "../support/solo";
 
 /**
- * Launch smoke test (docs/LAUNCH.md). Run against the deployed site:
+ * Smoke test of a deployed site (docs/LAUNCH.md §6). Read-only: it writes
+ * nothing to Supabase. The room flow, which does, is in `rooms.spec.ts`.
  *
- *   E2E_BASE_URL=https://<site> pnpm smoke:live
+ *   pnpm test:smoke --base-url https://<site>
  *
- * Read-only, except the room check, which creates one room (counts toward
- * that browser's 10 rooms an hour) and leaves it. Also runs in CI against
- * the local build, where the room check is skipped without a Supabase.
+ * Also runs in CI with the normal E2E suite against the local build, so the
+ * selectors stay in step with the app; checks that need a Supabase are
+ * skipped there.
  */
 
 const LIVE_SITE = Boolean(process.env.E2E_BASE_URL);
 const HAS_SUPABASE = LIVE_SITE || Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL);
 
-test("home page loads with security headers", async ({ page }) => {
+/** Collects console errors and uncaught exceptions on `page`. */
+function trackErrors(page: Page): string[] {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
+  return errors;
+}
+
+test("home loads with the security headers and no console errors", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
   const response = await page.goto("/");
   expect(response?.status()).toBe(200);
   const headers = response?.headers() ?? {};
   expect(headers["content-security-policy"]).toContain("default-src 'self'");
+  expect(headers["content-security-policy"]).toContain(
+    "frame-ancestors 'none'",
+  );
   expect(headers["x-content-type-options"]).toBe("nosniff");
+  expect(headers["x-frame-options"]).toBe("DENY");
+  expect(headers["referrer-policy"]).toBe("strict-origin-when-cross-origin");
+  expect(headers["permissions-policy"]).toContain("camera=()");
   await expect(
     page.getByRole("heading", { level: 1, name: "Bug Hunt Race 🐛" }),
   ).toBeVisible();
+  expect(errors).toEqual([]);
 });
 
-test("Solo: a puzzle loads and the code runner works", async ({ page }) => {
-  await page.goto("/solo");
-  await page.getByLabel("JavaScript", { exact: true }).check();
-  await page.getByLabel("Easy", { exact: false }).check();
-  await page.getByRole("link", { name: "Start" }).click();
-  await expect(page.getByRole("timer")).toBeVisible({ timeout: 15_000 });
-  // The buggy code fails its tests: the runner worker loaded and ran it.
-  await page.getByRole("button", { name: "Run Tests" }).click();
-  await expect(page.getByText("Failed: ").first()).toBeAttached({
-    timeout: 15_000,
+test("/solo loads with no console errors", async ({ page }) => {
+  const errors = trackErrors(page);
+  const response = await page.goto("/solo");
+  expect(response?.status()).toBe(200);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Solo Practice" }),
+  ).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test("the theme toggle switches between light and dark", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto("/");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await page.getByRole("radio", { name: /Dark/ }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await page.getByRole("radio", { name: /Light/ }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+});
+
+const SOLO: { language: SoloLanguage; wait: number }[] = [
+  { language: "javascript", wait: 15_000 },
+  // Pyodide downloads and starts on the first run.
+  { language: "python", wait: 60_000 },
+];
+
+for (const { language, wait } of SOLO) {
+  test(`Solo ${language} Easy: the buggy code fails, the fix passes`, async ({
+    page,
+  }) => {
+    test.setTimeout(wait + 60_000);
+    const errors = trackErrors(page);
+    await startSolo(page, language, "Easy");
+    const puzzle = await currentPuzzle(page);
+
+    await page.getByRole("button", { name: "Run Tests" }).click();
+    await expect(page.getByText("Failed: ").first()).toBeAttached({
+      timeout: wait,
+    });
+
+    await setCode(page, puzzle.fix);
+    await page.getByRole("button", { name: "Run Tests" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Bug squashed!" }),
+    ).toBeVisible({ timeout: wait });
+    expect(errors).toEqual([]);
   });
+}
+
+test("an invite link with a made-up code shows Room not found", async ({
+  page,
+}) => {
+  test.skip(!HAS_SUPABASE, "Needs a Supabase (the live site has one).");
+  await page.goto("/join/ZZZZZZ");
+  await expect(
+    page.getByRole("heading", { name: "Room not found" }),
+  ).toBeVisible({ timeout: 15_000 });
 });
 
 test("an unknown page shows the 404 screen", async ({ page }) => {
@@ -52,42 +125,4 @@ test("the fix route refuses a request without a player", async ({
     "/api/rounds/00000000-0000-0000-0000-000000000000/fix",
   );
   expect(response.status()).toBe(401);
-});
-
-test("rooms: create, join by link, both see each other, leave", async ({
-  browser,
-}) => {
-  test.skip(!HAS_SUPABASE, "Needs a Supabase (the live site has one).");
-  const host = await browser.newContext();
-  const guest = await browser.newContext();
-  try {
-    const ana = await host.newPage();
-    await ana.goto("/room/new");
-    await ana.getByLabel("Your name").fill("Smoke host");
-    await ana.getByRole("button", { name: "Create room" }).click();
-    await ana.waitForURL(/\/room\/[A-Z2-9]{6}$/);
-    const code = new URL(ana.url()).pathname.split("/").pop() ?? "";
-
-    const ben = await guest.newPage();
-    await ben.goto(`/join/${code}`);
-    await ben.getByLabel("Your name").fill("Smoke guest");
-    await ben.getByRole("button", { name: "Join room" }).click();
-    await expect(ben).toHaveURL(`/room/${code}`);
-
-    for (const [page, other] of [
-      [ana, "Smoke guest"],
-      [ben, "Smoke host"],
-    ] as const) {
-      await expect(page.getByText(other, { exact: true })).toBeVisible({
-        timeout: 5_000,
-      });
-    }
-
-    for (const page of [ben, ana]) {
-      await page.getByRole("button", { name: "Leave room" }).click();
-      await expect(page).toHaveURL("/");
-    }
-  } finally {
-    await Promise.all([host.close(), guest.close()]);
-  }
 });
