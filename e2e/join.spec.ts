@@ -28,6 +28,27 @@ test.describe("/join", () => {
     await expect(page).toHaveURL("/join/K7M2QX");
   });
 
+  test("a code pasted before the page hydrates still counts", async ({
+    page,
+  }) => {
+    // Hold the app's JS so the paste lands before React hydrates (TB-78:
+    // WebKit on a busy CI runner sometimes got the fill in that early).
+    let hydrate!: () => void;
+    const held = new Promise<void>((resolve) => (hydrate = resolve));
+    await page.route("**/_next/static/**/*.js", async (route) => {
+      await held;
+      await route.continue();
+    });
+    await page.goto("/join", { waitUntil: "domcontentloaded" });
+    await page.getByLabel("Room code").fill("k7 0m-2qx");
+    hydrate();
+
+    await expect(page.getByLabel("Room code")).toHaveValue("K7M2QX");
+    await expect(page.getByText("Codes never use 0")).toBeVisible();
+    await page.getByRole("button", { name: "Join", exact: true }).click();
+    await expect(page).toHaveURL("/join/K7M2QX");
+  });
+
   test("fits a phone", async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 640 });
     await page.goto("/join");
