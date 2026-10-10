@@ -1,0 +1,48 @@
+name: New puzzle idea
+description: Suggest a buggy code snippet for players to fix.
+labels: ["puzzle"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Puzzle rules and tips: [puzzles/README.md](https://github.com/vandit-bera/Bug-Hunt-Race/blob/main/puzzles/README.md). Want to write it yourself? Send a pull request instead; see [CONTRIBUTING.md](https://github.com/vandit-bera/Bug-Hunt-Race/blob/main/CONTRIBUTING.md#adding-a-puzzle).
+  - type: dropdown
+    id: language
+    attributes:
+      label: Language
+      options:
+        - JavaScript
+        - TypeScript
+        - Python
+    validations:
+      required: true
+  - type: dropdown
+    id: level
+    attributes:
+      label: Level
+      description: "Easy: 1 bug, 5–15 lines. Medium: 1–2 bugs, 15–40 lines. Hard: 2–3 bugs, 40–80 lines."
+      options:
+        - Easy
+        - Medium
+        - Hard
+    validations:
+      required: true
+  - type: textarea
+    id: what-it-does
+    attributes:
+      label: What should the code do?
+      description: The behaviour a player reads before hunting for the bug.
+    validations:
+      required: true
+  - type: textarea
+    id: bug
+    attributes:
+      label: The bug
+      description: What mistake does the code make? Realistic bugs only (off-by-one, wrong comparison, missing await, mutated argument), no typos or trick questions.
+    validations:
+      required: true
+  - type: textarea
+    id: code
+    attributes:
+      label: Buggy code and tests (optional)
+      render: text

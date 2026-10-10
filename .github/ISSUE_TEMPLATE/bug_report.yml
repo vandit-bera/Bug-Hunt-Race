@@ -1,0 +1,60 @@
+name: Bug report
+description: Something in the game or the repo does not work as expected.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Security problems go through [Report a vulnerability](https://github.com/vandit-bera/Bug-Hunt-Race/security/advisories/new), not here.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to Solo Practice
+        2. Pick Python, Easy
+        3. Click Run tests
+        4. See the error
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where did it happen?
+      options:
+        - Live site (bug-hunt-race.vercel.app)
+        - Local dev (pnpm dev)
+        - Tests or CI
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Game mode
+      options:
+        - Solo Practice
+        - Race Room
+        - Not related to a game mode
+  - type: input
+    id: environment
+    attributes:
+      label: Browser, device and OS
+      placeholder: e.g. Chrome 140 on macOS, Safari on iPhone 15
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots, console errors or anything else
+      description: Please do not paste puzzle solutions.
