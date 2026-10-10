@@ -564,11 +564,10 @@ reaction plays the `react` sound at most every 400 ms (silent while muted).
   sees ~5 reactions/s from the others, all 29 others get through.
 - **On screen:** at most 20 floating at once (`MAX_FLOATING_REACTIONS`),
   each for 2.5 s.
-- **Trust:** the room channel is public (see Presence above), and `sender`
-  is what the client says. A modified client in the room could claim another
-  member's id; the per-sender limit still caps the damage at 5 reactions per
-  3 s per claimed id. Authenticating senders needs a private channel with
-  RLS on `realtime.messages` (a migration), out of scope for TB-71.
+- **Trust:** the room channel is private (TB-66), so only players still in
+  the room can send reactions. `sender` is still what the client says: a
+  modified client in the room could claim another member's id; the
+  per-sender limit caps the damage at 5 reactions per 3 s per claimed id.
 
 ### Join flow and lobby (TB-34)
 

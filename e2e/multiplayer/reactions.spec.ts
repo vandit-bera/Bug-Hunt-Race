@@ -40,7 +40,9 @@ async function rogueClient(code: string) {
     avatar: "🐝",
   });
   if (error) throw new Error(error.message);
-  const channel: RealtimeChannel = client.channel(`room:${player.room_id}`);
+  const channel: RealtimeChannel = client.channel(`room:${player.room_id}`, {
+    config: { private: true },
+  });
   await new Promise<void>((resolve, reject) =>
     channel.subscribe((state) => {
       if (state === "SUBSCRIBED") resolve();

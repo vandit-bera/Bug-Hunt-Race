@@ -147,8 +147,8 @@ limits in `20261008000005_abuse_limits.sql` and the capacity work (TB-52).
 - **L3 (Low, fixed in TB-66):** online dots came from presence on the public
   Realtime channel `room:<id>`; an outsider who knew the room id joined it and
   showed another player as online. The channel is now private: Realtime
-  policies on `realtime.messages` let only players still in the room read it
-  and track presence, and nobody send broadcasts. The outsider's join is
+  policies on `realtime.messages` let only players still in the room read it,
+  track presence and send broadcasts (reactions). The outsider's join is
   refused (`Unauthorized`), and a public channel of the same name is a
   different channel. Tests: pgTAP `10` and E2E `e2e/multiplayer/rooms.spec.ts`
   ("someone outside the room cannot show a player as online"). Left: the

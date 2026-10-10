@@ -62,8 +62,8 @@ export interface RoomConnectionOptions {
   onError?: (error: unknown) => void;
   onStatus?: (status: RoomConnectionStatus) => void;
   /**
-   * A reaction broadcast from another client, as received: anyone who knows
-   * the room id can send one, so validate it (`parseReactionMessage`).
+   * A reaction broadcast from another client, as received: any player in
+   * the room can send one, so validate it (`parseReactionMessage`).
    */
   onReaction?: (payload: unknown) => void;
 }

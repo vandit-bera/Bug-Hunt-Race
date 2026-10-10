@@ -6,13 +6,14 @@
 --   * L2: room_heartbeat checks the caller is in the room before it takes the
 --     room row lock, so an outsider cannot make the room row contend.
 --   * L3: the room's Realtime channel is private: only players still in the
---     room may join it, so an outsider cannot show anyone as online.
+--     room may join it, so an outsider cannot show anyone as online or send
+--     reactions.
 --
 -- Rollback (in one transaction):
 --   drop trigger rooms_settings_lobby_only on public.rooms;
 --   drop function private.guard_room_settings();
 --   drop policy "Room players can read the room channel" on realtime.messages;
---   drop policy "Room players can track presence on the room channel" on realtime.messages;
+--   drop policy "Room players can send on the room channel" on realtime.messages;
 --   drop function private.can_use_room_channel();
 --   then re-run the room_heartbeat definition from 20261009000007_end_of_game.sql,
 --   and ship the client with `private: true` removed from lib/rooms/connection.ts
@@ -118,9 +119,9 @@ revoke all on function private.can_use_room_channel() from public, anon;
 grant execute on function private.can_use_room_channel() to authenticated;
 
 -- Realtime checks these when a client joins a private channel: select to
--- receive presence, insert to track it. Database changes on the channel stay
--- filtered by the tables' own RLS. Broadcast is not used, so nobody may send
--- it.
+-- receive presence and broadcasts, insert to track presence and send
+-- broadcasts (reactions, TB-71). Database changes on the channel stay
+-- filtered by the tables' own RLS.
 create policy "Room players can read the room channel"
   on realtime.messages for select
   to authenticated
@@ -129,10 +130,10 @@ create policy "Room players can read the room channel"
     and (select private.can_use_room_channel())
   );
 
-create policy "Room players can track presence on the room channel"
+create policy "Room players can send on the room channel"
   on realtime.messages for insert
   to authenticated
   with check (
-    realtime.messages.extension = 'presence'
+    realtime.messages.extension in ('presence', 'broadcast')
     and (select private.can_use_room_channel())
   );

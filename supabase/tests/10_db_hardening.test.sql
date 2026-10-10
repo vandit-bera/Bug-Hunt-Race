@@ -2,7 +2,7 @@
 -- lobby-only, room_heartbeat checks membership before it locks the room, and
 -- only players still in the room may use its Realtime channel.
 begin;
-select plan(17);
+select plan(19);
 
 insert into auth.users (id) values
   ('00000000-0000-0000-0000-0000000000a1'),  -- Ana: admin of room A
@@ -142,9 +142,31 @@ select is(
   ),
   array[
     'Room players can read the room channel:r',
-    'Room players can track presence on the room channel:a'
+    'Room players can send on the room channel:a'
   ],
   'the room channel policies are the only Realtime policies'
+);
+
+-- Reactions (TB-71) are broadcasts: room players must be able to send them.
+select ok(
+  (
+    select with_check ~ 'presence' and with_check ~ 'broadcast'
+    from pg_policies
+    where schemaname = 'realtime'
+      and tablename = 'messages'
+      and policyname = 'Room players can send on the room channel'
+  ),
+  'room players may track presence and send broadcasts'
+);
+select ok(
+  (
+    select qual ~ 'presence' and qual ~ 'broadcast'
+    from pg_policies
+    where schemaname = 'realtime'
+      and tablename = 'messages'
+      and policyname = 'Room players can read the room channel'
+  ),
+  'room players may receive presence and broadcasts'
 );
 
 select * from finish();
