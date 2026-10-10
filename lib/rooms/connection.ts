@@ -246,7 +246,7 @@ export function connectToRoom(
       .channel(`room:${roomId}`, {
         config: {
           // Only players still in the room may join (Realtime policies in
-          // 20261009000008_db_hardening.sql), so nobody outside the room can
+          // 20261009000009_db_hardening.sql), so nobody outside the room can
           // show a player as online.
           private: true,
           presence: { key: playerId },
@@ -304,9 +304,14 @@ export function connectToRoom(
     if (client.realtime.accessTokenValue) {
       subscribe();
     } else {
-      void client.realtime.setAuth().then(() => {
-        if (!stopped && opened === channel) subscribe();
-      });
+      client.realtime.setAuth().then(
+        () => {
+          if (!stopped && opened === channel) subscribe();
+        },
+        (error: unknown) => {
+          if (!stopped && opened === channel) options.onError?.(error);
+        },
+      );
     }
     return opened;
   }

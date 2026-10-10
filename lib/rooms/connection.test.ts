@@ -250,6 +250,19 @@ describe("connectToRoom", () => {
     await vi.waitFor(() => expect(views).toHaveLength(1));
   });
 
+  it("reports a failed token refresh instead of joining", async () => {
+    const fake = createFakeRealtime();
+    fake.realtime.accessTokenValue = null;
+    const failure = new Error("session lookup failed");
+    fake.realtime.setAuth.mockRejectedValueOnce(failure);
+    const { options } = connect(fake);
+
+    await vi.waitFor(() =>
+      expect(options.onError).toHaveBeenCalledWith(failure),
+    );
+    expect(fake.channel.subscribe).not.toHaveBeenCalled();
+  });
+
   it("does not join after disconnect while waiting for the token", async () => {
     const fake = createFakeRealtime();
     fake.realtime.accessTokenValue = null;
