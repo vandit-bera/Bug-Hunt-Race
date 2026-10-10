@@ -6,11 +6,11 @@ one automated test that runs in CI on every pull request.
 
 Where the tests run (`.github/workflows/ci.yml`):
 
-| Job        | What it runs                                                                                                               |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Job        | What it runs                                                                                                                       |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | `ci`       | lint, types, unit tests (Vitest), `puzzles:check`, build, then single-player E2E (`e2e/*.spec.ts`) in Chromium, Firefox and WebKit |
-| `database` | pgTAP tests (`supabase/tests/`) on a fresh Postgres with every migration                                                   |
-| `realtime` | multi-player E2E (`e2e/multiplayer/`) against a local Supabase, Chromium, **no retries**                                   |
+| `database` | pgTAP tests (`supabase/tests/`) on a fresh Postgres with every migration                                                           |
+| `realtime` | multi-player E2E (`e2e/multiplayer/`) against a local Supabase, Chromium, **no retries**                                           |
 
 Paths below are relative to the repo root; E2E names are the Playwright test titles.
 
@@ -41,7 +41,7 @@ Paths below are relative to the repo root; E2E names are the Playwright test tit
 | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Infinite loop (JavaScript)               | `e2e/solo.spec.ts` "an infinite loop shows Time limit exceeded and the page stays usable"; `e2e/runner.spec.ts` "an infinite loop times out at ~5s…"; `e2e/multiplayer/failure-cases.spec.ts` "§18 infinite loop in a race round…" (new)                             |
 | Infinite loop (Python)                   | `e2e/runner.spec.ts` "Python: an infinite loop times out at ~5s, the page stays responsive and the next run works"; `lib/runner/node.test.ts`                                                                                                                        |
-| Internet drops; rejoin keeps the score   | `e2e/multiplayer/resilience.spec.ts` "a player who drops for 10 s mid-round keeps their seat and score"; `e2e/multiplayer/failure-cases.spec.ts` "§18 internet drops: closing the tab and opening the invite link again keeps the seat and score" (new)              |
+| Internet drops; rejoin keeps the score   | `e2e/multiplayer/resilience.spec.ts` "a player who drops for 10 s mid-round keeps their seat and score"; `e2e/multiplayer/failure-cases.spec.ts` "§18 rejoin: closing the tab and opening the invite link again keeps the seat and score" (new)                      |
 | Admin leaves → role passes on            | `e2e/multiplayer/rooms.spec.ts` "the admin role passes on when the admin drops for more than 15 s"; `e2e/multiplayer/harness.spec.ts`; `supabase/tests/05_room_engine.test.sql`                                                                                      |
 | Admin Stop mid-round → final leaderboard | `e2e/multiplayer/race.spec.ts` "the admin plays too, and Stop from a live round ends the game" (live) and the first test (paused)                                                                                                                                    |
 | Simultaneous finish / exact tie          | `supabase/tests/04_scores.test.sql` "exact ties share the place", "equal points: the earlier last solve (server time) wins"; `supabase/tests/08_end_of_game.test.sql`; `lib/rooms/leaderboard.test.ts`; `components/results/results.test.tsx` "shows shared places…" |

@@ -20,14 +20,17 @@ export function heading(page: Page) {
 }
 
 /** The puzzle on `page`, by its title (the database picks at random). */
-export async function puzzleOn(page: Page) {
+export async function puzzleOn(
+  page: Page,
+  language: LanguageId = "javascript",
+) {
   const title = page.getByRole("main").getByRole("heading", { level: 2 });
   await expect(title).toBeVisible(COUNTDOWN);
   const text = (await title.textContent()) ?? "";
   const puzzle = PUZZLES.find(
-    ({ meta }) => meta.title === text && meta.language === "javascript",
+    ({ meta }) => meta.title === text && meta.language === language,
   );
-  if (!puzzle) throw new Error(`No JavaScript puzzle titled "${text}"`);
+  if (!puzzle) throw new Error(`No ${language} puzzle titled "${text}"`);
   return puzzle;
 }
 

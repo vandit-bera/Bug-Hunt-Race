@@ -18,7 +18,7 @@ import {
 // The full map is in docs/TEST_PLAN.md.
 requireSupabase();
 
-test("§18 internet drops: closing the tab and opening the invite link again keeps the seat and score", async ({
+test("§18 rejoin: closing the tab and opening the invite link again keeps the seat and score", async ({
   players,
 }) => {
   const racers = await players(2);
@@ -34,6 +34,7 @@ test("§18 internet drops: closing the tab and opening the invite link again kee
     .getByRole("list", { name: "Round 1 results" })
     .getByRole("listitem")
     .filter({ hasText: ben.name });
+  await expect(benRow).toContainText(/\+\d+/, LIVE);
   const points = /\+(\d+)/.exec((await benRow.textContent()) ?? "")?.[1];
   expect(Number(points)).toBeGreaterThan(0);
 
@@ -46,7 +47,8 @@ test("§18 internet drops: closing the tab and opening the invite link again kee
     .getByRole("list", { name: "Round 1 results" })
     .getByRole("listitem")
     .filter({ hasText: ben.name });
-  await expect(again).toContainText("(you)");
+  // The same seat: "Ben (you)", not a new "Ben (2)".
+  await expect(again).toContainText(new RegExp(`${ben.name}\\s*\\(you\\)`));
   await expect(again).toContainText(`+${points}`);
   await expect(
     ana.page
@@ -86,15 +88,15 @@ test("§18 Python slow to load: the round shows a loading bar until Python is re
   test.setTimeout(90_000);
   const racers = await players(2);
   const [ana, ben] = racers;
-  await openRoom(racers, 3, "python");
-
-  // Hold Ben's Pyodide download until the round is on screen.
+  // Hold Ben's Pyodide download until the round is on screen. The route goes
+  // in before Ben joins, so it still holds once the lobby preloads Python (TB-76).
   let release = () => {};
   const held = new Promise<void>((resolve) => (release = resolve));
   await ben.page.route("**/pyodide/**", async (route) => {
     await held;
     await route.continue();
   });
+  await openRoom(racers, 3, "python");
 
   await startGame(ana, racers);
   await expect(ben.page.getByText(/^Loading Python… \d+%$/)).toBeVisible(
@@ -102,13 +104,13 @@ test("§18 Python slow to load: the round shows a loading bar until Python is re
   );
   await expect(ben.page.getByRole("progressbar")).toBeVisible();
 
+  const puzzle = await puzzleOn(ben.page, "python");
   release();
   await expect(ben.page.getByText(/^Loading Python…/)).toHaveCount(0, {
     timeout: 60_000,
   });
-  await expect(
-    ben.page.getByRole("button", { name: "Run Tests" }),
-  ).toBeEnabled();
+  // Python really runs: the reference fix passes.
+  await solve(ben.page, puzzle.fix);
 });
 
 test("§18 Python slow to load: Pyodide is preloaded in the lobby", async ({
@@ -118,6 +120,8 @@ test("§18 Python slow to load: Pyodide is preloaded in the lobby", async ({
     true,
     "App bug TB-76: the room lobby does not preload Pyodide; it starts loading only when the round starts.",
   );
+  // test.fail also passes if the join breaks. Checked by hand: today it fails
+  // only on the poll below (0 Pyodide requests in the lobby).
   const [ana, ben] = await players(2);
   const pyodide: string[] = [];
   ben.page.on("request", (request) => {
