@@ -105,8 +105,8 @@ pnpm puzzles:check                                 # every puzzle: buggy fails, 
 End-to-end tests (Playwright). The first time, install the browsers:
 
 ```bash
-pnpm exec playwright install chromium webkit
-pnpm test:e2e                       # every test in Chromium and WebKit
+pnpm exec playwright install chromium firefox webkit
+pnpm test:e2e                       # every test in Chromium, Firefox and WebKit
 pnpm test:e2e --project=chromium    # one browser only
 E2E_PORT=3100 pnpm test:e2e         # if port 3000 is taken
 ```
