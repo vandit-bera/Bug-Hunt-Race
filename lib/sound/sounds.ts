@@ -7,6 +7,7 @@ export const SOUND_NAMES = [
   "fail",
   "solved",
   "timeup",
+  "react",
   "fanfare",
 ] as const;
 

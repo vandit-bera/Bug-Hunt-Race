@@ -9,6 +9,7 @@ import {
   type Player,
   type Room,
 } from "@/lib/db";
+import type { ReactionMessage } from "@/lib/game/reactions";
 import { backoffDelayMs, isUnavailableError } from "./retry";
 
 /**
@@ -17,6 +18,9 @@ import { backoffDelayMs, isUnavailableError } from "./retry";
  * lost heartbeat does not count as a drop.
  */
 export const HEARTBEAT_INTERVAL_MS = 5_000;
+
+/** The broadcast event reactions travel on, in the room's channel. */
+export const REACTION_EVENT = "reaction";
 
 export interface RoomView {
   room: Room;
@@ -57,6 +61,11 @@ export interface RoomConnectionOptions {
   onClosed: () => void;
   onError?: (error: unknown) => void;
   onStatus?: (status: RoomConnectionStatus) => void;
+  /**
+   * A reaction broadcast from another client, as received: anyone who knows
+   * the room id can send one, so validate it (`parseReactionMessage`).
+   */
+  onReaction?: (payload: unknown) => void;
 }
 
 export interface RoomConnection {
@@ -64,12 +73,19 @@ export interface RoomConnection {
   disconnect(): void;
   /** Leaves the room for good: frees the seat and hands over the admin role. */
   leave(): Promise<void>;
+  /**
+   * Broadcasts a reaction to the other clients in the room (not echoed back).
+   * False, and nothing sent, while the channel is not live: reactions are
+   * not worth queueing for later.
+   */
+  sendReaction(message: ReactionMessage): boolean;
 }
 
 /**
  * Keeps a live view of one room: room row and player list from Supabase
  * Realtime (`postgres_changes`, filtered by RLS to rooms the caller is in),
- * who is online from Realtime presence, and a heartbeat to the database every
+ * who is online from Realtime presence, reactions over Realtime broadcast
+ * (never stored), and a heartbeat to the database every
  * `HEARTBEAT_INTERVAL_MS`. Reloads everything each time the channel
  * (re)subscribes, so changes missed while offline are picked up. The seat
  * is the database's: a player who drops keeps it (and their scores) until
@@ -257,6 +273,9 @@ export function connectToRoom(
         },
         () => void refreshPlayers(),
       )
+      .on("broadcast", { event: REACTION_EVENT }, ({ payload }) => {
+        if (!stopped) options.onReaction?.(payload);
+      })
       .on("presence", { event: "sync" }, () => {
         online = new Set(Object.keys(opened.presenceState()));
         emit();
@@ -286,6 +305,15 @@ export function connectToRoom(
     async leave() {
       stop();
       await leaveRoom(client, roomId);
+    },
+    sendReaction(message) {
+      if (stopped || !channelLive) return false;
+      void channel.send({
+        type: "broadcast",
+        event: REACTION_EVENT,
+        payload: message,
+      });
+      return true;
     },
   };
 }

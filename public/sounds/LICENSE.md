@@ -1,6 +1,6 @@
 # Sound effects
 
-All seven sounds (`tick`, `go`, `pass`, `fail`, `solved`, `timeup`,
+All eight sounds (`tick`, `go`, `pass`, `fail`, `solved`, `timeup`, `react`,
 `fanfare`) are
 synthesized from plain sine and square tones by `scripts/generate-sounds.mjs`
 in this repository. They contain no third-party samples. They are original

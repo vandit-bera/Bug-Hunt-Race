@@ -73,6 +73,9 @@ const SOUNDS = {
     { freq: 330, start: 0.2, length: 0.2, shape: "square", gain: 0.3 },
     { freq: [262, 130], start: 0.4, length: 0.3, shape: "square", gain: 0.3 },
   ]),
+  react: render(0.09, [
+    { freq: [700, 1100], start: 0, length: 0.09, gain: 0.25 },
+  ]),
   fanfare: render(1.6, [
     { freq: 523, start: 0, length: 0.14 },
     { freq: 523, start: 0.15, length: 0.14 },

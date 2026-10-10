@@ -54,6 +54,7 @@ function createFakeRealtime() {
     on: (type: string, filter: Record<string, string>, fn: Handler) => unknown;
     subscribe: (callback: typeof subscribeCallback) => unknown;
     track: () => Promise<string>;
+    send: (message: unknown) => Promise<string>;
     presenceState: () => Record<string, unknown[]>;
   }
 
@@ -70,6 +71,7 @@ function createFakeRealtime() {
         return opened;
       }),
       track: vi.fn(async () => "ok"),
+      send: vi.fn(async () => "ok"),
       presenceState: () => presence,
     };
     channels.push(opened);
@@ -217,6 +219,7 @@ describe("connectToRoom", () => {
           filter: "room_id=eq.room-1",
         },
       ],
+      ["broadcast", { event: "reaction" }],
       ["presence", { event: "sync" }],
     ]);
   });
@@ -399,6 +402,47 @@ describe("connectToRoom", () => {
     expect(heartbeatCalls(fake.rpc)).toBe(1);
     expect(fake.removeChannel).toHaveBeenCalledOnce();
     expect(fake.rpc).not.toHaveBeenCalledWith("leave_room", expect.anything());
+  });
+
+  it("passes reaction broadcasts on as received", async () => {
+    const fake = createFakeRealtime();
+    const onReaction = vi.fn();
+    connectToRoom(fake.client, {
+      roomId: "room-1",
+      playerId: "p1",
+      onChange: () => {},
+      onClosed: () => {},
+      onReaction,
+    });
+
+    fake.fire("broadcast", null, {
+      type: "broadcast",
+      event: "reaction",
+      payload: { sender: "p2", emojis: ["🔥"] },
+    });
+
+    expect(onReaction).toHaveBeenCalledWith({ sender: "p2", emojis: ["🔥"] });
+  });
+
+  it("broadcasts reactions only while live", async () => {
+    const fake = createFakeRealtime();
+    const { connection, views } = connect(fake);
+    const message = { sender: "p1", emojis: ["🔥" as const] };
+
+    expect(connection.sendReaction(message)).toBe(false);
+    fake.subscribe("SUBSCRIBED");
+    await vi.waitFor(() => expect(views).toHaveLength(1));
+
+    expect(connection.sendReaction(message)).toBe(true);
+    expect(fake.channel.send).toHaveBeenCalledWith({
+      type: "broadcast",
+      event: "reaction",
+      payload: message,
+    });
+
+    connection.disconnect();
+    expect(connection.sendReaction(message)).toBe(false);
+    expect(fake.channel.send).toHaveBeenCalledOnce();
   });
 
   it("leave stops and leaves the room", async () => {

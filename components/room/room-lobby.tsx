@@ -31,9 +31,11 @@ import {
   roomErrorMessage,
   useRoomConnection,
 } from "@/lib/rooms";
+import { preloadRunner } from "@/lib/runner/preload";
 import { PlayerList, type RoomPlayer } from "./player-list";
 import { RoomErrorCard } from "./room-error-card";
 import { RoomHeader } from "./room-header";
+import { RoomReactions } from "./room-reactions";
 import { RoomReadyPanel } from "./room-ready-panel";
 import { describeRoomSettings } from "./room-settings";
 
@@ -168,6 +170,11 @@ function Lobby({
   const current = useCurrentRound(client, room);
   const [leaving, setLeaving] = useState(false);
   const [starting, setStarting] = useState(false);
+  // Warm Python while players wait, so the round does not open on a loading
+  // bar. JS and TS rooms download nothing.
+  useEffect(() => {
+    void preloadRunner(room.language);
+  }, [room.language]);
   if (live.closed && !leaving) return <RoomGone />;
 
   const players = live.view?.players ?? [membership.player];
@@ -344,6 +351,13 @@ function Lobby({
           Connection lost. Reconnecting…
         </p>
       )}
+      <RoomReactions
+        selfId={me.id}
+        memberIds={players.map((player) => player.id)}
+        onlineCount={online?.size || players.length}
+        sendReaction={live.sendReaction}
+        subscribeReactions={live.subscribeReactions}
+      />
       {body}
     </RoomFrame>
   );
