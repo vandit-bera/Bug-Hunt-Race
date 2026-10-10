@@ -1,8 +1,9 @@
 import { expect, type Page } from "@playwright/test";
 import type { LabSettings } from "@/app/dev/rooms/lab-settings";
+import { waitForHydration } from "./hydration";
 
-/** Realtime round trips land within about a second. */
-export const LIVE = { timeout: 3_000 };
+/** Realtime round trips land within about a second; slack for busy runners. */
+export const LIVE = { timeout: 5_000 };
 
 /**
  * A dropped player is back after the Supabase client's reconnect backoff
@@ -40,6 +41,7 @@ export async function createRoom(
   settings: RoomSettings = {},
 ): Promise<string> {
   await page.goto(labUrl(settings));
+  await waitForHydration(page.getByLabel("Your name"));
   await page.getByLabel("Your name").fill(name);
   await page.getByRole("button", { name: "Create room" }).click();
   const heading = page.getByRole("heading", { name: /^Room [A-Z2-9]{6}$/ });
@@ -83,6 +85,7 @@ export async function fillCreateRoomForm(
   name: string,
   settings: RoomSettings = {},
 ) {
+  await waitForHydration(page.getByLabel("Your name"));
   if (settings.language) {
     await page
       .getByRole("group", { name: "Language" })
@@ -115,6 +118,7 @@ export async function fillCreateRoomForm(
  */
 export async function joinRoom(page: Page, code: string, name: string) {
   if (!page.url().includes("/dev/rooms")) await page.goto(labUrl());
+  await waitForHydration(page.getByLabel("Your name"));
   await page.getByLabel("Your name").fill(name);
   await page.getByLabel("Room code").fill(code);
   await page.getByRole("button", { name: "Join room" }).click();

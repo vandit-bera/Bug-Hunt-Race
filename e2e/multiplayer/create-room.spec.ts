@@ -39,6 +39,17 @@ async function decodeQr(page: Page, label: string): Promise<string | null> {
   return jsQR(new Uint8ClampedArray(pixels), width, height)?.data ?? null;
 }
 
+/**
+ * Pyodide checks for a classic worker with `importScripts("data:...")` in a
+ * try/catch. Safari's CSP still logs the blocked load as a console error, but
+ * nothing breaks, so only this exact message is allowed.
+ */
+function isPyodideWorkerProbe(text: string) {
+  return /^Refused to load data:text\/javascript, because it does not appear in the script-src directive/.test(
+    text,
+  );
+}
+
 function inviteLinkFor(page: Page, code: string) {
   return `${new URL(page.url()).origin}/join/${code}`;
 }
@@ -49,7 +60,9 @@ test("Create Room opens the ready panel with code, link and a QR of the link", a
   const [ana] = await players(1);
   const errors: string[] = [];
   ana.page.on("console", (message) => {
-    if (message.type() === "error") errors.push(message.text());
+    if (message.type() === "error" && !isPyodideWorkerProbe(message.text())) {
+      errors.push(message.text());
+    }
   });
 
   const code = await createRoomFromScreen(ana.page, ana.name, {

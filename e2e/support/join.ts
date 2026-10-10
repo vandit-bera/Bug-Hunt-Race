@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { expect, type Locator, type Page } from "@playwright/test";
 import type { Database } from "@/lib/db/types";
+import { waitForHydration } from "./hydration";
 
 /**
  * Helpers for the real join screens (`/join`, `/join/<code>`) and the lobby
@@ -25,6 +26,7 @@ export async function expectLobby(page: Page, code: string) {
 
 /** Fills in the name step of `/join/<code>` and joins. Does not wait. */
 export async function enterName(page: Page, name: string) {
+  await waitForHydration(page.getByLabel("Your name"));
   await page.getByLabel("Your name").fill(name);
   await page.getByRole("button", { name: "Join room" }).click();
 }
