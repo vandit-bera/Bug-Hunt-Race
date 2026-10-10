@@ -8,6 +8,7 @@ import {
   messageKind,
   percentile,
   summarize,
+  timestampMicros,
 } from "./metrics";
 
 describe("percentile", () => {
@@ -142,16 +143,50 @@ describe("checkDuplicateNames", () => {
   });
 });
 
+describe("timestampMicros", () => {
+  it("keeps microseconds that Date would drop", () => {
+    const a = timestampMicros("2026-10-10T10:33:36.410231+00:00");
+    const b = timestampMicros("2026-10-10T10:33:36.410232+00:00");
+    expect(b - a).toBe(1);
+    expect(a).toBe(Date.parse("2026-10-10T10:33:36.410Z") * 1000 + 231);
+  });
+
+  it("reads trimmed and missing fractions and offsets", () => {
+    expect(timestampMicros("2026-10-10T10:33:36.41+00:00")).toBe(
+      Date.parse("2026-10-10T10:33:36.410Z") * 1000,
+    );
+    expect(timestampMicros("2026-10-10T12:33:36+02:00")).toBe(
+      Date.parse("2026-10-10T10:33:36Z") * 1000,
+    );
+  });
+});
+
 describe("expectedRanks", () => {
-  it("ranks by points, then lower server solve time; exact ties share", () => {
+  it("ranks by points, then earliest last solve; exact ties share", () => {
     const ranks = expectedRanks([
-      { playerId: "a", points: 100, solveMs: 900 },
-      { playerId: "b", points: 120, solveMs: 950 },
-      { playerId: "c", points: 100, solveMs: 800 },
-      { playerId: "d", points: 100, solveMs: 900 },
-      { playerId: "e", points: 0, solveMs: 0 },
+      { playerId: "a", points: 100, solveMs: 900, lastSolvedUs: 2_000 },
+      { playerId: "b", points: 120, solveMs: 950, lastSolvedUs: 3_000 },
+      { playerId: "c", points: 100, solveMs: 800, lastSolvedUs: 1_000 },
+      { playerId: "d", points: 100, solveMs: 900, lastSolvedUs: 2_000 },
+      { playerId: "e", points: 0, solveMs: 0, lastSolvedUs: null },
+      { playerId: "f", points: 0, solveMs: 0, lastSolvedUs: null },
     ]);
-    expect(Object.fromEntries(ranks)).toEqual({ b: 1, c: 2, a: 3, d: 3, e: 5 });
+    expect(Object.fromEntries(ranks)).toEqual({
+      b: 1,
+      c: 2,
+      a: 3,
+      d: 3,
+      e: 5,
+      f: 5,
+    });
+  });
+
+  it("breaks a points tie by last solve, not total solve time", () => {
+    const ranks = expectedRanks([
+      { playerId: "fastTotal", points: 200, solveMs: 1_000, lastSolvedUs: 9 },
+      { playerId: "earlyLast", points: 200, solveMs: 5_000, lastSolvedUs: 5 },
+    ]);
+    expect(Object.fromEntries(ranks)).toEqual({ earlyLast: 1, fastTotal: 2 });
   });
 });
 

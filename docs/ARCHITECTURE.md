@@ -629,9 +629,9 @@ in the same second (`--join-over 30` in brackets, where it differs):
 - Correct at 30: identical player lists and leaderboards on all clients; the
   31st concurrent joiner and a later one get `room_full` ("Room is full");
   repeated names become "Riya", "Riya (2)", "Riya (3)"; ranks follow points,
-  then the server-measured solve time, and exact ties share the place (every
-  run has some); the earliest-joined connected player takes over as admin and
-  the old admin does not get the role back.
+  then the earlier server time of the last solve, and exact ties share the
+  place; the earliest-joined connected player takes over as admin and the old
+  admin does not get the role back.
 - **Engine bug found and fixed:** the player-list reload used to drop every
   answer that a newer change had overtaken. With 30 joins in one second each
   client kept starting new queries and dropping the answers, so the list froze
