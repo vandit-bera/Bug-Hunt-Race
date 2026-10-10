@@ -3,6 +3,7 @@ import { formatTime } from "@/components/solo/result-screen";
 import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/components/ui/cn";
 import { isTied, type RoundRow } from "@/lib/game/standings";
+import { AwardBadges, type RoomAwards } from "./award-badges";
 
 function Breakdown({ score }: { score: RoundRow["score"] }) {
   return (
@@ -16,16 +17,19 @@ function Breakdown({ score }: { score: RoundRow["score"] }) {
 
 /**
  * One round's results: who solved it, how fast, the points (base + speed
- * bonus − hint) and the overall rank change. `rows` come from `roundResults`.
+ * bonus − hint), the overall rank change and the room awards so far.
+ * `rows` come from `roundResults`.
  */
 export function RoundResults({
   rows,
   roundNumber,
   currentPlayerId,
+  awards,
 }: {
   rows: readonly RoundRow[];
   roundNumber: number;
   currentPlayerId?: string;
+  awards?: RoomAwards | null;
 }) {
   const title = `Round ${roundNumber} results`;
   if (rows.length === 0) {
@@ -68,6 +72,11 @@ export function RoundResults({
               ) : (
                 <span className="text-xs text-muted">Not solved</span>
               )}
+              <AwardBadges
+                awards={awards}
+                playerId={row.id}
+                className="mt-0.5"
+              />
             </span>
             <ChangeMarker change={row.change} />
             <span className="shrink-0 font-mono font-bold tabular-nums">

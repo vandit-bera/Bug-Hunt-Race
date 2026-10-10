@@ -1,6 +1,6 @@
 import type { DbClient } from "./client";
 import { toDbError } from "./errors";
-import type { LeaderboardEntry, Score } from "./models";
+import type { LeaderboardEntry, Round, Score } from "./models";
 
 export interface RecordScoreInput {
   roundId: string;
@@ -84,6 +84,43 @@ export async function listRoundScores(
     .select()
     .eq("round_id", roundId)
     .order("submitted_at");
+  if (error) throw toDbError(error);
+  return data;
+}
+
+/** A round of the room with its results, for the room awards. */
+export type RoomResultsRound = Pick<
+  Round,
+  "id" | "game_number" | "round_number" | "started_at" | "ended_at"
+> & {
+  scores: Pick<
+    Score,
+    | "player_id"
+    | "passed"
+    | "solve_time_ms"
+    | "hint_used"
+    | "points"
+    | "submitted_at"
+  >[];
+};
+
+/**
+ * Every round of a room the caller is in, all games, with each round's
+ * results, in play order. The room awards (First Blood, win streaks…) are
+ * computed from these server rows, so every player sees the same awards.
+ */
+export async function listRoomResults(
+  client: DbClient,
+  roomId: string,
+): Promise<RoomResultsRound[]> {
+  const { data, error } = await client
+    .from("rounds")
+    .select(
+      "id, game_number, round_number, started_at, ended_at, scores(player_id, passed, solve_time_ms, hint_used, points, submitted_at)",
+    )
+    .eq("room_id", roomId)
+    .order("game_number")
+    .order("round_number");
   if (error) throw toDbError(error);
   return data;
 }

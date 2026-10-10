@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { RoomAwards } from "@/components/results/award-badges";
 import { Podium } from "@/components/results/podium";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -12,18 +13,20 @@ import { playSound } from "@/lib/sound/sounds";
 import { useLeaderboard } from "./use-race-data";
 
 /**
- * The game is over: the top 3 on a podium, the full list below and a
- * confetti burst and a fanfare. The admin can play again (same players, scores back to 0)
+ * The game is over: the top 3 on a podium, the full list below with the
+ * room awards, a confetti burst and a fanfare. The admin can play again (same players, scores back to 0)
  * or close the room.
  */
 export function FinalLeaderboard({
   client,
   room,
   me,
+  awards,
 }: {
   client: DbClient;
   room: Room;
   me: Player;
+  awards: RoomAwards | null;
 }) {
   const toast = useToast();
   const { entries, error, retry } = useLeaderboard(client, room, false);
@@ -72,6 +75,7 @@ export function FinalLeaderboard({
         onPlayAgain={() => void advance("play_again")}
         onCloseRoom={() => void advance("close")}
         busy={busy}
+        awards={awards}
       />
       {!me.is_admin && (
         <p role="status" className="text-center text-muted">

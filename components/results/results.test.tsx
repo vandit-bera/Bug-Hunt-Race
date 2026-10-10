@@ -5,6 +5,7 @@ import {
   roundResults,
   type RoundResult,
 } from "@/lib/game/standings";
+import type { RoomAwards } from "./award-badges";
 import { Leaderboard } from "./leaderboard";
 import { Podium } from "./podium";
 import { RoundResults } from "./round-results";
@@ -126,5 +127,58 @@ describe("Podium", () => {
       <Podium standings={computeStandings(players, [])} />,
     );
     expect(html).toContain("Nobody scored this game");
+  });
+});
+
+describe("room awards", () => {
+  const awards: RoomAwards = new Map([
+    ["riya", { awards: ["first-blood", "speed-demon"], winStreak: 0 }],
+    ["sam", { awards: ["no-hints-needed"], winStreak: 3 }],
+  ] as const);
+
+  it("show next to names on round results", () => {
+    const html = renderToStaticMarkup(
+      <RoundResults
+        rows={roundResults(players, [round])}
+        roundNumber={1}
+        awards={awards}
+      />,
+    );
+    expect(html).toContain("First Blood");
+    expect(html).toContain("Speed Demon");
+    expect(html).toContain("No Hints Needed");
+    expect(html).toContain("🔥 x3");
+    expect(html).toContain("Win streak: 3 games won in a row");
+    expect(html.match(/data-testid="room-awards"/g)).toHaveLength(2);
+  });
+
+  it("show on the podium and the final leaderboard", () => {
+    const html = renderToStaticMarkup(
+      <Podium standings={computeStandings(players, [round])} awards={awards} />,
+    );
+    // Riya and Sam: once on the podium, once in the list.
+    expect(html.match(/data-testid="room-awards"/g)).toHaveLength(4);
+  });
+
+  it("stay on one line in the final leaderboard", () => {
+    const html = renderToStaticMarkup(
+      <Leaderboard
+        standings={computeStandings(players, [round])}
+        awards={awards}
+      />,
+    );
+    const lists = html.match(/data-testid="room-awards" class="[^"]*"/g);
+    expect(lists).toHaveLength(2);
+    for (const list of lists ?? []) {
+      expect(list).toContain("flex-nowrap");
+      expect(list).not.toMatch(/\bflex-wrap\b/);
+    }
+  });
+
+  it("render nothing without awards", () => {
+    const html = renderToStaticMarkup(
+      <RoundResults rows={roundResults(players, [round])} roundNumber={1} />,
+    );
+    expect(html).not.toContain("room-awards");
   });
 });
