@@ -30,7 +30,9 @@ import {
   expectedRanks,
   frameEvent,
   summarize,
+  timestampMicros,
   type MessageKind,
+  type ScoreTotal,
   type Summary,
 } from "./metrics";
 
@@ -369,7 +371,9 @@ async function serverTotals(roomId: string) {
       service.from("players").select("id").eq("room_id", roomId),
       service
         .from("scores")
-        .select("player_id, points, solve_time_ms, rounds!inner(room_id)")
+        .select(
+          "player_id, points, solve_time_ms, passed, submitted_at, rounds!inner(room_id)",
+        )
         .eq("rounds.room_id", roomId),
     ]);
   if (playersError || error) {
@@ -378,12 +382,19 @@ async function serverTotals(roomId: string) {
     );
   }
   const totals = new Map(
-    players.map((p) => [p.id, { playerId: p.id, points: 0, solveMs: 0 }]),
+    players.map((p): [string, ScoreTotal] => [
+      p.id,
+      { playerId: p.id, points: 0, solveMs: 0, lastSolvedUs: null },
+    ]),
   );
   for (const score of scores) {
     const total = totals.get(score.player_id)!;
     total.points += score.points;
     total.solveMs += score.solve_time_ms ?? 0;
+    if (score.passed) {
+      const solvedUs = timestampMicros(score.submitted_at);
+      total.lastSolvedUs = Math.max(total.lastSolvedUs ?? solvedUs, solvedUs);
+    }
   }
   return [...totals.values()];
 }
@@ -427,7 +438,7 @@ async function verifyLeaderboards(
     [...ranks.values()].filter((rank, i, all) => all.indexOf(rank) !== i),
   ).size;
   check(
-    `${key}: ranks follow points, then server-measured solve time`,
+    `${key}: ranks follow points, then earliest last solve (server time)`,
     wrong.length === 0,
     wrong.length === 0
       ? `${tiedPlaces} shared place(s)`

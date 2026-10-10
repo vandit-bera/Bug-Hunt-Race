@@ -176,18 +176,33 @@ export interface ScoreTotal {
   playerId: string;
   points: number;
   solveMs: number;
+  /** Microseconds since the epoch of the latest passed submission; null if none. */
+  lastSolvedUs: number | null;
 }
 
 /**
- * Leaderboard places from server-side totals: more points first, then less
- * total solve time (measured by the database clock); exact ties share the
- * place, like SQL `rank()`.
+ * Microseconds since the epoch of a Postgres `timestamptz` as PostgREST sends
+ * it (e.g. `2026-10-10T10:33:36.410231+00:00`). `Date` keeps only
+ * milliseconds, which could make two different solve times look tied.
+ */
+export function timestampMicros(timestamp: string): number {
+  const fraction = /\.(\d+)/.exec(timestamp)?.[1] ?? "";
+  const ms = Date.parse(timestamp.replace(/\.\d+/, ""));
+  return ms * 1000 + Number(fraction.padEnd(6, "0").slice(0, 6));
+}
+
+/**
+ * Leaderboard places from server-side totals, like the `room_leaderboard`
+ * view: more points first, then the earlier last solve (database clock;
+ * players who never solved come last); exact ties share the place, like SQL
+ * `rank()`.
  */
 export function expectedRanks(
   totals: readonly ScoreTotal[],
 ): Map<string, number> {
+  const lastSolved = (t: ScoreTotal) => t.lastSolvedUs ?? Infinity;
   const sorted = [...totals].sort(
-    (a, b) => b.points - a.points || a.solveMs - b.solveMs,
+    (a, b) => b.points - a.points || lastSolved(a) - lastSolved(b),
   );
   const ranks = new Map<string, number>();
   sorted.forEach((entry, i) => {
@@ -195,7 +210,7 @@ export function expectedRanks(
     const tied =
       previous &&
       previous.points === entry.points &&
-      previous.solveMs === entry.solveMs;
+      lastSolved(previous) === lastSolved(entry);
     ranks.set(entry.playerId, tied ? ranks.get(previous.playerId)! : i + 1);
   });
   return ranks;
