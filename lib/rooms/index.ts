@@ -3,6 +3,7 @@ export * from "./connection";
 export * from "./errors";
 export * from "./leaderboard";
 export * from "./links";
+export * from "./reactions";
 export * from "./retry";
 export * from "./round-fix";
 export * from "./round-result";

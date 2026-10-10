@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { DbClient } from "@/lib/db";
+import type { ReactionMessage } from "@/lib/game/reactions";
 import {
   connectToRoom,
   type RoomConnection,
@@ -18,7 +19,16 @@ export interface RoomConnectionState {
   status: RoomConnectionStatus;
   /** Leaves the room for good. */
   leave: () => Promise<void>;
+  /** See `RoomConnection.sendReaction`. */
+  sendReaction: (message: ReactionMessage) => boolean;
+  /**
+   * Listens to raw reaction payloads from other clients; returns the
+   * unsubscribe function. Stable for the life of the component.
+   */
+  subscribeReactions: (listener: ReactionListener) => () => void;
 }
+
+export type ReactionListener = (payload: unknown) => void;
 
 /**
  * React wrapper around `connectToRoom`: connects while mounted (and while
@@ -34,6 +44,7 @@ export function useRoomConnection(
   const [error, setError] = useState<unknown>(null);
   const [status, setStatus] = useState<RoomConnectionStatus>("connecting");
   const connection = useRef<RoomConnection | null>(null);
+  const reactionListeners = useRef(new Set<ReactionListener>());
 
   useEffect(() => {
     if (!roomId || !playerId) return;
@@ -47,6 +58,9 @@ export function useRoomConnection(
       onClosed: () => setClosed(true),
       onError: setError,
       onStatus: setStatus,
+      onReaction: (payload) => {
+        for (const listener of reactionListeners.current) listener(payload);
+      },
     });
     connection.current = current;
     return () => {
@@ -59,6 +73,19 @@ export function useRoomConnection(
     };
   }, [client, roomId, playerId]);
 
+  const sendReaction = useCallback(
+    (message: ReactionMessage) =>
+      connection.current?.sendReaction(message) ?? false,
+    [],
+  );
+  const subscribeReactions = useCallback((listener: ReactionListener) => {
+    const listeners = reactionListeners.current;
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+    };
+  }, []);
+
   return {
     view,
     closed,
@@ -67,5 +94,7 @@ export function useRoomConnection(
     leave: async () => {
       await connection.current?.leave();
     },
+    sendReaction,
+    subscribeReactions,
   };
 }

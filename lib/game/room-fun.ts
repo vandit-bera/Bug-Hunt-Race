@@ -3,6 +3,8 @@ export type ReactionEmoji = (typeof REACTION_EMOJIS)[number];
 
 export const REACTION_COOLDOWN_MS = 1000;
 export const MAX_FLOATING_REACTIONS = 20;
+/** How long a reaction floats (or counts, under reduced motion). */
+export const REACTION_FLOAT_MS = 2500;
 
 export function isCoolingDown(
   lastReactionAt: number | null,
