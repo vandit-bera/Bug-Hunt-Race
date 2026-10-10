@@ -6,7 +6,8 @@ Supabase project and sets secrets. Tick each box in the launch issue.
 
 ## 1. Before you start
 
-- [ ] `main` is green in CI (all three jobs) and every Phase 4 PR is merged.
+- [ ] `main` is green in CI (all four jobs: `ci`, `browsers`,
+      `database`, `realtime`) and every Phase 4 PR is merged.
 - [ ] Locally on `main`: `pnpm lint && pnpm typecheck && pnpm test && pnpm puzzles:check && pnpm build`.
 - [ ] Note the current production deployment in Vercel (for rollback, §7).
 - [ ] Back up the live database: Supabase dashboard → Database → Backups
@@ -52,6 +53,8 @@ query below tells you which).
       Realtime)
 - [ ] `20261008000005_abuse_limits.sql`
 - [ ] `20261008000006_round_engine.sql`
+- [ ] `20261009000007_end_of_game.sql`
+- [ ] `20261009000008_scoring_rounding.sql`
 - [ ] `supabase/puzzles.sql` (the puzzle catalog; safe to run again, and run it
       again whenever `puzzles/` changes)
 
@@ -66,8 +69,15 @@ from (values
   ('000003 room functions',     'private.generate_room_code()'),
   ('000004 room engine',        'private.touch_presence(uuid)'),
   ('000005 abuse limits',       'private.limit_room_creation()'),
-  ('000006 round engine',       'private.pick_puzzle(public.rooms)')
+  ('000006 round engine',       'private.pick_puzzle(public.rooms)'),
+  ('000007 end of game',        'private.is_closed_code(text)')
 ) as m(migration, fn)
+union all
+-- 000008 replaces a function from 000003, so check its body, not its name.
+select '000008 scoring rounding',
+       coalesce(pg_get_functiondef(to_regprocedure(
+         'private.calculate_points(integer,integer,integer,boolean)'
+       )) like '%round(%', false)
 union all
 select 'puzzles.sql (' || count(*) filter (where active) || ' active puzzles)',
        count(*) filter (where active) > 0
