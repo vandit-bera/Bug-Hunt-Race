@@ -3,16 +3,17 @@
 import { useCallback, useLayoutEffect, useRef } from "react";
 
 /**
- * Slides absolutely placed rows (`translateY(index * rowHeightRem)`) to their
+ * Slides absolutely placed rows (`translateY(calc(rowPitch * index))`) to their
  * new place when the order changes. Rows stay in rank order in the DOM, so
  * screen readers read 1st place first; React moves the elements, and moving
  * an element drops its CSS transition, so each moved row is put back at its
  * old place and then let go to slide to the new one. Give each row
- * `ref={rowRef(id)}`.
+ * `ref={rowRef(id)}`. `rowPitch` is a CSS length, such as `3.5rem` or
+ * `var(--row)`.
  */
 export function useSlideRows(
   order: readonly string[],
-  rowHeightRem: number,
+  rowPitch: string,
   disabled: boolean,
 ) {
   const rows = useRef(new Map<string, HTMLElement>());
@@ -28,7 +29,7 @@ export function useSlideRows(
       if (from === undefined || from === index || !row) return;
       const to = row.style.transform;
       row.style.transition = "none";
-      row.style.transform = `translateY(${from * rowHeightRem}rem)`;
+      row.style.transform = `translateY(calc(${rowPitch} * ${from}))`;
       // Read layout so the browser starts from the old place.
       row.getBoundingClientRect();
       row.style.transition = "";

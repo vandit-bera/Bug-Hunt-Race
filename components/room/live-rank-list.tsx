@@ -109,7 +109,7 @@ export function LiveRankList({ rows }: { rows: readonly RankRow[] }) {
   }
   const rowRef = useSlideRows(
     ranked.map((row) => row.id),
-    ROW_HEIGHT_REM,
+    `${ROW_HEIGHT_REM}rem`,
     reducedMotion,
   );
 

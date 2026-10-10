@@ -6,9 +6,13 @@ import { useSlideRows } from "@/components/fx/use-slide-rows";
 import { ChangeMarker } from "@/components/room/live-rank-list";
 import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/components/ui/cn";
+import { awardsOf } from "@/lib/game/room-awards";
 import { isTied, type Standing } from "@/lib/game/standings";
+import { AwardBadges, type RoomAwards } from "./award-badges";
 
-const ROW_HEIGHT_REM = 3.75;
+// Row pitch. On phones, award chips get a line of their own.
+const ROW_HEIGHT = "[--row:3.75rem]";
+const ROW_HEIGHT_WITH_AWARDS = "[--row:3.75rem] max-sm:[--row:4.75rem]";
 /** How long `replayChanges` shows the previous order before sliding. */
 const REPLAY_DELAY_MS = 400;
 
@@ -22,19 +26,22 @@ function previousOrder(standings: readonly Standing[]): readonly Standing[] {
 
 /**
  * Overall standings, in rank order in the DOM. Rows slide to their new place
- * when the order changes; exact ties show the same place. `standings` must be
- * ranked (see `computeStandings`). `replayChanges` first shows the order
- * before the last round (from `change`), then slides rows to their places.
+ * when the order changes; exact ties show the same place; room awards sit
+ * next to the rounds solved. `standings` must be ranked (see
+ * `computeStandings`). `replayChanges` first shows the order before the last
+ * round (from `change`), then slides rows to their places.
  */
 export function Leaderboard({
   standings,
   currentPlayerId,
   label = "Leaderboard",
+  awards,
   replayChanges = false,
 }: {
   standings: readonly Standing[];
   currentPlayerId?: string;
   label?: string;
+  awards?: RoomAwards | null;
   replayChanges?: boolean;
 }) {
   const reducedMotion = useReducedMotion();
@@ -49,18 +56,25 @@ export function Leaderboard({
     replaying && !reducedMotion ? previousOrder(standings) : standings;
   const rowRef = useSlideRows(
     rows.map((row) => row.id),
-    ROW_HEIGHT_REM,
+    "var(--row)",
     reducedMotion,
   );
   if (standings.length === 0) {
     return <p className="text-muted">No players yet.</p>;
   }
 
+  const anyAwards = standings.some((row) => {
+    const held = awardsOf(awards ?? null, row.id);
+    return held.awards.length > 0 || held.winStreak > 0;
+  });
   return (
     <ol
       aria-label={label}
-      className="relative w-full"
-      style={{ height: `${standings.length * ROW_HEIGHT_REM}rem` }}
+      className={cn(
+        "relative w-full",
+        anyAwards ? ROW_HEIGHT_WITH_AWARDS : ROW_HEIGHT,
+      )}
+      style={{ height: `calc(var(--row) * ${standings.length})` }}
     >
       {rows.map((row, index) => {
         const you = row.id === currentPlayerId;
@@ -76,8 +90,8 @@ export function Leaderboard({
               !reducedMotion && "transition-transform duration-500 ease-out",
             )}
             style={{
-              height: `${ROW_HEIGHT_REM - 0.5}rem`,
-              transform: `translateY(${index * ROW_HEIGHT_REM}rem)`,
+              height: "calc(var(--row) - 0.5rem)",
+              transform: `translateY(calc(var(--row) * ${index}))`,
             }}
           >
             <span className="w-6 shrink-0 text-center font-display font-bold">
@@ -91,8 +105,14 @@ export function Leaderboard({
                 {row.name}
                 {you && <span className="text-muted"> (you)</span>}
               </span>
-              <span className="truncate text-xs text-muted">
-                {row.roundsSolved} solved
+              <span className="flex min-w-0 gap-x-1.5 text-xs text-muted max-sm:flex-col sm:items-center">
+                <span className="shrink-0">{row.roundsSolved} solved</span>
+                <AwardBadges
+                  awards={awards}
+                  playerId={row.id}
+                  compact
+                  className="min-w-0 overflow-hidden"
+                />
               </span>
             </span>
             <ChangeMarker change={row.change} />

@@ -2,10 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   getLeaderboard,
   getScore,
+  listRoomResults,
   listRoundScores,
   recordScore,
 } from "@/lib/db";
-import type { LeaderboardEntry, Score } from "@/lib/db";
+import type { LeaderboardEntry, RoomResultsRound, Score } from "@/lib/db";
 import { createFakeClient } from "./test-utils";
 
 describe("recordScore", () => {
@@ -143,5 +144,59 @@ describe("listRoundScores", () => {
     await expect(listRoundScores(fake.client, "round-1")).rejects.toMatchObject(
       { name: "DbError", code: "room_not_found" },
     );
+  });
+});
+
+describe("listRoomResults", () => {
+  it("reads every round of the room with its results, in play order", async () => {
+    const rounds: RoomResultsRound[] = [
+      {
+        id: "round-1",
+        game_number: 1,
+        round_number: 1,
+        started_at: "2026-10-08T00:00:00Z",
+        ended_at: "2026-10-08T00:01:00Z",
+        scores: [
+          {
+            player_id: "player-1",
+            passed: true,
+            solve_time_ms: 42_000,
+            hint_used: false,
+            points: 138,
+            submitted_at: "2026-10-08T00:00:42Z",
+          },
+        ],
+      },
+    ];
+    const fake = createFakeClient({ from: [{ data: rounds, error: null }] });
+
+    await expect(listRoomResults(fake.client, "room-1")).resolves.toEqual(
+      rounds,
+    );
+    expect(fake.queries[0]).toEqual({
+      table: "rounds",
+      calls: [
+        [
+          "select",
+          [
+            "id, game_number, round_number, started_at, ended_at, scores(player_id, passed, solve_time_ms, hint_used, points, submitted_at)",
+          ],
+        ],
+        ["eq", ["room_id", "room-1"]],
+        ["order", ["game_number"]],
+        ["order", ["round_number"]],
+      ],
+    });
+  });
+
+  it("maps errors to a typed error", async () => {
+    const fake = createFakeClient({
+      from: [{ data: null, error: { message: "room_not_found" } }],
+    });
+
+    await expect(listRoomResults(fake.client, "room-1")).rejects.toMatchObject({
+      name: "DbError",
+      code: "room_not_found",
+    });
   });
 });

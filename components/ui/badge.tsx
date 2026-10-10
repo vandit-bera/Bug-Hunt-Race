@@ -10,16 +10,26 @@ const variants = {
   warning: "border-warning text-warning",
 };
 
+const sizes = {
+  md: "gap-1 px-2.5 py-0.5",
+  sm: "gap-0.5 px-1.5 py-0 leading-tight",
+};
+
 export function Badge({
   variant = "neutral",
+  size = "md",
   className,
   ...props
-}: HTMLAttributes<HTMLSpanElement> & { variant?: keyof typeof variants }) {
+}: HTMLAttributes<HTMLSpanElement> & {
+  variant?: keyof typeof variants;
+  size?: keyof typeof sizes;
+}) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full border-2 bg-surface px-2.5 py-0.5 text-xs font-bold",
+        "inline-flex items-center rounded-full border-2 bg-surface text-xs font-bold",
         variants[variant],
+        sizes[size],
         className,
       )}
       {...props}
