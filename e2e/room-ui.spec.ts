@@ -59,9 +59,11 @@ test.describe("room UI building blocks on /styleguide", () => {
     const input = page
       .locator('main [data-theme="light"]')
       .getByPlaceholder("K7M2QX");
-    await input.fill("k7 0m-2qxzz");
-
-    await expect(input).toHaveValue("K7M2QX");
+    // WebKit can take the fill before React hydrates the input; fill again.
+    await expect(async () => {
+      await input.fill("k7 0m-2qxzz");
+      await expect(input).toHaveValue("K7M2QX", { timeout: 1_000 });
+    }).toPass();
     await expect(page.getByText("Codes never use 0").first()).toBeVisible();
   });
 

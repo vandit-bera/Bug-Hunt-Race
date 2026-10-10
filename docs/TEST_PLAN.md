@@ -6,11 +6,12 @@ one automated test that runs in CI on every pull request.
 
 Where the tests run (`.github/workflows/ci.yml`):
 
-| Job        | What it runs                                                                                                                       |
-| ---------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `ci`       | lint, types, unit tests (Vitest), `puzzles:check`, build, then single-player E2E (`e2e/*.spec.ts`) in Chromium, Firefox and WebKit |
-| `database` | pgTAP tests (`supabase/tests/`) on a fresh Postgres with every migration                                                           |
-| `realtime` | multi-player E2E (`e2e/multiplayer/`) against a local Supabase, Chromium, **no retries**                                           |
+| Job        | What it runs                                                                                                   |
+| ---------- | -------------------------------------------------------------------------------------------------------------- |
+| `ci`       | lint, types, unit tests (Vitest), `puzzles:check`, build, then single-player E2E (`e2e/*.spec.ts`) in Chromium |
+| `browsers` | the same single-player E2E in Firefox and in WebKit (one job per browser)                                      |
+| `database` | pgTAP tests (`supabase/tests/`) on a fresh Postgres with every migration                                       |
+| `realtime` | multi-player E2E (`e2e/multiplayer/`) against a local Supabase, Chromium, **no retries**                       |
 
 Paths below are relative to the repo root; E2E names are the Playwright test titles.
 
@@ -68,10 +69,17 @@ Run the suite five times without retries before a release:
 pnpm exec playwright test --project=chromium --repeat-each=5 --retries=0
 ```
 
-| Test                                                                          | Cause                                                                                                                                    | Status                                                                                      |
-| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `race.spec.ts` "everyone done ends the round early; nobody solved…"           | The last give-up ends the round at once, so "You gave up this one." can vanish before the check (`realtime` on `main`, 2026-10-09 10:07) | Fixed: `solve` / `giveUp` in `e2e/support/race.ts` accept the round results screen as well. |
-| `hardening.spec.ts` "the Solo game loads Monaco (the check above can see it)" | Monaco can take over 5 s to appear when the machine is busy                                                                              | Fixed: waits up to 15 s, like the other Solo game tests.                                    |
+| Test                                                                             | Cause                                                                                                                                    | Status                                                                                      |
+| -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `race.spec.ts` "everyone done ends the round early; nobody solved…"              | The last give-up ends the round at once, so "You gave up this one." can vanish before the check (`realtime` on `main`, 2026-10-09 10:07) | Fixed: `solve` / `giveUp` in `e2e/support/race.ts` accept the round results screen as well. |
+| `hardening.spec.ts` "the Solo game loads Monaco (the check above can see it)"    | Monaco can take over 5 s to appear when the machine is busy                                                                              | Fixed: waits up to 15 s, like the other Solo game tests.                                    |
+| `room-ui.spec.ts` "room code input normalises and explains look-alikes" (WebKit) | WebKit can take the fill before React hydrates the input, so it is not normalised (flaky on `main`)                                      | Fixed: fills again until the value is normalised (`toPass`).                                |
+| `runner.spec.ts` "Python: an infinite loop times out at ~5s…" (WebKit)           | The warm-spare run took 3.1 s on a busy CI runner, over the 3 s limit (flaky on `main`)                                                  | Fixed: limit is 4 s.                                                                        |
+| Every Solo test that edits code (Firefox)                                        | Monaco's Firefox input ignores the synthetic paste in `setCode`                                                                          | Fixed: `setCode` types the code with `insertText` in Firefox (no auto-indent there).        |
+
+Known browser differences, tracked as app issues: Firefox reports a stack
+overflow as `InternalError` (TB-77), and WebKit overflows its JS stack before
+Python's recursion limit (TB-67). Both tests are `test.fixme` in that browser only.
 
 ## Manual checks
 

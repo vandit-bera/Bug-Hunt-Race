@@ -32,12 +32,41 @@ jobs:
       - run: pnpm build
       - run: pnpm bundle:check
       - run: pnpm fixes:check
-      - run: pnpm exec playwright install --with-deps chromium firefox webkit
-      - run: pnpm test:e2e
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e --project=chromium
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+  # Single-player E2E in Firefox and WebKit (Safari's engine), one job each so
+  # the `ci` job stays fast. Multi-player specs skip here, as in `ci`.
+  browsers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [firefox, webkit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps ${{ matrix.browser }}
+      - run: pnpm test:e2e --project=${{ matrix.browser }}
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report-${{ matrix.browser }}
           path: |
             playwright-report/
             test-results/
