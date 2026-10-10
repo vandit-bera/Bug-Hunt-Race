@@ -33,6 +33,7 @@ import {
 import { PlayerList, type RoomPlayer } from "./player-list";
 import { RoomErrorCard } from "./room-error-card";
 import { RoomHeader } from "./room-header";
+import { RoomReactions } from "./room-reactions";
 import { RoomReadyPanel } from "./room-ready-panel";
 import { describeRoomSettings } from "./room-settings";
 
@@ -341,6 +342,13 @@ function Lobby({
           Connection lost. Reconnecting…
         </p>
       )}
+      <RoomReactions
+        selfId={me.id}
+        memberIds={players.map((player) => player.id)}
+        onlineCount={online?.size || players.length}
+        sendReaction={live.sendReaction}
+        subscribeReactions={live.subscribeReactions}
+      />
       {body}
     </RoomFrame>
   );

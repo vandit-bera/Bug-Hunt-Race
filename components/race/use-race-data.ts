@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import {
   getCurrentRound,
+  getLeaderboard,
   listRoundScores,
   type CurrentRoundView,
   type DbClient,
+  type LeaderboardEntry,
   type Room,
   type Score,
 } from "@/lib/db";
@@ -108,6 +110,68 @@ export function useRoundScores(
   }, [client, roundId, poll]);
 
   return scores?.roundId === roundId ? scores.list : null;
+}
+
+export interface LeaderboardState {
+  /** Null until the first read. */
+  entries: LeaderboardEntry[] | null;
+  /** Set when the first read failed; a later failed poll keeps the list. */
+  error: string | null;
+  retry: () => void;
+}
+
+/**
+ * The room's leaderboard for the current game, read again whenever the room
+ * status, round or game changes, and every `SCORES_POLL_MS` while `poll` is
+ * on (scores are not sent over Realtime), so a solve shows up for everyone
+ * within a couple of seconds.
+ */
+export function useLeaderboard(
+  client: DbClient,
+  room: Room,
+  poll: boolean,
+): LeaderboardState {
+  const [entries, setEntries] = useState<LeaderboardEntry[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = () =>
+      getLeaderboard(client, room.id).then(
+        (next) => {
+          if (cancelled) return;
+          setEntries(next);
+          setError(null);
+        },
+        (caught: unknown) => {
+          if (!cancelled) setError(roomErrorMessage(caught));
+        },
+      );
+    void load();
+    const timer = poll ? setInterval(() => void load(), SCORES_POLL_MS) : null;
+    return () => {
+      cancelled = true;
+      if (timer) clearInterval(timer);
+    };
+  }, [
+    client,
+    room.id,
+    room.status,
+    room.current_round,
+    room.game_number,
+    poll,
+    attempt,
+  ]);
+
+  return {
+    entries,
+    error: entries ? null : error,
+    retry: () => {
+      setError(null);
+      setAttempt((n) => n + 1);
+    },
+  };
 }
 
 /** `Date.now()`, refreshed every `intervalMs`. */

@@ -87,7 +87,9 @@ test("system theme follows the OS on a page without a ThemeToggle", async ({
 
 test("tooltip closes on Escape while shown by mouse hover", async ({
   page,
+  hasTouch,
 }) => {
+  test.skip(hasTouch, "touch devices have no hover");
   await page.goto("/styleguide");
   await page.getByRole("button", { name: "Hover or focus me" }).first().hover();
   const tooltip = page.getByRole("tooltip").first();

@@ -66,6 +66,7 @@ describe("LiveRankList", () => {
     );
     const top = /translateY\(0rem\)[\s\S]*?Bo/.test(html);
     expect(top).toBe(true);
+    expect(html.indexOf("Bo")).toBeLessThan(html.indexOf("Ann"));
   });
 
   it("shows an empty state", () => {

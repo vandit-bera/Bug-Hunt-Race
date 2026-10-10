@@ -42,6 +42,14 @@ _CHECKS = {
     "not in": lambda left, right: left not in right,
 }
 
+# Freeing an exception's traceback takes one nested native call per Python
+# frame it passed through, and in WebKit (Safari) that overflows the JS stack
+# at about 420 frames: infinite recursion became a "Maximum call stack size
+# exceeded" run error instead of a RecursionError. Below this limit no
+# exception can get that deep, so every browser and Node give the same result.
+# Puzzles only recurse a few levels.
+_RECURSION_LIMIT = 250
+
 
 def _bhr_compare(symbol, left, right, source):
     if _CHECKS[symbol](left, right):
@@ -171,6 +179,7 @@ def run_puzzle(code, tests, max_output):
         return outcome("error", error=_syntax_error(error, "the tests"))
 
     namespace = {"__name__": "__puzzle__", "_bhr_compare": _bhr_compare}
+    sys.setrecursionlimit(_RECURSION_LIMIT)
     real_stdout, real_stderr = sys.stdout, sys.stderr
     sys.stdout = sys.stderr = output
     try:

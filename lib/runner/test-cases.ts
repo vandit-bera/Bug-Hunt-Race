@@ -474,6 +474,53 @@ export const RUNNER_CASES: RunnerCase[] = [
     },
   },
   {
+    name: "Python: code that catches its own RecursionError passes",
+    request: {
+      language: "python",
+      code: [
+        "def f():",
+        "    return f()",
+        "def safe():",
+        "    try:",
+        "        return f()",
+        "    except RecursionError:",
+        '        return "caught"',
+      ].join("\n"),
+      tests: 'def test_safe():\n    assert safe() == "caught"',
+    },
+    expected: {
+      status: "passed",
+      tests: [{ name: "test_safe", passed: true }],
+    },
+  },
+  {
+    name: "Python: recursion 200 deep passes, and an error that deep fails",
+    request: {
+      language: "python",
+      code: [
+        "def depth(n):",
+        "    return 0 if n == 0 else 1 + depth(n - 1)",
+        "def fail_at(n):",
+        "    if n == 0:",
+        '        raise ValueError("deep")',
+        "    return fail_at(n - 1)",
+      ].join("\n"),
+      tests: [
+        "def test_depth():",
+        "    assert depth(200) == 200",
+        "def test_fail_at():",
+        "    fail_at(200)",
+      ].join("\n"),
+    },
+    expected: {
+      status: "failed",
+      tests: [
+        { name: "test_depth", passed: true },
+        { name: "test_fail_at", passed: false, message: "ValueError: deep" },
+      ],
+    },
+  },
+  {
     name: "Python: network paths are blocked",
     request: {
       language: "python",

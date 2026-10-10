@@ -58,7 +58,9 @@ your machine is out of file watchers: close other dev servers or run
 - **Unit** tests sit next to the code they test as `*.test.ts(x)` and run with
   `pnpm test`.
 - **E2E** tests live in `e2e/` and run with `pnpm test:e2e`. The first time,
-  install the browser: `pnpm exec playwright install chromium`. Locally,
+  install the browsers: `pnpm exec playwright install chromium webkit`. Every
+  test runs in Chromium and in WebKit (Safari's engine); run one with
+  `pnpm test:e2e --project=chromium`. Locally,
   Playwright starts `pnpm dev` for you (or reuses one already running on port
   3000). If port 3000 is taken by another app, pick another port:
   `E2E_PORT=3100 pnpm test:e2e`.

@@ -25,6 +25,23 @@ async function runInBrowser(page: Page, request: RunRequest) {
   return readResult(page);
 }
 
+/**
+ * Keeps only the error type ("TypeError") of each message. V8 (Chromium and
+ * Node) and other engines word the same error differently.
+ */
+function errorTypesOnly<T extends Partial<BrowserResult>>(result: T): T {
+  const type = (message: string) => message.replace(/: [\s\S]*$/, "");
+  return {
+    ...result,
+    ...(result.error !== undefined && { error: type(result.error) }),
+    ...(result.tests && {
+      tests: result.tests.map((t) =>
+        t.message === undefined ? t : { ...t, message: type(t.message) },
+      ),
+    }),
+  };
+}
+
 test.beforeEach(async ({ page }) => {
   await page.goto("/dev/runner");
   await expect(
@@ -75,6 +92,7 @@ test("network APIs are blocked, including cross-origin import()", async ({
   context,
   page,
   baseURL,
+  browserName,
 }) => {
   // Same server, different origin. Any request that is not blocked in the
   // worker reaches this route, so `reached` proves nothing left the sandbox.
@@ -119,7 +137,10 @@ test("network APIs are blocked, including cross-origin import()", async ({
     importScripts: "Error: importScripts is blocked in the sandbox",
     "import()": expect.stringMatching(/^TypeError: /),
     storage: "Error: indexedDB is blocked in the sandbox",
-    dom: "ReferenceError: document is not defined",
+    dom:
+      browserName === "chromium"
+        ? "ReferenceError: document is not defined"
+        : expect.stringMatching(/^ReferenceError: /),
   });
   expect(reached).toEqual([]);
 });
@@ -269,11 +290,29 @@ test("Python: preload reports progress, then a second run is fast", async ({
 });
 
 for (const runnerCase of RUNNER_CASES) {
-  test(`browser matches Node: ${runnerCase.name}`, async ({ page }) => {
+  test(`browser matches Node: ${runnerCase.name}`, async ({
+    page,
+    browserName,
+  }) => {
+    test.fixme(
+      browserName === "webkit" &&
+        runnerCase.name === "Python: recursion error is a failed test",
+      "TB-67: WebKit's JS stack overflows before Python's recursion limit",
+    );
     const browser = await runInBrowser(page, runnerCase.request);
     const { durationMs, ...node } = await runInNode(runnerCase.request);
     expect(durationMs).toBeGreaterThanOrEqual(0);
-    expect(browser).toEqual(node);
-    expect(browser).toMatchObject(runnerCase.expected);
+    if (
+      browserName === "chromium" ||
+      runnerCase.request.language !== "javascript"
+    ) {
+      expect(browser).toEqual(node);
+      expect(browser).toMatchObject(runnerCase.expected);
+    } else {
+      expect(errorTypesOnly(browser)).toEqual(errorTypesOnly(node));
+      expect(errorTypesOnly(browser)).toMatchObject(
+        errorTypesOnly(runnerCase.expected),
+      );
+    }
   });
 }

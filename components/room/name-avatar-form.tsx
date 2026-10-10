@@ -85,7 +85,7 @@ export function NameAvatarForm({
                 aria-label={`Avatar ${emoji}`}
                 checked={avatar === emoji}
                 onChange={() => setAvatar(emoji)}
-                className="peer absolute inset-0 cursor-pointer opacity-0"
+                className="peer absolute inset-0 cursor-pointer appearance-none opacity-0"
               />
               <span
                 className={cn(
