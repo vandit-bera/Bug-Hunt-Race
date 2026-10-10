@@ -18,6 +18,7 @@ import {
   useCurrentRound,
   useRoomAwards,
 } from "@/components/race/use-race-data";
+import { SoundToggle } from "@/components/sound-toggle";
 import {
   advanceRoom,
   findMyMembership,
@@ -277,6 +278,7 @@ function Lobby({
           client={client}
           room={room}
           isAdmin={me.is_admin}
+          clockOffsetMs={current.clockOffsetMs}
         />
       );
       break;
@@ -337,6 +339,7 @@ function Lobby({
                     : "connecting"
               }
             />
+            <SoundToggle />
             <Button
               variant="danger"
               loading={leaving}

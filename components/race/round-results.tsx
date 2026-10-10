@@ -91,7 +91,7 @@ export function RoundResults({
           awards={awards}
         />
       </Card>
-      <LiveStandings leaderboard={leaderboard} selfId={me.id} />
+      <LiveStandings leaderboard={leaderboard} selfId={me.id} replayChanges />
       <FixReveal
         client={client}
         roundId={round.round_id}
