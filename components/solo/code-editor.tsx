@@ -18,7 +18,7 @@ import "monaco-editor/editor/contrib/toggleTabFocusMode/browser/toggleTabFocusMo
 import "monaco-editor/editor/contrib/wordOperations/browser/wordOperations";
 import * as monaco from "monaco-editor/editor/editor.api";
 import Editor, { loader, type OnMount } from "@monaco-editor/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Spinner } from "@/components/ui/spinner";
 
 /**
@@ -53,6 +53,24 @@ function useDataTheme(): "light" | "dark" {
   return theme;
 }
 
+// Same breakpoint as Tailwind's `sm` and the `tap` variant.
+const PHONE_QUERY = "(width < 40rem)";
+
+function subscribePhone(listener: () => void) {
+  const media = window.matchMedia(PHONE_QUERY);
+  media.addEventListener("change", listener);
+  return () => media.removeEventListener("change", listener);
+}
+
+/** True on phone widths, where long lines would hide behind a side scroll. */
+function usePhoneWidth(): boolean {
+  return useSyncExternalStore(
+    subscribePhone,
+    () => window.matchMedia(PHONE_QUERY).matches,
+    () => false,
+  );
+}
+
 export interface CodeEditorProps {
   value: string;
   language: string;
@@ -70,6 +88,7 @@ export default function CodeEditor({
   readOnly = false,
 }: CodeEditorProps) {
   const theme = useDataTheme();
+  const phone = usePhoneWidth();
   const onRunRef = useRef(onRun);
   useEffect(() => {
     onRunRef.current = onRun;
@@ -101,6 +120,11 @@ export default function CodeEditor({
         suggestOnTriggerCharacters: false,
         wordBasedSuggestions: "off",
         parameterHints: { enabled: false },
+        // Phones: wrap long lines and give the code the gutter's width.
+        wordWrap: phone ? "on" : "off",
+        folding: !phone,
+        lineNumbersMinChars: phone ? 2 : 5,
+        lineDecorationsWidth: phone ? 4 : 10,
         ariaLabel: "Code editor",
       }}
     />

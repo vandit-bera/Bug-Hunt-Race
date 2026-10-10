@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Silkscreen } from "next/font/google";
 import { Footer } from "@/components/footer";
 import { SoundArm } from "@/components/sound-arm";
@@ -28,6 +28,14 @@ export const metadata: Metadata = {
   description: "Race your team to fix buggy code. Fastest correct fix wins.",
 };
 
+// "cover" lets the page reach the iPhone's rounded corners; globals.css pads
+// the body and the fixed toasts by the safe-area insets instead.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
@@ -38,7 +46,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: getThemeInitScript() }} />
       </head>
-      <body className="flex min-h-full flex-col font-sans">
+      <body className="flex min-h-full flex-col pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] font-sans">
         <ThemeSync />
         <SoundArm />
         <ToastProvider>{children}</ToastProvider>

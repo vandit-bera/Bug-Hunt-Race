@@ -36,7 +36,7 @@ function SolveToast({
   return (
     <li
       className={cn(
-        "pointer-events-auto flex items-center gap-2 rounded-lg border-2 bg-surface-raised px-3 py-2 font-bold text-foreground motion-safe:animate-[toast-in_200ms_ease-out]",
+        "flex items-center gap-2 rounded-lg border-2 bg-surface-raised px-3 py-2 font-bold text-foreground motion-safe:animate-[toast-in_200ms_ease-out]",
         medal ? "border-warning" : "border-success",
       )}
     >

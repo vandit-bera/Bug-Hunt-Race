@@ -103,17 +103,17 @@ function Stats() {
           Personal bests
         </h2>
         <div className="relative overflow-x-auto rounded-xl border-2 border-border-subtle">
-          <table className="w-full min-w-96 text-left text-sm">
+          <table className="w-full text-left text-xs sm:text-sm">
             <caption className="sr-only">
               Best score and time for each language and level
             </caption>
             <thead>
               <tr className="border-b-2 border-border-subtle">
-                <th scope="col" className="p-3">
+                <th scope="col" className="p-1.5 sm:p-3">
                   Language
                 </th>
                 {BEST_LEVELS.map(({ id, label }) => (
-                  <th key={id} scope="col" className="p-3">
+                  <th key={id} scope="col" className="p-1.5 sm:p-3">
                     {label}
                   </th>
                 ))}
@@ -125,7 +125,7 @@ function Stats() {
                   key={language}
                   className="border-b border-border-subtle last:border-b-0"
                 >
-                  <th scope="row" className="p-3 font-bold">
+                  <th scope="row" className="p-1.5 font-bold sm:p-3">
                     {LANGUAGES[language].label}
                   </th>
                   {BEST_LEVELS.map(({ id }) => (
@@ -216,7 +216,7 @@ function BadgeCard({
 function BestCell({ language, level }: { language: LanguageId; level: Level }) {
   const best = getBest(language, level);
   return (
-    <td className="p-3 tabular-nums">
+    <td className="p-1.5 tabular-nums sm:p-3">
       {best ? (
         <>
           <span className="font-bold">{best.points}</span> pts
