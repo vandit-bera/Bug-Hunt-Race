@@ -458,7 +458,11 @@ Room screens so far:
 - All room screens share one Supabase client per tab
   (`getBrowserDbClient()`).
 
-- **One channel per room**, `room:<room id>`:
+- **One private channel per room**, `room:<room id>`. Only players still in
+  the room may join it (Realtime policies on `realtime.messages`, helper
+  `private.can_use_room_channel()`); the client waits for the player's token
+  before joining (`client.realtime.setAuth()`), since a join with only the
+  anon key is refused.
   - `postgres_changes` UPDATE on `rooms` (`id=eq.<id>`): the new row is
     applied as is.
   - `postgres_changes` on `players` (`room_id=eq.<id>`): the player list is
@@ -467,14 +471,16 @@ Room screens so far:
     more, so a burst of joins costs two queries per client, not one per
     change.
   - **Presence**, keyed by player id: who has the page open right now. Fast
-    (~1 s) but UI-only; anyone who knows the room id could join the channel,
-    so nothing authoritative is decided from it.
+    (~1 s) but UI-only: the key is chosen by the client, so a player in the
+    room could show a roommate as online, and nothing authoritative is
+    decided from it.
   - On every (re)subscribe the room and players are reloaded, so changes
     missed while offline are picked up.
   - **Broadcast** `reaction` (TB-71): emoji reactions, `{ sender, emojis }`,
     never stored. See [Reactions](#reactions).
 - **Security:** Realtime applies RLS to `postgres_changes`, so a client only
-  receives rows of rooms it is in. Rows are never deleted through the API
+  receives rows of rooms it is in. Broadcast is not used and nobody may send
+  it. Rows are never deleted through the API
   (leaving sets `left_at`), so no unfiltered DELETE events exist.
 - **Heartbeats:** `connectToRoom` calls `room_heartbeat()` every 5 s. The
   database stores the time in `private.player_presence` (not in `players`,
@@ -558,11 +564,10 @@ reaction plays the `react` sound at most every 400 ms (silent while muted).
   sees ~5 reactions/s from the others, all 29 others get through.
 - **On screen:** at most 20 floating at once (`MAX_FLOATING_REACTIONS`),
   each for 2.5 s.
-- **Trust:** the room channel is public (see Presence above), and `sender`
-  is what the client says. A modified client in the room could claim another
-  member's id; the per-sender limit still caps the damage at 5 reactions per
-  3 s per claimed id. Authenticating senders needs a private channel with
-  RLS on `realtime.messages` (a migration), out of scope for TB-71.
+- **Trust:** the room channel is private (TB-66), so only players still in
+  the room can send reactions. `sender` is still what the client says: a
+  modified client in the room could claim another member's id; the
+  per-sender limit caps the damage at 5 reactions per 3 s per claimed id.
 
 ### Join flow and lobby (TB-34)
 
@@ -989,6 +994,9 @@ name and score.
 | `rounds`           | Players in that room       | Nobody: only `advance_room()` and the round engine         |
 | `scores`           | Players in that room       | Nobody: only `record_score()`                              |
 | `room_leaderboard` | Players in that room (RLS) | n/a (view, `security_invoker`)                             |
+
+Room settings change in the lobby only: a trigger refuses any other change
+with `room_settings_locked`, for the admin and the functions alike.
 
 Everything else goes through `security definer` functions that check
 `auth.uid()` themselves:

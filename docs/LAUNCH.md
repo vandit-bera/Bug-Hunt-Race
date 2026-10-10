@@ -52,6 +52,11 @@ query below tells you which).
       Realtime)
 - [ ] `20261008000005_abuse_limits.sql`
 - [ ] `20261008000006_round_engine.sql`
+- [ ] `20261009000007_end_of_game.sql`
+- [ ] `20261009000008_scoring_rounding.sql`
+- [ ] `20261009000009_db_hardening.sql` (makes the room's Realtime channel
+      private: apply it **before** deploying the app from the same commit,
+      or nobody's lobby goes live)
 - [ ] `supabase/puzzles.sql` (the puzzle catalog; safe to run again, and run it
       again whenever `puzzles/` changes)
 
@@ -66,8 +71,16 @@ from (values
   ('000003 room functions',     'private.generate_room_code()'),
   ('000004 room engine',        'private.touch_presence(uuid)'),
   ('000005 abuse limits',       'private.limit_room_creation()'),
-  ('000006 round engine',       'private.pick_puzzle(public.rooms)')
+  ('000006 round engine',       'private.pick_puzzle(public.rooms)'),
+  ('000007 end of game',        'private.is_closed_code(text)')
 ) as m(migration, fn)
+union all
+-- 000008 replaces a function, so check its result: 149 before (floor).
+select '000008 scoring rounding',
+       private.calculate_points(100, 60, 600, false) = 150
+union all
+select '000009 db hardening',
+       to_regprocedure('private.guard_room_settings()') is not null
 union all
 select 'puzzles.sql (' || count(*) filter (where active) || ' active puzzles)',
        count(*) filter (where active) > 0

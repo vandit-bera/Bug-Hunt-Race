@@ -13,6 +13,7 @@ export const DB_ERROR_CODES = [
   "room_closed",
   "room_locked",
   "room_full",
+  "room_settings_locked",
   "room_code_exhausted",
   "rate_limited",
   "round_not_found",

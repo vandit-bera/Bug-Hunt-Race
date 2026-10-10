@@ -62,8 +62,8 @@ export interface RoomConnectionOptions {
   onError?: (error: unknown) => void;
   onStatus?: (status: RoomConnectionStatus) => void;
   /**
-   * A reaction broadcast from another client, as received: anyone who knows
-   * the room id can send one, so validate it (`parseReactionMessage`).
+   * A reaction broadcast from another client, as received: any player in
+   * the room can send one, so validate it (`parseReactionMessage`).
    */
   onReaction?: (payload: unknown) => void;
 }
@@ -245,6 +245,10 @@ export function connectToRoom(
     const opened: RealtimeChannel = client
       .channel(`room:${roomId}`, {
         config: {
+          // Only players still in the room may join (Realtime policies in
+          // 20261009000009_db_hardening.sql), so nobody outside the room can
+          // show a player as online.
+          private: true,
           presence: { key: playerId },
           // Report SUBSCRIBED only once the database changes stream is live.
           // Without it, a change between the channel join and the stream
@@ -279,8 +283,9 @@ export function connectToRoom(
       .on("presence", { event: "sync" }, () => {
         online = new Set(Object.keys(opened.presenceState()));
         emit();
-      })
-      .subscribe((state, error) => {
+      });
+    const subscribe = () =>
+      opened.subscribe((state, error) => {
         if (stopped || opened !== channel) return;
         if (state === "SUBSCRIBED") {
           reopenAttempts = 0;
@@ -293,6 +298,21 @@ export function connectToRoom(
         if (state === "CLOSED") reopen();
         else options.onError?.(error ?? new Error(`Realtime: ${state}`));
       });
+    // The private channel join is authorized with the player's token. On a
+    // fresh page supabase-js hands it to Realtime asynchronously, and a join
+    // sent before that carries only the anon key and is refused.
+    if (client.realtime.accessTokenValue) {
+      subscribe();
+    } else {
+      client.realtime.setAuth().then(
+        () => {
+          if (!stopped && opened === channel) subscribe();
+        },
+        (error: unknown) => {
+          if (!stopped && opened === channel) options.onError?.(error);
+        },
+      );
+    }
     return opened;
   }
 

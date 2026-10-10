@@ -111,7 +111,8 @@ and reconnects, then the admin leaves and the role passes on.
 | `openLobby(page, code)` / `expectLobby`       | Opens (or waits for) the lobby, `/room/<code>`, of a room the player is in.                                                                  |
 | `joinByCode` / `joinByLink(page, code, n)`    | Joins through `/join` (typed code) or `/join/<code>` (invite link, QR). `enterName(page, n)` fills just the name step. Do not wait.          |
 | `scanInviteQr(page)`                          | Decodes the invite QR on the admin's lobby and returns the link, like a phone would.                                                         |
-| `seatPlayers(code, n)`                        | Seats `n` extra players through the database API, no browsers (e.g. to fill a room to 30).                                                   |
+| `seatPlayers(code, n)`                        | Seats `n` extra players through the database API, no browsers (e.g. to fill a room to 30). Returns their players.                            |
+| `apiClient()`                                 | A new anonymous signed-in Supabase client with no room, e.g. an outsider probing a room.                                                     |
 | `requireSupabase()`                           | Skips the file when no Supabase is configured. Call it at the top of every multi-player spec.                                                |
 
 Timeouts to pass to `expect`: `LIVE` (3 s, a Realtime round trip),

@@ -137,7 +137,10 @@ select is(
 
 -- Round guards ----------------------------------------------------------------
 
-update public.rooms set status = 'lobby', current_round = 0, total_rounds = 2
+-- Back to the lobby first: settings only change there (TB-66).
+update public.rooms set status = 'lobby', current_round = 0
+where id = (select id from ids where name = 'room');
+update public.rooms set total_rounds = 2
 where id = (select id from ids where name = 'room');
 
 set local role authenticated;

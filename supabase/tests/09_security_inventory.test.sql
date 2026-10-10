@@ -71,7 +71,7 @@ select results_eq(
     order by 1, 2
   $$,
   $$values ('rooms', 'language'), ('rooms', 'level'), ('rooms', 'total_rounds')$$,
-  'the only direct writes are the room settings (admin only, by RLS)'
+  'the only direct writes are the room settings (admin only by RLS, lobby only by trigger)'
 );
 
 select results_eq(
@@ -99,6 +99,7 @@ select results_eq(
     order by 1
   $$,
   $$values
+    ('private.can_use_room_channel'),
     ('private.is_room_admin'),
     ('private.is_room_member'),
     ('private.is_round_member'),

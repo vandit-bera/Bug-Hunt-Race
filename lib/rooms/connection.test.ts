@@ -117,12 +117,21 @@ function createFakeRealtime() {
   const removeChannel = vi.fn(async () => "ok");
   const channelFactory = vi.fn(makeChannel);
 
+  // Realtime already has the player's token unless a test clears it.
+  const realtime = {
+    accessTokenValue: "player-token" as string | null,
+    setAuth: vi.fn(async () => {
+      realtime.accessTokenValue = "player-token";
+    }),
+  };
+
   // The fake implements only what connectToRoom uses.
   const client = {
     rpc,
     from,
     channel: channelFactory,
     removeChannel,
+    realtime,
   } as unknown as DbClient;
 
   return {
@@ -132,6 +141,7 @@ function createFakeRealtime() {
     },
     channels,
     channelFactory,
+    realtime,
     rpc,
     from,
     removeChannel,
@@ -190,12 +200,13 @@ afterEach(() => {
 });
 
 describe("connectToRoom", () => {
-  it("listens to its own room only, with the player as presence key, and waits for the changes stream", () => {
+  it("listens to its own room only, on a private channel, with the player as presence key, and waits for the changes stream", () => {
     const fake = createFakeRealtime();
     connect(fake);
 
     expect(fake.channelFactory).toHaveBeenCalledWith("room:room-1", {
       config: {
+        private: true,
         presence: { key: "p1" },
         postgres_changes_options: { wait: true },
       },
@@ -222,6 +233,45 @@ describe("connectToRoom", () => {
       ["broadcast", { event: "reaction" }],
       ["presence", { event: "sync" }],
     ]);
+  });
+
+  it("waits for the player's token before joining the private channel", async () => {
+    const fake = createFakeRealtime();
+    fake.realtime.accessTokenValue = null;
+    const { views } = connect(fake);
+
+    expect(fake.realtime.setAuth).toHaveBeenCalledOnce();
+    expect(fake.channel.subscribe).not.toHaveBeenCalled();
+    await vi.waitFor(() =>
+      expect(fake.channel.subscribe).toHaveBeenCalledOnce(),
+    );
+
+    fake.subscribe("SUBSCRIBED");
+    await vi.waitFor(() => expect(views).toHaveLength(1));
+  });
+
+  it("reports a failed token refresh instead of joining", async () => {
+    const fake = createFakeRealtime();
+    fake.realtime.accessTokenValue = null;
+    const failure = new Error("session lookup failed");
+    fake.realtime.setAuth.mockRejectedValueOnce(failure);
+    const { options } = connect(fake);
+
+    await vi.waitFor(() =>
+      expect(options.onError).toHaveBeenCalledWith(failure),
+    );
+    expect(fake.channel.subscribe).not.toHaveBeenCalled();
+  });
+
+  it("does not join after disconnect while waiting for the token", async () => {
+    const fake = createFakeRealtime();
+    fake.realtime.accessTokenValue = null;
+    const { connection } = connect(fake);
+
+    connection.disconnect();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(fake.channel.subscribe).not.toHaveBeenCalled();
   });
 
   it("loads the room and players once subscribed, and tracks presence", async () => {
