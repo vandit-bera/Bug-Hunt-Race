@@ -1,35 +1,13 @@
 import { expect, test, type Page } from "@playwright/test";
+import {
+  PHONE_WIDTHS,
+  expectEditorWraps,
+  expectFitsPhones,
+  expectNoHorizontalScroll,
+  expectTapTargets,
+} from "./support/mobile";
 
 test.use({ viewport: { width: 375, height: 700 } });
-
-async function expectNoHorizontalScroll(page: Page) {
-  const overflow = await page.evaluate(
-    () =>
-      document.documentElement.scrollWidth -
-      document.documentElement.clientWidth,
-  );
-  expect(overflow).toBeLessThanOrEqual(0);
-}
-
-/** Every visible link, button and radio must be at least 44px tall. */
-async function expectTapTargets(page: Page) {
-  const small = await page
-    .locator("a:visible, button:visible, input[type=radio]")
-    .evaluateAll((nodes) =>
-      nodes
-        .map((node) => {
-          const box = node.getBoundingClientRect();
-          // The radio inputs overlay their card, so they have the card's size.
-          return {
-            name: node.textContent?.trim(),
-            h: box.height,
-            w: box.width,
-          };
-        })
-        .filter(({ h, w }) => w > 0 && (h < 44 || w < 44)),
-    );
-  expect(small).toEqual([]);
-}
 
 test("Home fits a phone and explains the game", async ({ page }) => {
   await page.goto("/");
@@ -64,7 +42,7 @@ async function expectOptionLabelsFit(page: Page) {
   expect(overflowing).toEqual([]);
 }
 
-for (const width of [360, 375, 414, 640]) {
+for (const width of [320, 360, 375, 414, 640]) {
   test(`Solo setup fits at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 700 });
     await page.goto("/solo");
@@ -221,3 +199,119 @@ for (const width of [320, 360, 375, 414]) {
     expect(hidden).toEqual([]);
   });
 }
+
+for (const theme of ["light", "dark"] as const) {
+  test.describe(`every screen on a phone, ${theme} theme`, () => {
+    test.use({ colorScheme: theme });
+
+    test("Home", async ({ page }) => {
+      await page.goto("/");
+      await expectFitsPhones(page, ["Solo Practice", "How scoring works"]);
+    });
+
+    test("Solo game: editor wraps, controls stay reachable", async ({
+      page,
+    }) => {
+      const errors: string[] = [];
+      page.on("pageerror", (error) => errors.push(error.message));
+      await page.goto("/solo/play?language=javascript&level=easy&round=0");
+      await expect(page.getByRole("note")).toContainText("best on a laptop");
+      for (const width of PHONE_WIDTHS) {
+        await page.setViewportSize({ width, height: 740 });
+        await expectEditorWraps(page);
+      }
+      await expectFitsPhones(page, ["Run Tests", "Give up", "Mute sound"]);
+      expect(errors).toEqual([]);
+    });
+
+    test("Solo result", async ({ page }) => {
+      await page.goto("/solo/play?language=javascript&level=easy&round=0");
+      await page.getByRole("button", { name: "Give up" }).click();
+      await page
+        .getByRole("dialog", { name: "Give up?" })
+        .getByRole("button", { name: "Give up" })
+        .click();
+      await expect(
+        page.getByRole("heading", { name: "You gave up" }),
+      ).toBeVisible();
+      await expectFitsPhones(page, ["How scoring works"]);
+    });
+
+    test("Stats: every personal-best column shows", async ({ page }) => {
+      await page.addInitScript(() =>
+        localStorage.setItem(
+          "bhr:solo:best",
+          JSON.stringify({
+            "typescript:medium": { points: 285, timeSec: 125 },
+            "javascript:mixed": { points: 300, timeSec: 601 },
+          }),
+        ),
+      );
+      await page.goto("/stats");
+      const table = page.getByRole("table");
+      await expect(table.getByText("285")).toBeVisible();
+      for (const width of PHONE_WIDTHS) {
+        await page.setViewportSize({ width, height: 740 });
+        // The table's natural width, so a slightly wider font (Linux CI,
+        // Android) still fits: keep at least 16px to spare.
+        const spare = await table.evaluate((node) => {
+          node.style.width = "max-content";
+          const needed = node.getBoundingClientRect().width;
+          node.style.width = "";
+          return (node.parentElement?.clientWidth ?? 0) - needed;
+        });
+        expect(spare, `room to spare at ${width}px`).toBeGreaterThanOrEqual(16);
+      }
+      await expectFitsPhones(page, ["Home"]);
+    });
+
+    for (const [name, url] of [
+      ["Join", "/join"],
+      ["Join link", "/join/ABCDEF"],
+      ["Create room", "/room/new"],
+      ["Room not found", "/room/ZZZZZZ"],
+      ["404", "/no-such-page"],
+    ] as const) {
+      test(name, async ({ page }) => {
+        await page.goto(url);
+        await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+        await expectFitsPhones(page);
+      });
+    }
+
+    test("Error page", async ({ page }) => {
+      await page.goto("/dev/crash");
+      await expect(page.getByRole("button", { name: "Retry" })).toBeVisible();
+      await expectFitsPhones(page, ["Retry", "Home"]);
+    });
+  });
+}
+
+test("toasts clear the controls: 44px dismiss, solve toasts pass taps through", async ({
+  page,
+}) => {
+  await page.goto("/styleguide");
+  await page.getByRole("button", { name: "Show toast" }).first().click();
+  const dismiss = page
+    .getByRole("button", { name: "Dismiss notification" })
+    .first();
+  const box = await dismiss.boundingBox();
+  expect(box?.width).toBeGreaterThanOrEqual(44);
+  expect(box?.height).toBeGreaterThanOrEqual(44);
+
+  await page.getByRole("button", { name: "Simulate solve" }).first().click();
+  const toast = page
+    .getByRole("listitem")
+    .filter({ hasText: "fixed it in" })
+    .first();
+  await expect(toast).toBeVisible();
+  await expect(toast).toHaveCSS("pointer-events", "none");
+});
+
+test("the page may reach the iPhone's safe areas", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator('meta[name="viewport"]')).toHaveAttribute(
+    "content",
+    /viewport-fit=cover/,
+  );
+});

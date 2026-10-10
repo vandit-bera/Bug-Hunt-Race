@@ -59,7 +59,7 @@ export function RaceSolveToasts({
   }
 
   return (
-    <div className="pointer-events-none fixed inset-x-4 bottom-4 z-40 flex justify-center sm:right-auto">
+    <div className="pointer-events-none fixed inset-x-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-40 flex justify-center sm:right-auto">
       <SolveToasts toasts={toasts} onDismiss={dismiss} />
     </div>
   );

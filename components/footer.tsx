@@ -5,7 +5,7 @@ const COMMIT = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "dev";
 
 export function Footer() {
   return (
-    <footer className="flex flex-wrap items-center justify-center gap-x-4 border-t-2 border-border-subtle px-4 py-2 text-sm text-muted">
+    <footer className="flex flex-wrap items-center justify-center gap-x-4 border-t-2 border-border-subtle px-4 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] text-sm text-muted">
       <span>
         Bug Hunt Race v{pkg.version} ({COMMIT})
       </span>

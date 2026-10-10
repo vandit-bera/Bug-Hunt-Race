@@ -96,7 +96,7 @@ export function InvitePanel({
             readOnly
             value={link}
             onFocus={(event) => event.currentTarget.select()}
-            className="h-11 w-full min-w-0 flex-1 rounded-lg border-2 border-border bg-surface px-3 font-mono text-sm text-foreground focus:border-accent"
+            className="h-11 w-full min-w-0 rounded-lg sm:flex-1 border-2 border-border bg-surface px-3 font-mono text-sm text-foreground focus:border-accent"
           />
           <div className="flex flex-wrap gap-2">
             <Button onClick={copyLink}>Copy</Button>
