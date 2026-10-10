@@ -1,7 +1,13 @@
 # Repo conventions
 
-Read this before working in the repo. The product plan is the TB-19 epic;
-the code-level design is in `docs/ARCHITECTURE.md`.
+Read this before working in the repo. It is for everyone who changes code:
+human contributors and AI coding assistants (tools such as Claude Code and
+Codex read `AGENTS.md` automatically; `CLAUDE.md` just points here). How to
+send a change is in `CONTRIBUTING.md`; the code-level design is in
+`docs/ARCHITECTURE.md`.
+
+IDs like `TB-19` in commits, PRs and docs are the maintainers' internal issue
+tracker numbers. You do not need access to it: GitHub issues work the same.
 
 ## Workflow
 
@@ -11,8 +17,8 @@ the code-level design is in `docs/ARCHITECTURE.md`.
 - Before pushing, run: `pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm build`.
   Run `pnpm test:e2e` when you touch pages or flows, and `pnpm db:test` when
   you touch `supabase/`.
-- CI must be green and the PR reviewed by Full Stack Dev – Senior before merge.
-- No new paid services, deploys or secrets without Vandit's approval.
+- CI must be green and a maintainer must approve the PR before merge.
+- No new paid services, deploys or secrets without the maintainer's approval.
 
 ## Code
 

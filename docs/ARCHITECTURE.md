@@ -1,7 +1,8 @@
 # Architecture
 
 The full product plan (game modes, scoring, screens, test plan, failure cases)
-is the TB-19 epic. This doc covers how the code is organised and the contracts
+is the TB-19 epic (the maintainers' internal tracker; `TB-…` numbers in
+this doc are issue ids there). This doc covers how the code is organised and the contracts
 every task builds on. Update it when you change one of those contracts.
 
 ## Stack
@@ -877,7 +878,7 @@ them; they are never picked again). It is safe to run any number of times.
 
 - **Locally** it is the seed (`supabase/config.toml`), applied by
   `pnpm db:reset` / `db:start`. It replaced the three dev sample puzzles.
-- **Live:** Vandit runs it in the SQL Editor after the migration, and again
+- **Live:** a maintainer runs it in the SQL Editor after the migration, and again
   after any change to `puzzles/`. `pnpm puzzles:check` fails if the file is
   out of date, so it always matches the repo.
 
@@ -1045,7 +1046,7 @@ from a determined attacker with many IPs. Migration
   Rejecting them keeps names safe in any other sink (titles, exports).
 - **Watch the IP limit:** a whole office behind one NAT IP shares the 30
   anonymous sign-ins per hour. Raise it in the Supabase dashboard before a
-  large game (Vandit's call; it is a live-project setting).
+  large game (the maintainer's call; it is a live-project setting).
 - Not limited: joins (bounded by the room cap), score submits (one result
   per player per round), Realtime messages (Supabase's per-project quotas).
 

@@ -20,7 +20,7 @@ puzzle, and CI blocks any PR that breaks it.
    `lib/puzzles/generated/fixes.ts` (server only, for the fix reveal) and
    `supabase/puzzles.sql` (the catalog race rounds pick from).
 5. After merge, the live database needs the new catalog: run
-   `supabase/puzzles.sql` in the Supabase SQL Editor (Vandit). Until then,
+   `supabase/puzzles.sql` in the Supabase SQL Editor (a maintainer does this). Until then,
    race rounds simply do not pick the new puzzle.
 
 ## Files
