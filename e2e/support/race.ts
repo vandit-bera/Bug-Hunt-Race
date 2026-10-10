@@ -1,6 +1,7 @@
 import path from "node:path";
 import type { Page } from "@playwright/test";
 import { loadPuzzles } from "@/lib/puzzles/load";
+import type { LanguageId } from "@/lib/runner/types";
 import { expect, type Player } from "./fixtures";
 import { joinByLink } from "./join";
 import { LIVE, createRoomFromScreen } from "./rooms";
@@ -19,24 +20,28 @@ export function heading(page: Page) {
 }
 
 /** The puzzle on `page`, by its title (the database picks at random). */
-export async function puzzleOn(page: Page) {
+export async function puzzleOn(
+  page: Page,
+  language: LanguageId = "javascript",
+) {
   const title = page.getByRole("main").getByRole("heading", { level: 2 });
   await expect(title).toBeVisible(COUNTDOWN);
   const text = (await title.textContent()) ?? "";
   const puzzle = PUZZLES.find(
-    ({ meta }) => meta.title === text && meta.language === "javascript",
+    ({ meta }) => meta.title === text && meta.language === language,
   );
-  if (!puzzle) throw new Error(`No JavaScript puzzle titled "${text}"`);
+  if (!puzzle) throw new Error(`No ${language} puzzle titled "${text}"`);
   return puzzle;
 }
 
-/** Creates a JavaScript room and seats `guests` through invite links. */
+/** Creates an Easy room and seats `guests` through invite links. */
 export async function openRoom(
   [admin, ...guests]: Player[],
   totalRounds: number | null = 3,
+  language: LanguageId = "javascript",
 ) {
   const code = await createRoomFromScreen(admin.page, admin.name, {
-    language: "javascript",
+    language,
     level: "easy",
     totalRounds,
   });
@@ -61,10 +66,21 @@ export async function startGame(admin: Player, racers: Player[]) {
   }
 }
 
+/**
+ * The player's "done" card, or the round results: the last result ends the
+ * round at once, so the card may be gone before an assertion sees it (the
+ * `realtime` flake on main, TB-73).
+ */
+function doneOrResults(page: Page, card: string) {
+  return page
+    .getByText(card)
+    .or(page.getByRole("heading", { level: 1, name: /^Round \d+ results$/ }));
+}
+
 export async function solve(page: Page, fix: string) {
   await setCode(page, fix);
   await page.getByRole("button", { name: "Run Tests" }).click();
-  await expect(page.getByText("🎉 Solved!")).toBeVisible(COUNTDOWN);
+  await expect(doneOrResults(page, "🎉 Solved!")).toBeVisible(COUNTDOWN);
 }
 
 export async function giveUp(page: Page) {
@@ -73,7 +89,7 @@ export async function giveUp(page: Page) {
     .getByRole("dialog", { name: "Give up?" })
     .getByRole("button", { name: "Give up" })
     .click();
-  await expect(page.getByText("You gave up this one.")).toBeVisible(LIVE);
+  await expect(doneOrResults(page, "You gave up this one.")).toBeVisible(LIVE);
 }
 
 /** The admin stops the game (from a live or paused round) and confirms. */

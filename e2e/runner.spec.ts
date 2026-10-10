@@ -194,7 +194,8 @@ test("Python: an infinite loop times out at ~5s, the page stays responsive and t
   expect(duration).toBeGreaterThanOrEqual(5_000);
   expect(duration).toBeLessThan(6_500);
 
-  // The killed worker is replaced by the warm spare, so this is fast.
+  // The killed worker is replaced by the warm spare, so this is fast. WebKit
+  // on a busy CI runner has taken 3.1 s.
   const startedAt = Date.now();
   const next = await runInBrowser(page, {
     language: "python",
@@ -202,7 +203,7 @@ test("Python: an infinite loop times out at ~5s, the page stays responsive and t
     tests: "def test_one():\n    assert one() == 1",
   });
   expect(next.status).toBe("passed");
-  expect(Date.now() - startedAt).toBeLessThan(3_000);
+  expect(Date.now() - startedAt).toBeLessThan(4_000);
 });
 
 test("Python: network paths fail, including cross-origin import()", async ({

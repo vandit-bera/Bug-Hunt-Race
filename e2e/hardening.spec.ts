@@ -79,7 +79,10 @@ test("the Solo game loads Monaco (the check above can see it)", async ({
 }) => {
   const assets = watchHeavyAssets(page);
   await page.goto("/solo/play?language=javascript&level=easy&round=0");
-  await expect(page.locator(".monaco-editor")).toBeVisible();
+  // Monaco is a large download: a busy machine can take over 5 s (TB-73).
+  await expect(page.locator(".monaco-editor")).toBeVisible({
+    timeout: 15_000,
+  });
   expect((await assets.settle()).monaco.length).toBeGreaterThan(0);
 });
 

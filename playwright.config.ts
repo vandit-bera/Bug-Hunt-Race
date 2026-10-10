@@ -19,6 +19,7 @@ export default defineConfig({
   },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    { name: "firefox", use: { ...devices["Desktop Firefox"] } },
     // Safari's engine. Run alone with `--project=webkit`.
     { name: "webkit", use: { ...devices["Desktop Safari"] } },
   ],

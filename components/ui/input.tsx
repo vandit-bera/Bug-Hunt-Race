@@ -1,4 +1,4 @@
-import { useId, type InputHTMLAttributes } from "react";
+import { useId, type InputHTMLAttributes, type Ref } from "react";
 import { cn } from "./cn";
 
 export function Input({
@@ -9,6 +9,7 @@ export function Input({
   id,
   ...props
 }: InputHTMLAttributes<HTMLInputElement> & {
+  ref?: Ref<HTMLInputElement>;
   label: string;
   hint?: string;
   error?: string;

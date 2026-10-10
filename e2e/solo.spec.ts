@@ -159,8 +159,13 @@ test("time running out ends the game with 0 points", async ({ page }) => {
   await page.clock.install();
   await start(page, "javascript", "Easy", { skipCountdown: false });
   await page.clock.runFor(4_000);
-  await expect(page.getByRole("timer")).toHaveText("3:00");
-  await page.clock.fastForward(181_000);
+  const timer = page.getByRole("timer");
+  await expect(timer).toHaveText("3:00");
+  // "3:00" shows before the round's effect starts the clock. Wait for a tick
+  // so the jump below can't land first and restart the 3 minutes (TB-78).
+  await page.clock.runFor(1_000);
+  await expect(timer).toHaveText("2:59");
+  await page.clock.fastForward(180_000);
   await expect(page.getByRole("heading", { name: "Time's up" })).toBeVisible();
   await expect(page.getByText("0 points")).toBeVisible();
 });
