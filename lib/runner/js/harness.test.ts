@@ -209,4 +209,29 @@ describe("runHarness", () => {
       error: "RangeError: late",
     });
   });
+
+  // Firefox throws InternalError("too much recursion") where Node, Chromium
+  // and WebKit throw RangeError("Maximum call stack size exceeded").
+  const firefoxOverflow =
+    'Object.assign(new Error("too much recursion"), { name: "InternalError" })';
+
+  it("reports Firefox's stack overflow the same way as Node", async () => {
+    expect(await run(`throw ${firefoxOverflow};`, "")).toEqual({
+      status: "error",
+      tests: [],
+      output: "",
+      error: "RangeError: Maximum call stack size exceeded",
+    });
+    expect(await messageOf(`throw ${firefoxOverflow}`)).toBe(
+      "RangeError: Maximum call stack size exceeded",
+    );
+  });
+
+  it("keeps other InternalError messages as they are", async () => {
+    expect(
+      await messageOf(
+        'throw Object.assign(new Error("boom"), { name: "InternalError" })',
+      ),
+    ).toBe("InternalError: boom");
+  });
 });

@@ -36,6 +36,13 @@ export async function runHarness(
 ): Promise<HarnessOutcome> {
   type TestFn = () => unknown;
 
+  // Firefox reports a stack overflow as InternalError("too much recursion");
+  // Node, Chromium and WebKit all say RangeError, so players see one message.
+  const errorText = (error: Error): string =>
+    error.name === "InternalError" && error.message === "too much recursion"
+      ? "RangeError: Maximum call stack size exceeded"
+      : `${error.name}: ${error.message}`;
+
   const describe = (value: unknown, seen: unknown[] = []): string => {
     if (typeof value === "string") return JSON.stringify(value);
     if (typeof value === "boolean") return String(value);
@@ -51,7 +58,7 @@ export async function runHarness(
     }
     if (seen.includes(value)) return "[Circular]";
     const nested = [...seen, value];
-    if (value instanceof Error) return `${value.name}: ${value.message}`;
+    if (value instanceof Error) return errorText(value);
     if (value instanceof Date) return `Date(${value.toISOString()})`;
     if (value instanceof RegExp) return String(value);
     if (Array.isArray(value)) {
@@ -82,9 +89,7 @@ export async function runHarness(
   };
   const errorMessage = (error: unknown): string => {
     if (!(error instanceof Error)) return `Thrown: ${describe(error)}`;
-    return assertionErrors.has(error)
-      ? error.message
-      : `${error.name}: ${error.message}`;
+    return assertionErrors.has(error) ? error.message : errorText(error);
   };
 
   const deepEqual = (a: unknown, b: unknown, seen: unknown[] = []): boolean => {
