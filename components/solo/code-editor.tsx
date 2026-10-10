@@ -95,6 +95,9 @@ export default function CodeEditor({
   }, [onRun]);
 
   const onMount: OnMount = (editor) => {
+    // Monaco measures characters once; if the web font arrives later, line
+    // wrapping on phones would use the fallback font's widths and hide text.
+    void document.fonts.ready.then(() => monaco.editor.remeasureFonts());
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () =>
       onRunRef.current(),
     );

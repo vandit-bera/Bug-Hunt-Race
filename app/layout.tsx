@@ -28,8 +28,8 @@ export const metadata: Metadata = {
   description: "Race your team to fix buggy code. Fastest correct fix wins.",
 };
 
-// "cover" lets the page reach the iPhone's rounded corners; globals.css pads
-// the body and the fixed toasts by the safe-area insets instead.
+// "cover" lets the page reach the iPhone's rounded corners; the body, footer
+// and fixed toasts pad themselves by the safe-area insets instead.
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,

@@ -252,10 +252,15 @@ for (const theme of ["light", "dark"] as const) {
       await expect(table.getByText("285")).toBeVisible();
       for (const width of PHONE_WIDTHS) {
         await page.setViewportSize({ width, height: 740 });
-        const clipped = await table.evaluate(
-          (node) => node.scrollWidth - (node.parentElement?.clientWidth ?? 0),
-        );
-        expect(clipped, `table at ${width}px`).toBeLessThanOrEqual(0);
+        // The table's natural width, so a slightly wider font (Linux CI,
+        // Android) still fits: keep at least 16px to spare.
+        const spare = await table.evaluate((node) => {
+          node.style.width = "max-content";
+          const needed = node.getBoundingClientRect().width;
+          node.style.width = "";
+          return (node.parentElement?.clientWidth ?? 0) - needed;
+        });
+        expect(spare, `room to spare at ${width}px`).toBeGreaterThanOrEqual(16);
       }
       await expectFitsPhones(page, ["Home"]);
     });

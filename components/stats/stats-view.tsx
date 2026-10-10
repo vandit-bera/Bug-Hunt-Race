@@ -109,11 +109,12 @@ function Stats() {
             </caption>
             <thead>
               <tr className="border-b-2 border-border-subtle">
-                <th scope="col" className="p-1.5 sm:p-3">
-                  Language
+                {/* Phones: the short language names (JS, TS, PY) explain the column. */}
+                <th scope="col" className="px-1 py-1.5 sm:p-3">
+                  <span className="max-sm:sr-only">Language</span>
                 </th>
                 {BEST_LEVELS.map(({ id, label }) => (
-                  <th key={id} scope="col" className="p-1.5 sm:p-3">
+                  <th key={id} scope="col" className="px-1 py-1.5 sm:p-3">
                     {label}
                   </th>
                 ))}
@@ -125,8 +126,13 @@ function Stats() {
                   key={language}
                   className="border-b border-border-subtle last:border-b-0"
                 >
-                  <th scope="row" className="p-1.5 font-bold sm:p-3">
-                    {LANGUAGES[language].label}
+                  <th scope="row" className="px-1 py-1.5 font-bold sm:p-3">
+                    <span className="max-sm:sr-only">
+                      {LANGUAGES[language].label}
+                    </span>
+                    <span aria-hidden="true" className="uppercase sm:hidden">
+                      {LANGUAGES[language].fileExtension}
+                    </span>
                   </th>
                   {BEST_LEVELS.map(({ id }) => (
                     <BestCell key={id} language={language} level={id} />
@@ -216,10 +222,11 @@ function BadgeCard({
 function BestCell({ language, level }: { language: LanguageId; level: Level }) {
   const best = getBest(language, level);
   return (
-    <td className="p-1.5 tabular-nums sm:p-3">
+    <td className="px-1 py-1.5 tabular-nums sm:p-3">
       {best ? (
         <>
-          <span className="font-bold">{best.points}</span> pts
+          <span className="font-bold">{best.points}</span>
+          <span className="max-sm:sr-only"> pts</span>
           <span className="block text-xs text-muted">
             {formatTime(best.timeSec)}
           </span>

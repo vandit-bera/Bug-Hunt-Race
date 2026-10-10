@@ -70,12 +70,16 @@ export async function expectFitsPhones(
 export async function expectEditorWraps(page: Page) {
   const lines = page.locator(".monaco-editor .view-lines").first();
   await expect(lines).toBeVisible();
-  const hidden = await page
-    .locator(".monaco-editor .monaco-scrollable-element")
-    .first()
-    .evaluate((editor) => {
-      const lines = editor.querySelector(".view-lines");
-      return lines ? lines.scrollWidth - editor.clientWidth : 0;
-    });
-  expect(hidden).toBeLessThanOrEqual(0);
+  // Monaco lays out again after a resize, so wait for the wrapped lines.
+  await expect
+    .poll(() =>
+      page
+        .locator(".monaco-editor .monaco-scrollable-element")
+        .first()
+        .evaluate((editor) => {
+          const lines = editor.querySelector(".view-lines");
+          return lines ? lines.scrollWidth - editor.clientWidth : 0;
+        }),
+    )
+    .toBeLessThanOrEqual(0);
 }
