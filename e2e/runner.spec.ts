@@ -300,11 +300,6 @@ for (const runnerCase of RUNNER_CASES) {
         runnerCase.name === "Python: recursion error is a failed test",
       "TB-67: WebKit's JS stack overflows before Python's recursion limit",
     );
-    test.fixme(
-      browserName === "firefox" &&
-        runnerCase.name === "Stack overflow is an error",
-      "TB-77: Firefox reports InternalError, Node reports RangeError",
-    );
     const browser = await runInBrowser(page, runnerCase.request);
     const { durationMs, ...node } = await runInNode(runnerCase.request);
     expect(durationMs).toBeGreaterThanOrEqual(0);

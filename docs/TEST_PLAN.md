@@ -76,9 +76,9 @@ pnpm exec playwright test --project=chromium --repeat-each=5 --retries=0
 | `runner.spec.ts` "Python: an infinite loop times out at ~5s…" (WebKit)        | The warm-spare run took 3.1 s on a busy CI runner, over the 3 s limit (flaky on `main`)                                                  | Fixed: limit is 4 s.                                                                        |
 | Every Solo test that edits code (Firefox)                                     | Monaco's Firefox input ignores the synthetic paste in `setCode`                                                                          | Fixed: `setCode` types the code with `insertText` in Firefox (no auto-indent there).        |
 
-Known browser differences, tracked as app issues: Firefox reports a stack
-overflow as `InternalError` (TB-77), and WebKit overflows its JS stack before
-Python's recursion limit (TB-67). Both tests are `test.fixme` in that browser only.
+Known browser difference, tracked as an app issue: WebKit overflows its JS stack
+before Python's recursion limit (TB-67), so that test is `test.fixme` in WebKit
+only. Firefox's stack overflow now reports `RangeError` like Node (TB-77).
 
 ## Manual checks
 
