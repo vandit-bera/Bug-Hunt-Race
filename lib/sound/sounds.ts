@@ -8,6 +8,7 @@ export const SOUND_NAMES = [
   "solved",
   "timeup",
   "react",
+  "fanfare",
 ] as const;
 
 export type SoundName = (typeof SOUND_NAMES)[number];

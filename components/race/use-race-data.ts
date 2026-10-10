@@ -28,6 +28,11 @@ export interface CurrentRoundState {
   view: CurrentRoundView | null;
   error: string | null;
   retry: () => void;
+  /**
+   * How far the server clock is ahead of this one, from the latest round
+   * read (kept between rounds); null before the first.
+   */
+  clockOffsetMs: number | null;
 }
 
 /**
@@ -77,7 +82,12 @@ export function useCurrentRound(
     view.round.game_number === room.game_number
       ? view
       : null;
-  return { view: current, error, retry: () => setAttempt((n) => n + 1) };
+  return {
+    view: current,
+    error,
+    retry: () => setAttempt((n) => n + 1),
+    clockOffsetMs: view?.clockOffsetMs ?? null,
+  };
 }
 
 /**

@@ -76,6 +76,16 @@ const SOUNDS = {
   react: render(0.09, [
     { freq: [700, 1100], start: 0, length: 0.09, gain: 0.25 },
   ]),
+  fanfare: render(1.6, [
+    { freq: 523, start: 0, length: 0.14 },
+    { freq: 523, start: 0.15, length: 0.14 },
+    { freq: 523, start: 0.3, length: 0.14 },
+    { freq: 659, start: 0.45, length: 0.4 },
+    { freq: 587, start: 0.85, length: 0.14 },
+    { freq: 659, start: 1.0, length: 0.14 },
+    { freq: 784, start: 1.15, length: 0.45 },
+    { freq: 392, start: 1.15, length: 0.45, shape: "square", gain: 0.2 },
+  ]),
 };
 
 mkdirSync(OUT, { recursive: true });

@@ -13,6 +13,7 @@ import { FinalLeaderboard } from "@/components/race/final-leaderboard";
 import { RaceCountdown } from "@/components/race/race-countdown";
 import { RaceRound } from "@/components/race/race-round";
 import { RoundResults } from "@/components/race/round-results";
+import { SoundToggle } from "@/components/sound-toggle";
 import { useCurrentRound } from "@/components/race/use-race-data";
 import {
   advanceRoom,
@@ -269,6 +270,7 @@ function Lobby({
           client={client}
           room={room}
           isAdmin={me.is_admin}
+          clockOffsetMs={current.clockOffsetMs}
         />
       );
       break;
@@ -326,6 +328,7 @@ function Lobby({
                     : "connecting"
               }
             />
+            <SoundToggle />
             <Button
               variant="danger"
               loading={leaving}
