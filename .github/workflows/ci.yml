@@ -83,6 +83,12 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # The runner hands out ephemeral source ports from 32768-60999, which
+      # covers Supabase's 543xx ports. If an outgoing connection (e.g. the
+      # image pull) holds 54322 when the container starts, the bind fails
+      # with "address already in use". Reserve the ports first.
+      - name: Reserve the Supabase ports
+        run: sudo sysctl -w net.ipv4.ip_local_reserved_ports=54320-54329
       # Fresh Postgres with every migration and the puzzle catalog applied.
       - run: pnpm exec supabase db start
       - run: pnpm db:test
@@ -103,6 +109,9 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # See the `database` job: keep ephemeral ports off 54320-54329.
+      - name: Reserve the Supabase ports
+        run: sudo sysctl -w net.ipv4.ip_local_reserved_ports=54320-54329
       - run: pnpm exec supabase start -x studio,storage-api,imgproxy,mailpit,edge-runtime,logflare,vector,supavisor
       - name: Point the app at the local Supabase
         run: |
