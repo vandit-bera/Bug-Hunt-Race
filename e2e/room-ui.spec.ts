@@ -209,6 +209,43 @@ test.describe("results building blocks on /styleguide", () => {
     await expect(panel.getByText("Not solved").first()).toBeVisible();
   });
 
+  test("leaderboard rows are in rank order in the DOM and still slide", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto("/styleguide");
+    const panel = page.locator('main [data-theme="light"]');
+    const board = panel.getByRole("list", { name: "light live leaderboard" });
+    await expect(board.getByRole("listitem")).toHaveCount(5);
+
+    // Places read top to bottom in the DOM, and each row sits below the last.
+    const rows = () =>
+      board.evaluate((list) =>
+        [...list.querySelectorAll("li")].map((row) => ({
+          place: Number(row.getAttribute("aria-posinset")),
+          top: row.getBoundingClientRect().top,
+          sliding: row.getAnimations().length > 0,
+        })),
+      );
+    const expectRankOrder = async () => {
+      await expect
+        .poll(async () => (await rows()).some((r) => r.sliding))
+        .toBe(false);
+      const now = await rows();
+      expect(now.map((row) => row.place)).toEqual([1, 2, 3, 4, 5]);
+      const tops = now.map((row) => row.top);
+      expect(tops).toEqual([...tops].sort((a, b) => a - b));
+    };
+    await expectRankOrder();
+    await expect(board.getByRole("listitem").first()).toContainText(/^Place 1/);
+
+    await panel.getByRole("button", { name: "Play round 2" }).click();
+    await expect
+      .poll(async () => (await rows()).some((r) => r.sliding))
+      .toBe(true);
+    await expectRankOrder();
+  });
+
   test("podium admin buttons and confetti respect reduced motion", async ({
     page,
   }) => {

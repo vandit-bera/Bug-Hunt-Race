@@ -43,6 +43,25 @@ describe("Leaderboard", () => {
     expect(html).toContain("115");
   });
 
+  it("lists rows in rank order in the DOM, ties included", () => {
+    // Sam leads but sorts last by id, so an id-ordered DOM would fail.
+    const samFirst = [
+      result("riya", 115, 42_000),
+      result("sam", 140, 30_000),
+      result("kai", 115, 42_000),
+    ];
+    const html = renderToStaticMarkup(
+      <Leaderboard standings={computeStandings(players, [samFirst])} />,
+    );
+    const places = [...html.matchAll(/Place <\/span>(\d+)/g)].map((m) => m[1]);
+    expect(places).toEqual(["1", "2", "2"]);
+    const positions = [...html.matchAll(/aria-posinset="(\d+)"/g)].map(
+      (m) => m[1],
+    );
+    expect(positions).toEqual(["1", "2", "3"]);
+    expect(html.indexOf("Sam")).toBeLessThan(html.indexOf("Riya"));
+  });
+
   it("has an empty state", () => {
     expect(renderToStaticMarkup(<Leaderboard standings={[]} />)).toContain(
       "No players yet.",
@@ -69,6 +88,24 @@ describe("Podium", () => {
     const html = renderToStaticMarkup(<Podium standings={standings} />);
     expect(html).toContain('aria-label="1st place"');
     expect(html).not.toContain('aria-label="2nd place"');
+  });
+
+  it("reads the steps 1st, 2nd, 3rd in the DOM", () => {
+    const html = renderToStaticMarkup(
+      <Podium
+        standings={computeStandings(players, [
+          [
+            result("riya", 50, 60_000),
+            result("sam", 115, 42_000),
+            result("kai", 80, 50_000),
+          ],
+        ])}
+      />,
+    );
+    const steps = [...html.matchAll(/aria-label="(\w+) place"/g)].map(
+      (m) => m[1],
+    );
+    expect(steps).toEqual(["1st", "2nd", "3rd"]);
   });
 
   it("shows admin buttons only to the admin", () => {

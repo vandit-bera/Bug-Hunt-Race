@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type Ref } from "react";
+import { useSlideRows } from "@/components/fx/use-slide-rows";
 import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/components/ui/cn";
 import { rankRows, type RankRow, type RankedRow } from "@/lib/game/room-fun";
@@ -61,14 +62,17 @@ function RankItem({
   row,
   total,
   reducedMotion,
+  ref,
 }: {
   row: RankedRow;
   total: number;
   reducedMotion: boolean;
+  ref: Ref<HTMLLIElement>;
 }) {
   const score = useCountUp(row.score, reducedMotion);
   return (
     <li
+      ref={ref}
       aria-posinset={row.rank}
       aria-setsize={total}
       className={cn(
@@ -91,7 +95,10 @@ function RankItem({
   );
 }
 
-/** Leaderboard that slides rows to their new place and counts scores up. */
+/**
+ * Leaderboard, in rank order in the DOM, that slides rows to their new place
+ * and counts scores up.
+ */
 export function LiveRankList({ rows }: { rows: readonly RankRow[] }) {
   const reducedMotion = usePrefersReducedMotion();
   const [source, setSource] = useState(rows);
@@ -100,6 +107,11 @@ export function LiveRankList({ rows }: { rows: readonly RankRow[] }) {
     setSource(rows);
     setRanked(rankRows(rows, ranked));
   }
+  const rowRef = useSlideRows(
+    ranked.map((row) => row.id),
+    `${ROW_HEIGHT_REM}rem`,
+    reducedMotion,
+  );
 
   if (ranked.length === 0) {
     return <p className="text-muted">No players yet.</p>;
@@ -110,16 +122,15 @@ export function LiveRankList({ rows }: { rows: readonly RankRow[] }) {
       className="relative w-full"
       style={{ height: `${ranked.length * ROW_HEIGHT_REM}rem` }}
     >
-      {[...ranked]
-        .sort((a, b) => a.id.localeCompare(b.id))
-        .map((row) => (
-          <RankItem
-            key={row.id}
-            row={row}
-            total={ranked.length}
-            reducedMotion={reducedMotion}
-          />
-        ))}
+      {ranked.map((row) => (
+        <RankItem
+          key={row.id}
+          ref={rowRef(row.id)}
+          row={row}
+          total={ranked.length}
+          reducedMotion={reducedMotion}
+        />
+      ))}
     </ol>
   );
 }

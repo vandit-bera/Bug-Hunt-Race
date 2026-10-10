@@ -1,6 +1,7 @@
 "use client";
 
 import { useReducedMotion } from "@/components/fx/use-reduced-motion";
+import { useSlideRows } from "@/components/fx/use-slide-rows";
 import { ChangeMarker } from "@/components/room/live-rank-list";
 import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/components/ui/cn";
@@ -13,9 +14,10 @@ const ROW_HEIGHT = "[--row:3.75rem]";
 const ROW_HEIGHT_WITH_AWARDS = "[--row:3.75rem] max-sm:[--row:4.75rem]";
 
 /**
- * Overall standings. Rows slide to their new place when the order changes;
- * exact ties show the same place; room awards sit next to the rounds solved.
- * `standings` must be ranked (see `computeStandings`).
+ * Overall standings, in rank order in the DOM. Rows slide to their new place
+ * when the order changes; exact ties show the same place; room awards sit
+ * next to the rounds solved. `standings` must be ranked (see
+ * `computeStandings`).
  */
 export function Leaderboard({
   standings,
@@ -29,14 +31,15 @@ export function Leaderboard({
   awards?: RoomAwards | null;
 }) {
   const reducedMotion = useReducedMotion();
+  const rowRef = useSlideRows(
+    standings.map((row) => row.id),
+    "var(--row)",
+    reducedMotion,
+  );
   if (standings.length === 0) {
     return <p className="text-muted">No players yet.</p>;
   }
 
-  const position = new Map(standings.map((row, index) => [row.id, index]));
-  // Render in a fixed order so React keeps each row's element and the CSS
-  // transition can slide it; the visual order comes from `translateY`.
-  const stable = [...standings].sort((a, b) => a.id.localeCompare(b.id));
   const anyAwards = standings.some((row) => {
     const held = awardsOf(awards ?? null, row.id);
     return held.awards.length > 0 || held.winStreak > 0;
@@ -50,12 +53,12 @@ export function Leaderboard({
       )}
       style={{ height: `calc(var(--row) * ${standings.length})` }}
     >
-      {stable.map((row) => {
-        const index = position.get(row.id) ?? 0;
+      {standings.map((row, index) => {
         const you = row.id === currentPlayerId;
         return (
           <li
             key={row.id}
+            ref={rowRef(row.id)}
             aria-posinset={index + 1}
             aria-setsize={standings.length}
             className={cn(
