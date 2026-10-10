@@ -123,6 +123,21 @@ describe("room awards", () => {
     expect(html.match(/data-testid="room-awards"/g)).toHaveLength(4);
   });
 
+  it("stay on one line in the final leaderboard", () => {
+    const html = renderToStaticMarkup(
+      <Leaderboard
+        standings={computeStandings(players, [round])}
+        awards={awards}
+      />,
+    );
+    const lists = html.match(/data-testid="room-awards" class="[^"]*"/g);
+    expect(lists).toHaveLength(2);
+    for (const list of lists ?? []) {
+      expect(list).toContain("flex-nowrap");
+      expect(list).not.toMatch(/\bflex-wrap\b/);
+    }
+  });
+
   it("render nothing without awards", () => {
     const html = renderToStaticMarkup(
       <RoundResults rows={roundResults(players, [round])} roundNumber={1} />,

@@ -4,10 +4,13 @@ import { useReducedMotion } from "@/components/fx/use-reduced-motion";
 import { ChangeMarker } from "@/components/room/live-rank-list";
 import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/components/ui/cn";
+import { awardsOf } from "@/lib/game/room-awards";
 import { isTied, type Standing } from "@/lib/game/standings";
 import { AwardBadges, type RoomAwards } from "./award-badges";
 
-const ROW_HEIGHT_REM = 3.75;
+// Row pitch. On phones, award chips get a line of their own.
+const ROW_HEIGHT = "[--row:3.75rem]";
+const ROW_HEIGHT_WITH_AWARDS = "[--row:3.75rem] max-sm:[--row:4.75rem]";
 
 /**
  * Overall standings. Rows slide to their new place when the order changes;
@@ -34,11 +37,18 @@ export function Leaderboard({
   // Render in a fixed order so React keeps each row's element and the CSS
   // transition can slide it; the visual order comes from `translateY`.
   const stable = [...standings].sort((a, b) => a.id.localeCompare(b.id));
+  const anyAwards = standings.some((row) => {
+    const held = awardsOf(awards ?? null, row.id);
+    return held.awards.length > 0 || held.winStreak > 0;
+  });
   return (
     <ol
       aria-label={label}
-      className="relative w-full"
-      style={{ height: `${standings.length * ROW_HEIGHT_REM}rem` }}
+      className={cn(
+        "relative w-full",
+        anyAwards ? ROW_HEIGHT_WITH_AWARDS : ROW_HEIGHT,
+      )}
+      style={{ height: `calc(var(--row) * ${standings.length})` }}
     >
       {stable.map((row) => {
         const index = position.get(row.id) ?? 0;
@@ -54,8 +64,8 @@ export function Leaderboard({
               !reducedMotion && "transition-transform duration-500 ease-out",
             )}
             style={{
-              height: `${ROW_HEIGHT_REM - 0.5}rem`,
-              transform: `translateY(${index * ROW_HEIGHT_REM}rem)`,
+              height: "calc(var(--row) - 0.5rem)",
+              transform: `translateY(calc(var(--row) * ${index}))`,
             }}
           >
             <span className="w-6 shrink-0 text-center font-display font-bold">
@@ -71,12 +81,13 @@ export function Leaderboard({
                 {row.name}
                 {you && <span className="text-muted"> (you)</span>}
               </span>
-              <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted">
+              <span className="flex min-w-0 gap-x-1.5 text-xs text-muted max-sm:flex-col sm:items-center">
                 <span className="shrink-0">{row.roundsSolved} solved</span>
                 <AwardBadges
                   awards={awards}
                   playerId={row.id}
-                  className="min-w-0 flex-nowrap overflow-hidden"
+                  compact
+                  className="min-w-0 overflow-hidden"
                 />
               </span>
             </span>

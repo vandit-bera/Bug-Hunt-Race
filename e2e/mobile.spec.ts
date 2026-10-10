@@ -184,3 +184,40 @@ test.describe("on a touch tablet", () => {
     await expectSmallControlsTappable(page);
   });
 });
+
+for (const width of [320, 360, 375, 414]) {
+  test(`Final leaderboard keeps award chips in their rows at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 700 });
+    await page.goto("/styleguide");
+    const rows = page
+      .getByRole("list", { name: "Final leaderboard" })
+      .first()
+      .getByRole("listitem");
+    await expect(rows.first()).toBeVisible();
+    // Chips never leave their row. From 360px up, every chip is fully shown;
+    // narrower phones may clip the last one. The first sample player holds
+    // all four awards, the widest case.
+    const hidden = await rows.evaluateAll(
+      (items, mustShowAll) =>
+        items.flatMap((item) => {
+          const row = item.getBoundingClientRect();
+          const list = item.querySelector("[data-testid=room-awards]");
+          if (!list) return [];
+          const box = list.getBoundingClientRect();
+          return [...list.children]
+            .map((chip) => chip.getBoundingClientRect())
+            .filter(
+              (chip) =>
+                chip.top < row.top ||
+                chip.bottom > row.bottom ||
+                (mustShowAll && chip.right > box.right + 0.5),
+            )
+            .map(() => item.textContent?.trim());
+        }),
+      width >= 360,
+    );
+    expect(hidden).toEqual([]);
+  });
+}

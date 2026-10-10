@@ -39,9 +39,9 @@ function sample(index: number, salt: number): number {
   return x - Math.floor(x);
 }
 
-/** Sample room awards: the first players hold one of each kind. */
+/** Sample room awards: the first player holds every kind (the widest row). */
 const SAMPLE_AWARDS: PlayerAwards[] = [
-  { awards: ["first-blood", "speed-demon"], winStreak: 3 },
+  { awards: ["first-blood", "speed-demon", "no-hints-needed"], winStreak: 3 },
   { awards: ["no-hints-needed"], winStreak: 0 },
   { awards: [], winStreak: 2 },
 ];
