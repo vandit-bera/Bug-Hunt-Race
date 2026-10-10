@@ -30,6 +30,7 @@ import {
   roomErrorMessage,
   useRoomConnection,
 } from "@/lib/rooms";
+import { preloadRunner } from "@/lib/runner/preload";
 import { PlayerList, type RoomPlayer } from "./player-list";
 import { RoomErrorCard } from "./room-error-card";
 import { RoomHeader } from "./room-header";
@@ -168,6 +169,11 @@ function Lobby({
   const current = useCurrentRound(client, room);
   const [leaving, setLeaving] = useState(false);
   const [starting, setStarting] = useState(false);
+  // Warm Python while players wait, so the round does not open on a loading
+  // bar. JS and TS rooms download nothing.
+  useEffect(() => {
+    void preloadRunner(room.language);
+  }, [room.language]);
   if (live.closed && !leaving) return <RoomGone />;
 
   const players = live.view?.players ?? [membership.player];
